@@ -6,6 +6,7 @@ import { Phase } from "@/lib/phase";
 import FirstVisitForm from "@/components/phases/FirstVisitForm";
 import InvitationCard from "@/components/phases/InvitationCard";
 import CountdownHero from "@/components/phases/CountdownHero";
+import Gallery from "@/components/sections/Gallery";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -38,7 +39,10 @@ export default function Home() {
       )}
 
       {phase === Phase.RETURN_VISIT && (
-        <CountdownHero guestName={guestName ?? "Friend"} />
+        <>
+          <CountdownHero guestName={guestName ?? "Friend"} />
+          <Gallery folder="engagement" title="Engagement Gallery" />
+        </>
       )}
 
       {phase === Phase.WEDDING_DAY && (
