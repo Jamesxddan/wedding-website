@@ -5,6 +5,7 @@ import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import FirstVisitForm from "@/components/phases/FirstVisitForm";
 import InvitationCard from "@/components/phases/InvitationCard";
+import CountdownHero from "@/components/phases/CountdownHero";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -37,12 +38,7 @@ export default function Home() {
       )}
 
       {phase === Phase.RETURN_VISIT && (
-        <section className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-          <p className="font-heading text-deep-rose text-2xl">
-            Welcome back{guestName ? `, ${guestName}` : ""}!
-          </p>
-          <p className="font-body text-sage text-lg">Countdown hero goes here (Step 6)</p>
-        </section>
+        <CountdownHero guestName={guestName ?? "Friend"} />
       )}
 
       {phase === Phase.WEDDING_DAY && (
