@@ -16,28 +16,41 @@ describe("getPhase", () => {
     expect(getPhase(null, weddingDay)).toBe(Phase.FIRST_VISIT);
   });
 
-  it("returns RETURN_VISIT when name exists and date is before wedding day", () => {
-    expect(getPhase("James", dayBefore)).toBe(Phase.RETURN_VISIT);
+  it("returns INVITATION when name exists but invitation not seen", () => {
+    expect(getPhase("James", dayBefore, false)).toBe(Phase.INVITATION);
   });
 
-  it("returns WEDDING_DAY when name exists and date is the wedding day", () => {
-    expect(getPhase("James", weddingDay)).toBe(Phase.WEDDING_DAY);
+  it("returns RETURN_VISIT when name exists and invitation already seen", () => {
+    expect(getPhase("James", dayBefore, true)).toBe(Phase.RETURN_VISIT);
+  });
+
+  it("returns FIRST_VISIT when no name regardless of invitationSeen", () => {
+    expect(getPhase(null, dayBefore, true)).toBe(Phase.FIRST_VISIT);
+    expect(getPhase(null, dayBefore, false)).toBe(Phase.FIRST_VISIT);
+  });
+
+  it("returns WEDDING_DAY when name set, invitation seen, and date is wedding day", () => {
+    expect(getPhase("James", weddingDay, true)).toBe(Phase.WEDDING_DAY);
+  });
+
+  it("returns INVITATION even on wedding day if not yet seen", () => {
+    expect(getPhase("James", weddingDay, false)).toBe(Phase.INVITATION);
   });
 
   it("returns POST_WEDDING when name exists and date is after wedding day", () => {
-    expect(getPhase("James", dayAfter)).toBe(Phase.POST_WEDDING);
+    expect(getPhase("James", dayAfter, true)).toBe(Phase.POST_WEDDING);
   });
 
   it("returns RETURN_VISIT at midnight on the day before", () => {
     const midnight = new Date(WEDDING_DATE);
     midnight.setDate(midnight.getDate() - 1);
     midnight.setHours(23, 59, 59, 999);
-    expect(getPhase("Sharon", midnight)).toBe(Phase.RETURN_VISIT);
+    expect(getPhase("Sharon", midnight, true)).toBe(Phase.RETURN_VISIT);
   });
 
   it("returns WEDDING_DAY at midnight start of wedding day (IST)", () => {
     const startOfDay = new Date(WEDDING_DATE);
     startOfDay.setHours(0, 0, 0, 0);
-    expect(getPhase("Sharon", startOfDay)).toBe(Phase.WEDDING_DAY);
+    expect(getPhase("Sharon", startOfDay, true)).toBe(Phase.WEDDING_DAY);
   });
 });

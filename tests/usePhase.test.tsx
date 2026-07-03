@@ -16,10 +16,7 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(globalThis, "localStorage", {
-  value: localStorageMock,
-  writable: true,
-});
+Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, writable: true });
 
 describe("usePhase", () => {
   beforeEach(() => {
@@ -38,8 +35,19 @@ describe("usePhase", () => {
     expect(result.current.guestName).toBeNull();
   });
 
-  it("returns RETURN_VISIT when name is set and date is before wedding", async () => {
+  it("returns INVITATION when name set but invitation not seen", async () => {
     localStorageMock.setItem("guest_name", "John");
+    vi.useFakeTimers();
+    vi.setSystemTime(DAY_BEFORE);
+    const { usePhase } = await import("@/lib/usePhase");
+    const { result } = renderHook(() => usePhase());
+    await act(async () => {});
+    expect(result.current.phase).toBe(Phase.INVITATION);
+  });
+
+  it("returns RETURN_VISIT when name set and invitation seen", async () => {
+    localStorageMock.setItem("guest_name", "John");
+    localStorageMock.setItem("invitation_seen", "true");
     vi.useFakeTimers();
     vi.setSystemTime(DAY_BEFORE);
     const { usePhase } = await import("@/lib/usePhase");
@@ -49,8 +57,9 @@ describe("usePhase", () => {
     expect(result.current.guestName).toBe("John");
   });
 
-  it("returns POST_WEDDING when name is set and date is after wedding", async () => {
+  it("returns POST_WEDDING when name set, invitation seen, and date is after wedding", async () => {
     localStorageMock.setItem("guest_name", "John");
+    localStorageMock.setItem("invitation_seen", "true");
     vi.useFakeTimers();
     vi.setSystemTime(DAY_AFTER);
     const { usePhase } = await import("@/lib/usePhase");

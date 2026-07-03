@@ -21,8 +21,9 @@ export function usePhase(): PhaseState {
   useEffect(() => {
     const name = localStorage.getItem("guest_name");
     const city = localStorage.getItem("guest_city");
+    const invitationSeen = localStorage.getItem("invitation_seen") === "true";
     setState({
-      phase: getPhase(name),
+      phase: getPhase(name, new Date(), invitationSeen),
       guestName: name,
       guestCity: city,
       isLoading: false,
