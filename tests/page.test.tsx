@@ -2,9 +2,17 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { Phase } from "@/lib/phase";
 
-vi.mock("@/lib/usePhase", () => ({
-  usePhase: vi.fn(),
+vi.mock("@/lib/usePhase", () => ({ usePhase: vi.fn() }));
+vi.mock("@/components/phases/CountdownHero", () => ({
+  default: ({ guestName }: { guestName: string }) => (
+    <div>Welcome back, {guestName}!</div>
+  ),
 }));
+vi.mock("@/components/sections/Gallery", () => ({ default: () => <div>Gallery</div> }));
+vi.mock("@/components/sections/OurStory", () => ({ default: () => <div>Our Story</div> }));
+vi.mock("@/components/sections/AboutJames", () => ({ default: () => <div>About James</div> }));
+vi.mock("@/components/sections/AboutSharon", () => ({ default: () => <div>About Sharon</div> }));
+vi.mock("@/components/sections/Families", () => ({ default: () => <div>Families</div> }));
 
 import { usePhase } from "@/lib/usePhase";
 import Home from "@/app/page";
