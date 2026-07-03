@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { searchCities, type City } from "@/lib/cities";
 
-export default function FirstVisitForm() {
+interface Props {
+  onComplete: () => void;
+}
+
+export default function FirstVisitForm({ onComplete }: Props) {
   const [name, setName] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -48,7 +52,7 @@ export default function FirstVisitForm() {
     if (!name.trim() || !selectedCity) return;
     localStorage.setItem("guest_name", name.trim());
     localStorage.setItem("guest_city", selectedCity.name);
-    window.location.reload();
+    onComplete();
   }
 
   const canSubmit = name.trim().length > 0 && selectedCity !== null;

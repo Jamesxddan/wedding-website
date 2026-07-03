@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import FirstVisitForm from "@/components/phases/FirstVisitForm";
+import InvitationCard from "@/components/phases/InvitationCard";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
+  const [showInvitation, setShowInvitation] = useState(false);
 
   if (isLoading) {
     return (
@@ -19,14 +22,18 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-cream">
-      {phase === Phase.FIRST_VISIT && (
+      {(phase === Phase.FIRST_VISIT && !showInvitation) && (
         <section className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
           <div className="text-center">
             <h1 className="font-heading text-5xl text-deep-rose mb-2">James &amp; Sharon</h1>
             <p className="font-script italic text-xl text-sage">are getting married!</p>
           </div>
-          <FirstVisitForm />
+          <FirstVisitForm onComplete={() => setShowInvitation(true)} />
         </section>
+      )}
+
+      {(showInvitation || phase === Phase.INVITATION) && (
+        <InvitationCard guestName={guestName ?? "Friend"} />
       )}
 
       {phase === Phase.RETURN_VISIT && (
