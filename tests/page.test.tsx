@@ -1,16 +1,44 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { Phase } from "@/lib/phase";
+
+vi.mock("@/lib/usePhase", () => ({
+  usePhase: vi.fn(),
+}));
+
+import { usePhase } from "@/lib/usePhase";
 import Home from "@/app/page";
 
-describe("Home page", () => {
-  it("renders the couple's names", () => {
+const mockUsePhase = vi.mocked(usePhase);
+
+describe("Home routing shell", () => {
+  it("renders loading state when isLoading is true", () => {
+    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: true });
     render(<Home />);
-    expect(screen.getByText(/James Daniel/)).toBeInTheDocument();
-    expect(screen.getByText(/Sharon/)).toBeInTheDocument();
+    expect(screen.getByText(/Loading/)).toBeInTheDocument();
   });
 
-  it("renders the wedding date", () => {
+  it("renders Phase 1 placeholder when FIRST_VISIT", () => {
+    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: false });
     render(<Home />);
-    expect(screen.getByText(/October 8th, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Phase 1/)).toBeInTheDocument();
+  });
+
+  it("renders Phase 2 placeholder with guest name when RETURN_VISIT", () => {
+    mockUsePhase.mockReturnValue({ phase: Phase.RETURN_VISIT, guestName: "John", guestCity: "Chennai", isLoading: false });
+    render(<Home />);
+    expect(screen.getByText(/Welcome back, John/)).toBeInTheDocument();
+  });
+
+  it("renders Phase 3 placeholder when WEDDING_DAY", () => {
+    mockUsePhase.mockReturnValue({ phase: Phase.WEDDING_DAY, guestName: "John", guestCity: null, isLoading: false });
+    render(<Home />);
+    expect(screen.getByText(/Wedding Day/)).toBeInTheDocument();
+  });
+
+  it("renders Phase 4 placeholder when POST_WEDDING", () => {
+    mockUsePhase.mockReturnValue({ phase: Phase.POST_WEDDING, guestName: "John", guestCity: null, isLoading: false });
+    render(<Home />);
+    expect(screen.getByText(/Post Wedding/)).toBeInTheDocument();
   });
 });
