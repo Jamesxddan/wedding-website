@@ -18,10 +18,11 @@ describe("Home routing shell", () => {
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
   });
 
-  it("renders Phase 1 placeholder when FIRST_VISIT", () => {
+  it("renders first visit form when FIRST_VISIT", () => {
     mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: false });
     render(<Home />);
-    expect(screen.getByText(/Phase 1/)).toBeInTheDocument();
+    expect(screen.getByText(/James & Sharon/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
   });
 
   it("renders Phase 2 placeholder with guest name when RETURN_VISIT", () => {
