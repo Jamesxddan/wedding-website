@@ -13,6 +13,8 @@ vi.mock("@/components/sections/OurStory", () => ({ default: () => <div>Our Story
 vi.mock("@/components/sections/AboutJames", () => ({ default: () => <div>About James</div> }));
 vi.mock("@/components/sections/AboutSharon", () => ({ default: () => <div>About Sharon</div> }));
 vi.mock("@/components/sections/Families", () => ({ default: () => <div>Families</div> }));
+vi.mock("@/components/sections/Venue", () => ({ default: () => <div>Venue</div> }));
+vi.mock("@/components/sections/Itinerary", () => ({ default: () => <div>Itinerary</div> }));
 
 import { usePhase } from "@/lib/usePhase";
 import Home from "@/app/page";

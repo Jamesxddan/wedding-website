@@ -11,6 +11,8 @@ import OurStory from "@/components/sections/OurStory";
 import AboutJames from "@/components/sections/AboutJames";
 import AboutSharon from "@/components/sections/AboutSharon";
 import Families from "@/components/sections/Families";
+import Venue from "@/components/sections/Venue";
+import Itinerary from "@/components/sections/Itinerary";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -50,6 +52,8 @@ export default function Home() {
           <AboutJames />
           <AboutSharon />
           <Families />
+          <Venue />
+          <Itinerary />
         </>
       )}
 
