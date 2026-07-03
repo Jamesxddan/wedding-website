@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
+import PetalScene from "@/components/webgl/PetalScene";
 
 interface Props {
   guestName: string;
@@ -21,8 +22,9 @@ export default function InvitationCard({ guestName }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-cream p-6">
-      <div className="relative w-full max-w-lg" style={{ perspective: "1200px" }}>
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-6 overflow-hidden bg-cream">
+      <PetalScene />
+      <div className="relative z-10 w-full max-w-lg" style={{ perspective: "1200px" }}>
         {/* Envelope flap */}
         <div
           aria-hidden="true"
