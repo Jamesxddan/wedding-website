@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { DrivePhoto } from "@/lib/drive";
 
 interface Props {
@@ -9,116 +9,117 @@ interface Props {
   parallaxY: number;
 }
 
-const SLIDE_DURATION = 8000; // ms visible per photo
-const FADE_DURATION = 2000;  // ms crossfade
+const SLIDE_DURATION = 7000; // ms each photo stays fully visible
+const FADE_MS = 2500;        // ms crossfade duration
 
 export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Props) {
-  const [current, setCurrent] = useState(0);
-  const [next, setNext] = useState(1);
-  const [fading, setFading] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const list = photos.length > 0 ? photos : null;
+
+  // Two slots — we swap which one is "on top" each transition.
+  // The hidden slot gets its photo updated silently, then fades in.
+  const [slots, setSlots] = useState([0, 1]);      // photo index per slot
+  const [topSlot, setTopSlot] = useState(0);        // which slot is visible on top
+  const [fading, setFading] = useState(false);      // crossfade in progress
+  const nextPhotoRef = useRef(2);                   // next photo to load
+
+  const advance = useCallback(() => {
+    if (!list || list.length < 2) return;
+
+    const hiddenSlot = topSlot === 0 ? 1 : 0;
+    const nextIdx = nextPhotoRef.current % list.length;
+    nextPhotoRef.current += 1;
+
+    // 1. Load next photo into the hidden slot (it's invisible — no flash)
+    setSlots(s => {
+      const n = [...s];
+      n[hiddenSlot] = nextIdx;
+      return n;
+    });
+
+    // 2. After a tick (so the img src change applies), start the fade
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setFading(true);
+        // 3. Halfway through fade, flip which slot is "top"
+        setTimeout(() => {
+          setTopSlot(hiddenSlot);
+          setFading(false);
+        }, FADE_MS);
+      });
+    });
+  }, [list, topSlot]);
 
   useEffect(() => {
     if (!list || list.length < 2) return;
-
-    function advance() {
-      setFading(true);
-      timerRef.current = setTimeout(() => {
-        setCurrent((c) => {
-          const nextIdx = (c + 1) % list!.length;
-          setNext((nextIdx + 1) % list!.length);
-          return nextIdx;
-        });
-        setFading(false);
-      }, FADE_DURATION);
-    }
-
-    const id = setInterval(advance, SLIDE_DURATION);
-    return () => {
-      clearInterval(id);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [list]);
+    const id = setInterval(advance, SLIDE_DURATION + FADE_MS);
+    return () => clearInterval(id);
+  }, [list, advance]);
 
   if (!list) {
     return (
       <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(135deg, #1a0a14 0%, #2d1220 30%, #0f1a12 60%, #1a1208 100%)",
-          }}
-        />
+        <div className="absolute inset-0" style={{
+          background: "linear-gradient(135deg, #1a0a14 0%, #2d1220 30%, #0f1a12 60%, #1a1208 100%)",
+        }} />
       </div>
     );
   }
 
+  const bottomSlot = topSlot === 0 ? 1 : 0;
+
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      {/* Next slide — underneath, always visible */}
-      <SlideLayer src={list[next].heroUrl} opacity={1} />
+      {/* Bottom slot — always fully visible underneath */}
+      <Slide src={list[slots[bottomSlot]]?.heroUrl} opacity={1} />
 
-      {/* Current slide — fades out to reveal next */}
-      <SlideLayer
-        src={list[current].heroUrl}
+      {/* Top slot — fades out during transition to reveal bottom */}
+      <Slide
+        src={list[slots[topSlot]]?.heroUrl}
         opacity={fading ? 0 : 1}
-        fadeDuration={FADE_DURATION}
-        slow
+        fadeDuration={FADE_MS}
       />
 
-      {/* Cinematic dark overlay */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `
-            radial-gradient(ellipse at center, rgba(5,2,10,0.2) 0%, rgba(5,2,10,0.58) 100%),
-            linear-gradient(to bottom, rgba(5,2,10,0.28) 0%, rgba(5,2,10,0.04) 40%, rgba(5,2,10,0.04) 60%, rgba(5,2,10,0.52) 100%)
-          `,
-          zIndex: 2,
-        }}
-      />
+      {/* Cinematic vignette overlay */}
+      <div className="absolute inset-0" style={{
+        background: `
+          radial-gradient(ellipse at center, rgba(5,2,10,0.18) 0%, rgba(5,2,10,0.56) 100%),
+          linear-gradient(to bottom, rgba(5,2,10,0.28) 0%, rgba(5,2,10,0.03) 40%, rgba(5,2,10,0.03) 60%, rgba(5,2,10,0.50) 100%)
+        `,
+        zIndex: 2,
+      }} />
 
-      {/* Gradient bleed into cream at bottom */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-40"
-        style={{
-          background: "linear-gradient(to bottom, transparent, rgba(253,246,236,0.85))",
-          zIndex: 3,
-        }}
-      />
+      {/* Fade into cream at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-40" style={{
+        background: "linear-gradient(to bottom, transparent, rgba(253,246,236,0.85))",
+        zIndex: 3,
+      }} />
     </div>
   );
 }
 
-function SlideLayer({
-  src,
-  opacity,
-  fadeDuration = 0,
-  slow = false,
-}: {
-  src: string;
+function Slide({ src, opacity, fadeDuration = 0 }: {
+  src: string | undefined;
   opacity: number;
   fadeDuration?: number;
-  slow?: boolean;
 }) {
+  if (!src) return null;
   return (
     <div
       className="absolute inset-0"
       style={{
         opacity,
-        transition: fadeDuration ? `opacity ${fadeDuration}ms ease-in-out` : undefined,
+        transition: fadeDuration ? `opacity ${fadeDuration}ms ease-in-out` : "none",
         zIndex: 1,
+        willChange: "opacity",
       }}
     >
-      {/* Blurred background to fill empty space */}
+      {/* Blurred copy fills letterbox bars */}
       <img
         src={src}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ filter: "blur(28px) brightness(0.45) saturate(0.6)", transform: "scale(1.12)" }}
+        style={{ filter: "blur(32px) brightness(0.4) saturate(0.5)", transform: "scale(1.15)" }}
         draggable={false}
       />
       {/* Full photo, unclipped */}
@@ -127,10 +128,7 @@ function SlideLayer({
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-contain"
-        style={{
-          filter: "saturate(1.08) contrast(1.02)",
-          animation: slow ? `kb-gentle ${SLIDE_DURATION * 2}ms ease-in-out infinite alternate` : undefined,
-        }}
+        style={{ filter: "saturate(1.08) contrast(1.02)" }}
         draggable={false}
       />
     </div>
