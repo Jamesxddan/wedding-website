@@ -40,14 +40,18 @@ export default function CinematicSlideshow({ photos }: Props) {
       const nextIdx = nextIdxRef.current % list!.length;
       nextIdxRef.current += 1;
 
-      // Silently load next photo into the hidden (opacity=0) slot
-      if (hidden === 0) setSlot0Photo(nextIdx);
-      else setSlot1Photo(nextIdx);
+      const nextSrc = list![nextIdx].heroUrl;
 
-      // Wait two frames for the src change to settle, then crossfade
-      requestAnimationFrame(() => {
+      // Preload the image fully before touching the DOM — prevents the
+      // "pop-in during fade" jump caused by the proxy fetch taking 100-500ms.
+      const preload = new window.Image();
+      preload.onload = () => {
+        // Image is in browser cache; update the hidden slot (loads instantly)
+        if (hidden === 0) setSlot0Photo(nextIdx);
+        else setSlot1Photo(nextIdx);
+
+        // One frame for React to sync the src, then crossfade
         requestAnimationFrame(() => {
-          // Bring hidden slot to front and fade it in; fade out current top
           if (hidden === 0) {
             setZ0(2); setZ1(1);
             setOp0(1); setOp1(0);
@@ -56,12 +60,14 @@ export default function CinematicSlideshow({ photos }: Props) {
             setOp1(1); setOp0(0);
           }
           topRef.current = hidden;
-
-          setTimeout(() => {
-            busyRef.current = false;
-          }, FADE_MS);
+          setTimeout(() => { busyRef.current = false; }, FADE_MS);
         });
-      });
+      };
+      preload.onerror = () => {
+        // Skip broken image and allow next advance to run
+        busyRef.current = false;
+      };
+      preload.src = nextSrc;
     }
 
     const id = setInterval(advance, SLIDE_DURATION + FADE_MS);
