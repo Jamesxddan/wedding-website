@@ -37,6 +37,10 @@ export const ITINERARY = [
 // Giscus comments — fill these in after running https://giscus.app
 // Steps: enable Discussions on your GitHub repo, install the giscus app,
 // then paste the repo/repoId/category/categoryId values below.
+// Set to a YouTube video ID (the part after ?v=) to show its comments.
+// Can be a pre-wedding video now; swap to the live stream ID after the wedding.
+export const YOUTUBE_COMMENT_VIDEO_ID = "";
+
 export const GISCUS_CONFIG = {
   repo: "Jamesxddan/wedding-website" as `${string}/${string}`,
   repoId: "R_kgDOTNgUhA",

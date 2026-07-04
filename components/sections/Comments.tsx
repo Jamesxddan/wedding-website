@@ -2,6 +2,7 @@
 
 import { GISCUS_CONFIG } from "@/lib/constants";
 import Giscus from "@giscus/react";
+import YoutubeComments from "@/components/sections/YoutubeComments";
 
 const isConfigured =
   !!GISCUS_CONFIG.repo &&
@@ -55,6 +56,8 @@ export default function Comments() {
             </a>
           </div>
         )}
+
+        <YoutubeComments />
       </div>
     </section>
   );
