@@ -13,6 +13,7 @@ import AboutSharon from "@/components/sections/AboutSharon";
 import Families from "@/components/sections/Families";
 import Venue from "@/components/sections/Venue";
 import Itinerary from "@/components/sections/Itinerary";
+import Comments from "@/components/sections/Comments";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -54,6 +55,7 @@ export default function Home() {
           <Families />
           <Venue />
           <Itinerary />
+          <Comments />
         </>
       )}
 

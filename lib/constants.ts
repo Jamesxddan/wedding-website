@@ -33,3 +33,13 @@ export const ITINERARY = [
   { time: "TBD", label: "Ceremony", venue: "St Andrews Kirk" },
   { time: "TBD", label: "Reception", venue: "BKN Auditorium" },
 ] as const;
+
+// Giscus comments — fill these in after running https://giscus.app
+// Steps: enable Discussions on your GitHub repo, install the giscus app,
+// then paste the repo/repoId/category/categoryId values below.
+export const GISCUS_CONFIG = {
+  repo: "" as `${string}/${string}`,
+  repoId: "",
+  category: "",
+  categoryId: "",
+} as const;
