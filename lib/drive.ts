@@ -5,6 +5,7 @@ export interface DrivePhoto {
   heroUrl: string;
   fullUrl: string;
   album?: string;
+  landscape?: boolean;
 }
 
 export interface DriveAlbum {
@@ -15,7 +16,13 @@ export interface DriveAlbum {
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 
-type DriveFile = { id: string; name: string; mimeType: string; thumbnailLink?: string };
+type DriveFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  thumbnailLink?: string;
+  imageMediaMetadata?: { width?: number; height?: number };
+};
 
 async function listFolderContents(
   folderId: string,
@@ -23,7 +30,7 @@ async function listFolderContents(
 ): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     q: `'${folderId}' in parents and trashed = false`,
-    fields: "files(id,name,mimeType,thumbnailLink)",
+    fields: "files(id,name,mimeType,thumbnailLink,imageMediaMetadata(width,height))",
     pageSize: "200",
     supportsAllDrives: "true",
     includeItemsFromAllDrives: "true",
@@ -41,8 +48,8 @@ async function listFolderContents(
 }
 
 function toPhoto(f: DriveFile, album?: string): DrivePhoto {
-  // Route all image requests through our server-side proxy so the API key
-  // handles auth — avoids ERR_BLOCKED_BY_ORB from browser fetching Drive directly
+  const w = f.imageMediaMetadata?.width ?? 0;
+  const h = f.imageMediaMetadata?.height ?? 0;
   return {
     id: f.id,
     name: f.name,
@@ -50,15 +57,22 @@ function toPhoto(f: DriveFile, album?: string): DrivePhoto {
     heroUrl: `/api/drive-image?id=${f.id}&sz=1600`,
     fullUrl: `/api/drive-image?id=${f.id}&sz=2400`,
     album,
+    landscape: w > 0 && h > 0 ? w >= h : undefined,
   };
 }
 
-// Returns flat list of all images (for hero slideshow)
+// Returns flat list of all images for hero slideshow — landscape photos first
 export async function fetchDrivePhotos(
   folderId: string,
   apiKey: string
 ): Promise<DrivePhoto[]> {
-  return collectAllImages(folderId, apiKey, "");
+  const photos = await collectAllImages(folderId, apiKey, "");
+  // Put landscape photos first, then portrait, then unknown
+  return [
+    ...photos.filter((p) => p.landscape === true),
+    ...photos.filter((p) => p.landscape === false),
+    ...photos.filter((p) => p.landscape === undefined),
+  ];
 }
 
 // Recursively collect all images within a folder (for album contents)
