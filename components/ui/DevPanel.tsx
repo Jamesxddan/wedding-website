@@ -22,19 +22,19 @@ export default function DevPanel() {
   function setPhase(phase: Phase | null) {
     if (phase === null) {
       localStorage.removeItem("dev_phase");
-      localStorage.removeItem("guestName");
-      localStorage.removeItem("invitationSeen");
+      localStorage.removeItem("guest_name");
+      localStorage.removeItem("invitation_seen");
       setCurrent(null);
     } else {
       localStorage.setItem("dev_phase", phase);
       // Pre-populate guest data so non-first-visit phases work correctly
       if (phase !== Phase.FIRST_VISIT) {
-        if (!localStorage.getItem("guestName")) {
-          localStorage.setItem("guestName", "Test Guest");
+        if (!localStorage.getItem("guest_name")) {
+          localStorage.setItem("guest_name", "Test Guest");
         }
       }
       if (phase === Phase.RETURN_VISIT || phase === Phase.WEDDING_DAY || phase === Phase.POST_WEDDING) {
-        localStorage.setItem("invitationSeen", "true");
+        localStorage.setItem("invitation_seen", "true");
       }
       setCurrent(phase);
     }
