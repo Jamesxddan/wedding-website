@@ -53,11 +53,8 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
     };
   }, [list]);
 
-  // parallaxX/Y are pixel offsets (max ~15px); depth factor gives subtle layer separation
-  const photoStyle = (depthRatio: number) => ({
-    transform: `translate(${parallaxX * depthRatio}px, ${parallaxY * depthRatio}px) scale(1.12)`,
-    transition: "transform 0.15s ease-out",
-  });
+  const photoTransform = (depthRatio: number) =>
+    `translate(${parallaxX * depthRatio}px, ${parallaxY * depthRatio}px) scale(1.12)`;
 
   if (!list) {
     // Gradient fallback
@@ -82,8 +79,8 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
         className="absolute inset-[-15%]"
         style={{
           opacity: fading ? 0 : 1,
-          transition: `opacity ${FADE_DURATION}ms ease-in-out`,
-          ...photoStyle(1.0),
+          transform: photoTransform(1.0),
+          transition: `opacity ${FADE_DURATION}ms ease-in-out, transform 0.15s ease-out`,
         }}
       >
         <img
@@ -101,8 +98,8 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
         className="absolute inset-[-15%]"
         style={{
           opacity: fading ? 1 : 0,
-          transition: `opacity ${FADE_DURATION}ms ease-in-out`,
-          ...photoStyle(0.78),
+          transform: photoTransform(0.78),
+          transition: `opacity ${FADE_DURATION}ms ease-in-out, transform 0.15s ease-out`,
         }}
       >
         <img
