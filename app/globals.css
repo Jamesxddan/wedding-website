@@ -44,43 +44,11 @@ body {
 .floral-float { animation: floral-float 6s ease-in-out infinite; }
 .floral-sway  { animation: floral-sway 8s ease-in-out infinite; }
 
-/* ── Ken Burns photo animations ────────────────────────────────────────────── */
-@keyframes kb-zoom-in-left {
-  0%   { transform: scale(1)    translate(2%, 1%); }
-  100% { transform: scale(1.14) translate(-2%, -1%); }
+/* ── Gentle slideshow zoom ──────────────────────────────────────────────────── */
+@keyframes kb-gentle {
+  0%   { transform: scale(1.0); }
+  100% { transform: scale(1.06); }
 }
-@keyframes kb-zoom-in-right {
-  0%   { transform: scale(1)    translate(-2%, 1%); }
-  100% { transform: scale(1.14) translate(2%, -1%); }
-}
-@keyframes kb-zoom-out-left {
-  0%   { transform: scale(1.14) translate(-2%, -1%); }
-  100% { transform: scale(1)    translate(2%, 1%); }
-}
-@keyframes kb-zoom-out-right {
-  0%   { transform: scale(1.14) translate(2%, -1%); }
-  100% { transform: scale(1)    translate(-2%, 1%); }
-}
-@keyframes kb-drift-left {
-  0%   { transform: scale(1.1) translate(3%, 0); }
-  100% { transform: scale(1.16) translate(-3%, -1%); }
-}
-@keyframes kb-drift-right {
-  0%   { transform: scale(1.1) translate(-3%, 0); }
-  100% { transform: scale(1.16) translate(3%, -1%); }
-}
-
-.cinematic-kb {
-  animation-duration: 8000ms;
-  animation-timing-function: ease-in-out;
-  animation-fill-mode: both;
-}
-.kb-zoom-in-left   { animation-name: kb-zoom-in-left; }
-.kb-zoom-in-right  { animation-name: kb-zoom-in-right; }
-.kb-zoom-out-left  { animation-name: kb-zoom-out-left; }
-.kb-zoom-out-right { animation-name: kb-zoom-out-right; }
-.kb-drift-left     { animation-name: kb-drift-left; }
-.kb-drift-right    { animation-name: kb-drift-right; }
 
 /* ── Scroll indicator ──────────────────────────────────────────────────────── */
 @keyframes scroll-line {
