@@ -26,8 +26,10 @@ export const VENUES = {
   },
 } as const;
 
-export const KIRK_STREAM_URL = "";
-export const BKN_STREAM_URL = "";
+// Replace with actual stream URLs from each media team on the day.
+// YouTube URLs are auto-embedded; any other URL gets a "Watch Live" button.
+export const KIRK_STREAM_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"; // TEST — replace before wedding
+export const BKN_STREAM_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk";  // TEST — replace before wedding
 
 export const ITINERARY = [
   { time: "TBD", label: "Ceremony", venue: "St Andrews Kirk" },

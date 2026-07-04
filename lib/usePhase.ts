@@ -22,8 +22,18 @@ export function usePhase(): PhaseState {
     const name = localStorage.getItem("guest_name");
     const city = localStorage.getItem("guest_city");
     const invitationSeen = localStorage.getItem("invitation_seen") === "true";
+
+    // Dev-only phase override: set localStorage key "dev_phase" to one of:
+    // FIRST_VISIT | INVITATION | RETURN_VISIT | WEDDING_DAY | POST_WEDDING
+    const devOverride = process.env.NODE_ENV !== "production"
+      ? localStorage.getItem("dev_phase")
+      : null;
+    const overridePhase = devOverride && Object.values(Phase).includes(devOverride as Phase)
+      ? (devOverride as Phase)
+      : null;
+
     setState({
-      phase: getPhase(name, new Date(), invitationSeen),
+      phase: overridePhase ?? getPhase(name, new Date(), invitationSeen),
       guestName: name,
       guestCity: city,
       isLoading: false,
