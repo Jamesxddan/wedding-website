@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { Phase } from "@/lib/phase";
 
-const STAGES: { label: string; phase: Phase; color: string }[] = [
-  { label: "Pre-Wedding", phase: Phase.RETURN_VISIT, color: "#8B5E83" },
-  { label: "Wedding Day", phase: Phase.WEDDING_DAY, color: "#C17B3F" },
-  { label: "Post-Wedding", phase: Phase.POST_WEDDING, color: "#4A7C59" },
+const STAGES: { label: string; phase: Phase; color: string; desc: string }[] = [
+  { label: "Opening",      phase: Phase.FIRST_VISIT,  color: "#6B7DB3", desc: "Name & city entry" },
+  { label: "Invitation",   phase: Phase.INVITATION,   color: "#9C6B9A", desc: "Animated reveal" },
+  { label: "Pre-Wedding",  phase: Phase.RETURN_VISIT, color: "#8B5E83", desc: "Countdown hero" },
+  { label: "Wedding Day",  phase: Phase.WEDDING_DAY,  color: "#C17B3F", desc: "Day-of view" },
+  { label: "Post-Wedding", phase: Phase.POST_WEDDING, color: "#4A7C59", desc: "Gallery & memories" },
 ];
 
 export default function DevPanel() {
@@ -20,29 +22,46 @@ export default function DevPanel() {
   function setPhase(phase: Phase | null) {
     if (phase === null) {
       localStorage.removeItem("dev_phase");
+      localStorage.removeItem("guestName");
+      localStorage.removeItem("invitationSeen");
       setCurrent(null);
     } else {
       localStorage.setItem("dev_phase", phase);
+      // Pre-populate guest data so non-first-visit phases work correctly
+      if (phase !== Phase.FIRST_VISIT) {
+        if (!localStorage.getItem("guestName")) {
+          localStorage.setItem("guestName", "Test Guest");
+        }
+      }
+      if (phase === Phase.RETURN_VISIT || phase === Phase.WEDDING_DAY || phase === Phase.POST_WEDDING) {
+        localStorage.setItem("invitationSeen", "true");
+      }
       setCurrent(phase);
     }
     window.location.reload();
   }
 
-  if (process.env.NODE_ENV === "production") return null;
+  // Show in dev always; in production only if ?dev=1 is in the URL
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const isDev = process.env.NODE_ENV !== "production";
+    const hasFlag = window.location.search.includes("dev=1");
+    setVisible(isDev || hasFlag);
+  }, []);
+
+  if (!visible) return null;
 
   return (
     <div className="fixed bottom-5 right-5 z-[9999] flex flex-col items-end gap-2">
       {open && (
         <div
-          className="flex flex-col gap-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl min-w-[180px]"
+          className="flex flex-col gap-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl min-w-[200px]"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
-          <p
-            className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 pb-1 border-b border-gray-100"
-          >
-            Dev · Phase
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 pb-1 border-b border-gray-100">
+            Dev · Phase Switcher
           </p>
-          {STAGES.map(({ label, phase, color }) => {
+          {STAGES.map(({ label, phase, color, desc }) => {
             const active = current === phase;
             return (
               <button
@@ -55,18 +74,17 @@ export default function DevPanel() {
                 }}
                 className="rounded-xl px-3 py-2 text-xs font-semibold text-left transition-all duration-200 hover:opacity-80"
               >
-                {active ? `✓ ${label}` : label}
+                <span>{active ? `✓ ` : ""}{label}</span>
+                <span style={{ opacity: 0.7, fontSize: "10px", display: "block", fontWeight: 400 }}>{desc}</span>
               </button>
             );
           })}
-          {current && (
-            <button
-              onClick={() => setPhase(null)}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-left text-gray-400 hover:text-gray-600 transition-colors border border-dashed border-gray-200 mt-1"
-            >
-              Reset (auto-detect)
-            </button>
-          )}
+          <button
+            onClick={() => setPhase(null)}
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-left text-gray-400 hover:text-gray-600 transition-colors border border-dashed border-gray-200 mt-1"
+          >
+            Reset all (auto-detect)
+          </button>
           <p className="text-[9px] text-gray-300 text-center pt-1">
             Reloads page on change
           </p>
