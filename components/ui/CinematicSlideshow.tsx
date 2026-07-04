@@ -9,24 +9,28 @@ interface Props {
   parallaxY: number;
 }
 
-const SLIDE_DURATION = 7000;
-const FADE_MS = 2500;
+const SLIDE_DURATION = 8000;
+const FADE_MS = 3000;
 
 export default function CinematicSlideshow({ photos }: Props) {
   const list = photos.length > 0 ? photos : null;
 
-  // Two slots always at FIXED DOM positions — never reorder them.
-  // Swapping DOM order causes React to remount elements → double flash.
-  // Instead, keep slot0 first, slot1 second always; control z-index + opacity.
   const [slot0Photo, setSlot0Photo] = useState(0);
   const [slot1Photo, setSlot1Photo] = useState(1);
-  const [op0, setOp0] = useState(1);  // slot0 starts visible
-  const [op1, setOp1] = useState(0);  // slot1 starts hidden
-  const [z0, setZ0] = useState(2);    // slot0 starts on top
+  const [op0, setOp0] = useState(1);
+  const [op1, setOp1] = useState(0);
+  const [z0, setZ0] = useState(2);
   const [z1, setZ1] = useState(1);
+  // Blurred background tracks the TOP (visible) slot's photo
+  const [bgSrc, setBgSrc] = useState<string | undefined>(undefined);
   const nextIdxRef = useRef(2);
   const busyRef = useRef(false);
-  const topRef = useRef(0); // which slot (0 or 1) is currently on top
+  const topRef = useRef(0);
+
+  // Set initial background when photos load
+  useEffect(() => {
+    if (list) setBgSrc(list[0]?.heroUrl);
+  }, [list]);
 
   useEffect(() => {
     if (!list || list.length < 2) return;
@@ -42,15 +46,11 @@ export default function CinematicSlideshow({ photos }: Props) {
 
       const nextSrc = list![nextIdx].heroUrl;
 
-      // Preload the image fully before touching the DOM — prevents the
-      // "pop-in during fade" jump caused by the proxy fetch taking 100-500ms.
       const preload = new window.Image();
       preload.onload = () => {
-        // Image is in browser cache; update the hidden slot (loads instantly)
         if (hidden === 0) setSlot0Photo(nextIdx);
         else setSlot1Photo(nextIdx);
 
-        // One frame for React to sync the src, then crossfade
         requestAnimationFrame(() => {
           if (hidden === 0) {
             setZ0(2); setZ1(1);
@@ -60,13 +60,14 @@ export default function CinematicSlideshow({ photos }: Props) {
             setOp1(1); setOp0(0);
           }
           topRef.current = hidden;
+          // Update blurred background mid-fade so the change is imperceptible
+          setTimeout(() => {
+            setBgSrc(nextSrc);
+          }, FADE_MS / 2);
           setTimeout(() => { busyRef.current = false; }, FADE_MS);
         });
       };
-      preload.onerror = () => {
-        // Skip broken image and allow next advance to run
-        busyRef.current = false;
-      };
+      preload.onerror = () => { busyRef.current = false; };
       preload.src = nextSrc;
     }
 
@@ -86,6 +87,21 @@ export default function CinematicSlideshow({ photos }: Props) {
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+      {/* Single stable blurred background — updated mid-fade so swap is invisible */}
+      {bgSrc && (
+        <img
+          src={bgSrc}
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            filter: "blur(40px) brightness(0.35) saturate(0.5)",
+            transform: "scale(1.2)",
+            zIndex: 0,
+          }}
+          draggable={false}
+        />
+      )}
+
       {/* Slot 0 — always first in DOM */}
       <SlideLayer src={list[slot0Photo]?.heroUrl} opacity={op0} zIndex={z0} />
       {/* Slot 1 — always second in DOM */}
@@ -94,16 +110,16 @@ export default function CinematicSlideshow({ photos }: Props) {
       {/* Vignette */}
       <div className="absolute inset-0" style={{
         background: `
-          radial-gradient(ellipse at center, rgba(5,2,10,0.18) 0%, rgba(5,2,10,0.56) 100%),
-          linear-gradient(to bottom, rgba(5,2,10,0.28) 0%, rgba(5,2,10,0.03) 40%, rgba(5,2,10,0.03) 60%, rgba(5,2,10,0.50) 100%)
+          radial-gradient(ellipse at center, rgba(5,2,10,0.15) 0%, rgba(5,2,10,0.52) 100%),
+          linear-gradient(to bottom, rgba(5,2,10,0.25) 0%, rgba(5,2,10,0.02) 40%, rgba(5,2,10,0.02) 60%, rgba(5,2,10,0.48) 100%)
         `,
-        zIndex: 5,
+        zIndex: 10,
       }} />
 
       {/* Fade to cream */}
       <div className="absolute bottom-0 left-0 right-0 h-40" style={{
         background: "linear-gradient(to bottom, transparent, rgba(253,246,236,0.85))",
-        zIndex: 6,
+        zIndex: 11,
       }} />
     </div>
   );
@@ -129,16 +145,8 @@ function SlideLayer({ src, opacity, zIndex }: {
         src={src}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ filter: "blur(32px) brightness(0.4) saturate(0.5)", transform: "scale(1.15)" }}
-        draggable={false}
-      />
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
         className="absolute inset-0 w-full h-full object-contain"
-        style={{ filter: "saturate(1.08) contrast(1.02)" }}
+        style={{ filter: "saturate(1.06) contrast(1.02)" }}
         draggable={false}
       />
     </div>
