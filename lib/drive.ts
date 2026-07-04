@@ -32,7 +32,10 @@ async function listFolderContents(
   const res = await fetch(`${DRIVE_API}/files?${params}`, {
     next: { revalidate: 300 },
   });
-  if (!res.ok) throw new Error(`Drive API error: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Drive API error: ${res.status} — ${body}`);
+  }
   const data = (await res.json()) as { files: DriveFile[] };
   return data.files ?? [];
 }
