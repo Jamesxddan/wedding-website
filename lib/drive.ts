@@ -15,13 +15,15 @@ export interface DriveAlbum {
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 
+type DriveFile = { id: string; name: string; mimeType: string; thumbnailLink?: string };
+
 async function listFolderContents(
   folderId: string,
   apiKey: string
-): Promise<{ id: string; name: string; mimeType: string }[]> {
+): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     q: `'${folderId}' in parents and trashed = false`,
-    fields: "files(id,name,mimeType)",
+    fields: "files(id,name,mimeType,thumbnailLink)",
     pageSize: "200",
     supportsAllDrives: "true",
     includeItemsFromAllDrives: "true",
@@ -31,19 +33,19 @@ async function listFolderContents(
     next: { revalidate: 300 },
   });
   if (!res.ok) throw new Error(`Drive API error: ${res.status}`);
-  const data = (await res.json()) as {
-    files: { id: string; name: string; mimeType: string }[];
-  };
+  const data = (await res.json()) as { files: DriveFile[] };
   return data.files ?? [];
 }
 
-function toPhoto(f: { id: string; name: string; mimeType: string }, album?: string): DrivePhoto {
+function toPhoto(f: DriveFile, album?: string): DrivePhoto {
+  // Route all image requests through our server-side proxy so the API key
+  // handles auth — avoids ERR_BLOCKED_BY_ORB from browser fetching Drive directly
   return {
     id: f.id,
     name: f.name,
-    thumbnailUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`,
-    heroUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w1600`,
-    fullUrl: `https://drive.google.com/uc?export=view&id=${f.id}`,
+    thumbnailUrl: `/api/drive-image?id=${f.id}&sz=600`,
+    heroUrl: `/api/drive-image?id=${f.id}&sz=1600`,
+    fullUrl: `/api/drive-image?id=${f.id}&sz=2400`,
     album,
   };
 }

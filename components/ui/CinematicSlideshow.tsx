@@ -53,22 +53,22 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
     };
   }, [list]);
 
-  // parallaxX/Y are already pixel offsets; depth factor shifts layers at different rates
+  // parallaxX/Y are pixel offsets (max ~15px); depth factor gives subtle layer separation
   const photoStyle = (depthRatio: number) => ({
     transform: `translate(${parallaxX * depthRatio}px, ${parallaxY * depthRatio}px) scale(1.12)`,
-    transition: "transform 0.1s linear",
+    transition: "transform 0.15s ease-out",
   });
 
   if (!list) {
-    // Gradient fallback — still gets parallax
+    // Gradient fallback
     return (
       <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
         <div
-          className="absolute inset-[-8%]"
+          className="absolute inset-[-15%]"
           style={{
             background: "linear-gradient(135deg, #1a0a14 0%, #2d1220 30%, #0f1a12 60%, #1a1208 100%)",
             transform: `translate(${parallaxX}px, ${parallaxY}px)`,
-            transition: "transform 0.1s linear",
+            transition: "transform 0.15s ease-out",
           }}
         />
       </div>
@@ -79,11 +79,11 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
       {/* Current slide */}
       <div
-        className="absolute inset-[-8%]"
+        className="absolute inset-[-15%]"
         style={{
           opacity: fading ? 0 : 1,
           transition: `opacity ${FADE_DURATION}ms ease-in-out`,
-          ...photoStyle(18),
+          ...photoStyle(1.0),
         }}
       >
         <img
@@ -98,11 +98,11 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
 
       {/* Next slide (pre-loaded, underneath) */}
       <div
-        className="absolute inset-[-8%]"
+        className="absolute inset-[-15%]"
         style={{
           opacity: fading ? 1 : 0,
           transition: `opacity ${FADE_DURATION}ms ease-in-out`,
-          ...photoStyle(14),
+          ...photoStyle(0.78),
         }}
       >
         <img

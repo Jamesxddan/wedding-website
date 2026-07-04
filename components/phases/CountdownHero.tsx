@@ -101,13 +101,13 @@ export default function CountdownHero({ guestName }: Props) {
     else { audio.play().then(() => setPlaying(true)).catch(() => {}); }
   }
 
-  // Parallax values in px
-  const px = mousePos.x * 22;
-  const py = mousePos.y * 12;
+  // Parallax values in px — kept small so image never exposes edges
+  const px = mousePos.x * 14;
+  const py = mousePos.y * 8;
 
   // Text parallax (opposite, subtle)
-  const tx = -mousePos.x * 8;
-  const ty = -mousePos.y * 5;
+  const tx = -mousePos.x * 5;
+  const ty = -mousePos.y * 3;
 
   const slideClass = (delay: number) =>
     `transition-all duration-1000 ease-out ${appeared ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-8 blur-sm"}`;
