@@ -7,6 +7,7 @@ import FirstVisitForm from "@/components/phases/FirstVisitForm";
 import InvitationCard from "@/components/phases/InvitationCard";
 import CountdownHero from "@/components/phases/CountdownHero";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
+import PostWeddingHero from "@/components/phases/PostWeddingHero";
 import Gallery from "@/components/sections/Gallery";
 import OurStory from "@/components/sections/OurStory";
 import AboutJames from "@/components/sections/AboutJames";
@@ -65,10 +66,7 @@ export default function Home() {
       )}
 
       {phase === Phase.POST_WEDDING && (
-        <section className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-          <p className="font-heading text-deep-rose text-2xl">Phase 4 — Post Wedding</p>
-          <p className="font-body text-sage text-lg">Thank you + wedding gallery goes here</p>
-        </section>
+        <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
     </main>
   );

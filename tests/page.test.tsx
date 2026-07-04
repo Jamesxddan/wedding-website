@@ -18,6 +18,9 @@ vi.mock("@/components/sections/Itinerary", () => ({ default: () => <div>Itinerar
 vi.mock("@/components/phases/WeddingDayBanner", () => ({
   default: ({ guestName }: { guestName: string }) => <div>Wedding Day — {guestName}</div>,
 }));
+vi.mock("@/components/phases/PostWeddingHero", () => ({
+  default: ({ guestName }: { guestName: string }) => <div>Post Wedding — {guestName}</div>,
+}));
 
 import { usePhase } from "@/lib/usePhase";
 import Home from "@/app/page";
@@ -50,9 +53,9 @@ describe("Home routing shell", () => {
     expect(screen.getByText(/Wedding Day — John/)).toBeInTheDocument();
   });
 
-  it("renders Phase 4 placeholder when POST_WEDDING", () => {
+  it("renders post-wedding hero when POST_WEDDING", () => {
     mockUsePhase.mockReturnValue({ phase: Phase.POST_WEDDING, guestName: "John", guestCity: null, isLoading: false });
     render(<Home />);
-    expect(screen.getByText(/Post Wedding/)).toBeInTheDocument();
+    expect(screen.getByText(/Post Wedding — John/)).toBeInTheDocument();
   });
 });
