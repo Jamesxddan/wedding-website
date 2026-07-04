@@ -47,11 +47,20 @@ export default function CountdownHero({ guestName }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  // Fetch engagement photos
+  // Fetch engagement photos — sorted by orientation to match device
   useEffect(() => {
     fetch("/api/drive-photos?folder=engagement")
       .then((r) => r.json())
-      .then((d) => { if (d.photos?.length) setPhotos(d.photos); })
+      .then((d) => {
+        if (!d.photos?.length) return;
+        const isMobile = window.innerWidth < 768;
+        const sorted = [...d.photos].sort((a, b) => {
+          const aMatch = isMobile ? a.landscape === false : a.landscape === true;
+          const bMatch = isMobile ? b.landscape === false : b.landscape === true;
+          return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
+        });
+        setPhotos(sorted);
+      })
       .catch(() => {});
   }, []);
 
