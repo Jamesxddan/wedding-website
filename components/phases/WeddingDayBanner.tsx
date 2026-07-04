@@ -45,19 +45,24 @@ export default function WeddingDayBanner({ guestName }: Props) {
         </p>
 
         {/* Cab booking buttons */}
-        <div className="relative flex flex-wrap justify-center gap-4 mt-4">
-          <button
-            onClick={() => setCabMode("to-venue")}
-            className="px-6 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity"
-          >
-            🚗 Get a ride to the venue
-          </button>
-          <button
-            onClick={() => setCabMode("home")}
-            className="px-6 py-3 rounded-full border border-deep-rose text-deep-rose font-heading tracking-widest uppercase text-sm hover:bg-blush/30 transition-colors"
-          >
-            🏠 Book a ride home
-          </button>
+        <div className="relative flex flex-col items-center gap-4 mt-4">
+          <p className="font-body text-deep-rose/60 text-sm">
+            If you need help joining us today, please use the options below
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => setCabMode("to-venue")}
+              className="px-6 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity"
+            >
+              🚗 Get a ride to the venue
+            </button>
+            <button
+              onClick={() => setCabMode("home")}
+              className="px-6 py-3 rounded-full border border-deep-rose text-deep-rose font-heading tracking-widest uppercase text-sm hover:bg-blush/30 transition-colors"
+            >
+              🏠 Book a ride home
+            </button>
+          </div>
         </div>
       </section>
 
