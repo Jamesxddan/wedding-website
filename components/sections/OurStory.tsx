@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import FloralAccent from "@/components/ui/FloralAccent";
+import Reveal from "@/components/ui/Reveal";
 
 interface Milestone {
   year: string;
@@ -109,13 +111,17 @@ function TimelineEntry({
 
 export default function OurStory() {
   return (
-    <section id="our-story" className="py-24 px-6 max-w-4xl mx-auto">
-      <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
-        Our Story
-      </h2>
-      <p className="font-script italic text-sage text-center text-xl mb-16">
-        "God's will was on our marriage"
-      </p>
+    <section id="our-story" className="relative py-24 px-6 max-w-4xl mx-auto overflow-hidden">
+      <FloralAccent position="top-right" size={160} opacity={0.12} animate="sway" />
+      <FloralAccent position="bottom-left" size={120} opacity={0.10} animate="float" />
+      <Reveal>
+        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
+          Our Story
+        </h2>
+        <p className="font-script italic text-sage text-center text-xl mb-16">
+          "God's will was on our marriage"
+        </p>
+      </Reveal>
 
       <div className="flex flex-col gap-0">
         {MILESTONES.map((m, i) => (
@@ -123,5 +129,6 @@ export default function OurStory() {
         ))}
       </div>
     </section>
+
   );
 }

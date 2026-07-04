@@ -3,6 +3,7 @@
 import { GISCUS_CONFIG } from "@/lib/constants";
 import Giscus from "@giscus/react";
 import YoutubeComments from "@/components/sections/YoutubeComments";
+import Reveal from "@/components/ui/Reveal";
 
 const isConfigured =
   !!GISCUS_CONFIG.repo &&
@@ -14,12 +15,14 @@ export default function Comments() {
   return (
     <section id="comments" className="py-24 px-6 bg-cream">
       <div className="max-w-3xl mx-auto">
-        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
-          Leave a Blessing
-        </h2>
-        <p className="font-script italic text-sage text-center text-xl mb-12">
-          Your words mean the world to us
-        </p>
+        <Reveal>
+          <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
+            Leave a Blessing
+          </h2>
+          <p className="font-script italic text-sage text-center text-xl mb-12">
+            Your words mean the world to us
+          </p>
+        </Reveal>
 
         {isConfigured ? (
           <Giscus

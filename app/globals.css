@@ -19,3 +19,30 @@ body {
   color: var(--color-deep-rose);
   font-family: var(--font-body);
 }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(2rem);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Floral accent animations */
+@keyframes floral-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes floral-sway {
+  0%, 100% { transform: rotate(-6deg) scale(1); }
+  50%       { transform: rotate(6deg) scale(1.05); }
+}
+.floral-float {
+  animation: floral-float 6s ease-in-out infinite;
+}
+.floral-sway {
+  animation: floral-sway 8s ease-in-out infinite;
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import Reveal from "@/components/ui/Reveal";
+
 interface VenueCardProps {
   tag: string;
   name: string;
@@ -90,12 +92,14 @@ export default function Venue() {
   return (
     <section id="venue" className="py-24 px-6 bg-cream">
       <div className="max-w-5xl mx-auto">
-        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
-          Venue &amp; Details
-        </h2>
-        <p className="font-script italic text-sage text-center text-xl mb-16">
-          Chennai, October 8th, 2026
-        </p>
+        <Reveal>
+          <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
+            Venue &amp; Details
+          </h2>
+          <p className="font-script italic text-sage text-center text-xl mb-16">
+            Chennai, October 8th, 2026
+          </p>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <VenueCard

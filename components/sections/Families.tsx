@@ -1,5 +1,7 @@
 "use client";
 
+import Reveal from "@/components/ui/Reveal";
+
 interface FamilyMember {
   name: string;
   role: string;
@@ -31,12 +33,14 @@ export default function Families() {
   return (
     <section id="families" className="py-24 px-6 bg-white">
       <div className="max-w-4xl mx-auto">
-        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
-          The Families
-        </h2>
-        <p className="font-script italic text-sage text-center text-xl mb-16">
-          Two families, one blessing
-        </p>
+        <Reveal>
+          <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
+            The Families
+          </h2>
+          <p className="font-script italic text-sage text-center text-xl mb-16">
+            Two families, one blessing
+          </p>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {FAMILIES.map((family) => (

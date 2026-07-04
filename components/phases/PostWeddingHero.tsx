@@ -4,6 +4,7 @@ import { HIGHLIGHTS_VIDEO_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import Gallery from "@/components/sections/Gallery";
 import Comments from "@/components/sections/Comments";
+import Footer from "@/components/ui/Footer";
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -98,6 +99,7 @@ export default function PostWeddingHero({ guestName }: Props) {
 
       {/* Comments still active */}
       <Comments />
+      <Footer />
     </>
   );
 }

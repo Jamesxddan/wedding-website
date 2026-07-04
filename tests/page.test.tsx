@@ -21,6 +21,7 @@ vi.mock("@/components/phases/WeddingDayBanner", () => ({
 vi.mock("@/components/phases/PostWeddingHero", () => ({
   default: ({ guestName }: { guestName: string }) => <div>Post Wedding — {guestName}</div>,
 }));
+vi.mock("@/components/ui/Footer", () => ({ default: () => <footer>Footer</footer> }));
 
 import { usePhase } from "@/lib/usePhase";
 import Home from "@/app/page";

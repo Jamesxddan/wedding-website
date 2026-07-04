@@ -16,6 +16,7 @@ import Families from "@/components/sections/Families";
 import Venue from "@/components/sections/Venue";
 import Itinerary from "@/components/sections/Itinerary";
 import Comments from "@/components/sections/Comments";
+import Footer from "@/components/ui/Footer";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -58,6 +59,7 @@ export default function Home() {
           <Venue />
           <Itinerary />
           <Comments />
+          <Footer />
         </>
       )}
 

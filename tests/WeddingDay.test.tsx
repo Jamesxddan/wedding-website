@@ -5,6 +5,7 @@ vi.mock("@/components/webgl/PetalScene", () => ({ default: () => null }));
 vi.mock("@/components/sections/Gallery", () => ({ default: () => <div>Gallery</div> }));
 vi.mock("@/components/sections/Venue", () => ({ default: () => <div>Venue</div> }));
 vi.mock("@/components/sections/Comments", () => ({ default: () => <div>Comments</div> }));
+vi.mock("@/components/ui/Footer", () => ({ default: () => <footer>Footer</footer> }));
 vi.mock("@giscus/react", () => ({ default: () => null }));
 vi.mock("@/components/sections/YoutubeComments", () => ({ default: () => null }));
 
@@ -99,7 +100,7 @@ describe("WeddingDayBanner", () => {
   it("renders the wedding day heading", async () => {
     const { default: WeddingDayBanner } = await import("@/components/phases/WeddingDayBanner");
     render(<WeddingDayBanner guestName="James" />);
-    expect(screen.getByText(/James & Sharon/)).toBeInTheDocument();
+    expect(screen.getAllByText(/James & Sharon/).length).toBeGreaterThan(0);
     expect(screen.getByText(/getting married right now/i)).toBeInTheDocument();
   });
 

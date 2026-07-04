@@ -5,6 +5,7 @@ import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import LiveStream from "@/components/sections/LiveStream";
 import CabDialog from "@/components/ui/CabDialog";
+import Footer from "@/components/ui/Footer";
 import Gallery from "@/components/sections/Gallery";
 import Venue from "@/components/sections/Venue";
 import Comments from "@/components/sections/Comments";
@@ -111,6 +112,8 @@ export default function WeddingDayBanner({ guestName }: Props) {
 
       {/* Comments */}
       <Comments />
+
+      <Footer />
 
       {/* Cab dialog */}
       {cabMode && (
