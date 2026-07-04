@@ -38,8 +38,8 @@ export const ITINERARY = [
 // Steps: enable Discussions on your GitHub repo, install the giscus app,
 // then paste the repo/repoId/category/categoryId values below.
 export const GISCUS_CONFIG = {
-  repo: "" as `${string}/${string}`,
-  repoId: "",
-  category: "",
-  categoryId: "",
+  repo: "Jamesxddan/wedding-website" as `${string}/${string}`,
+  repoId: "R_kgDOTNgUhA",
+  category: "General",
+  categoryId: "DIC_kwDOTNgUhM4DAe_R",
 } as const;
