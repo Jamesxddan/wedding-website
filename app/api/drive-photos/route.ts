@@ -22,9 +22,10 @@ export async function GET(req: NextRequest) {
     }
     const photos = await fetchDrivePhotos(folderId, apiKey);
     return NextResponse.json({ photos, configured: true });
-  } catch {
+  } catch (err) {
+    console.error("[drive-photos] error:", err);
     return NextResponse.json(
-      { photos: [], albums: [], configured: true, error: true },
+      { photos: [], albums: [], configured: true, error: true, message: String(err) },
       { status: 500 }
     );
   }
