@@ -18,8 +18,8 @@ const KB_ANIMATIONS = [
   "kb-drift-right",
 ];
 
-const SLIDE_DURATION = 6000; // ms per photo
-const FADE_DURATION = 1400;   // ms crossfade
+const SLIDE_DURATION = 9000; // ms per photo
+const FADE_DURATION = 2500;  // ms crossfade
 
 export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Props) {
   const [current, setCurrent] = useState(0);
@@ -76,37 +76,53 @@ export default function CinematicSlideshow({ photos, parallaxX, parallaxY }: Pro
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
       {/* Current slide */}
       <div
-        className="absolute inset-[-15%]"
+        className="absolute inset-0"
         style={{
           opacity: fading ? 0 : 1,
-          transform: photoTransform(1.0),
-          transition: `opacity ${FADE_DURATION}ms ease-in-out, transform 0.15s ease-out`,
+          transition: `opacity ${FADE_DURATION}ms ease-in-out`,
         }}
       >
+        {/* Blurred background fill */}
         <img
           src={list[current].heroUrl}
           alt=""
           aria-hidden="true"
-          className={`w-full h-full object-cover object-center cinematic-kb ${kbAnim}`}
-          style={{ filter: "saturate(1.15) contrast(1.05)" }}
+          className="absolute inset-0 w-full h-full object-cover object-center scale-110"
+          style={{ filter: "blur(24px) saturate(0.7) brightness(0.5)" }}
+          draggable={false}
+        />
+        {/* Full unclipped photo */}
+        <img
+          src={list[current].heroUrl}
+          alt=""
+          aria-hidden="true"
+          className={`relative z-10 w-full h-full object-contain object-center cinematic-kb ${kbAnim}`}
+          style={{ filter: "saturate(1.1) contrast(1.03)" }}
           draggable={false}
         />
       </div>
 
       {/* Next slide (pre-loaded, underneath) */}
       <div
-        className="absolute inset-[-15%]"
+        className="absolute inset-0"
         style={{
           opacity: fading ? 1 : 0,
-          transform: photoTransform(0.78),
-          transition: `opacity ${FADE_DURATION}ms ease-in-out, transform 0.15s ease-out`,
+          transition: `opacity ${FADE_DURATION}ms ease-in-out`,
         }}
       >
         <img
           src={list[next].heroUrl}
           alt=""
           aria-hidden="true"
-          className="w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center scale-110"
+          style={{ filter: "blur(24px) saturate(0.7) brightness(0.5)" }}
+          draggable={false}
+        />
+        <img
+          src={list[next].heroUrl}
+          alt=""
+          aria-hidden="true"
+          className="relative z-10 w-full h-full object-contain object-center"
           draggable={false}
         />
       </div>
