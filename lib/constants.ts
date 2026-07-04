@@ -26,6 +26,10 @@ export const VENUES = {
   },
 } as const;
 
+// Optional ambient music for the hero — set to a URL of an MP3/OGG file.
+// Leave empty to hide the music button entirely.
+export const MUSIC_URL = "";
+
 // Replace with actual stream URLs from each media team on the day.
 // YouTube URLs are auto-embedded; any other URL gets a "Watch Live" button.
 export const KIRK_STREAM_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"; // TEST — replace before wedding

@@ -2,6 +2,7 @@ export interface DrivePhoto {
   id: string;
   name: string;
   thumbnailUrl: string;
+  heroUrl: string;
   fullUrl: string;
 }
 
@@ -27,6 +28,7 @@ export async function fetchDrivePhotos(folderId: string, apiKey: string): Promis
     id: f.id,
     name: f.name,
     thumbnailUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`,
+    heroUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w1600`,
     fullUrl: `https://drive.google.com/uc?export=view&id=${f.id}`,
   }));
 }

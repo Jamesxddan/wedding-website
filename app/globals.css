@@ -20,18 +20,19 @@ body {
   font-family: var(--font-body);
 }
 
-/* Scroll reveal */
+/* ── Scroll reveal ─────────────────────────────────────────────────────────── */
 .reveal {
   opacity: 0;
   transform: translateY(2rem);
-  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Floral accent animations */
+/* ── Floral accent animations ──────────────────────────────────────────────── */
 @keyframes floral-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50%       { transform: translateY(-10px) rotate(4deg); }
@@ -40,9 +41,91 @@ body {
   0%, 100% { transform: rotate(-6deg) scale(1); }
   50%       { transform: rotate(6deg) scale(1.05); }
 }
-.floral-float {
-  animation: floral-float 6s ease-in-out infinite;
+.floral-float { animation: floral-float 6s ease-in-out infinite; }
+.floral-sway  { animation: floral-sway 8s ease-in-out infinite; }
+
+/* ── Ken Burns photo animations ────────────────────────────────────────────── */
+@keyframes kb-zoom-in-left {
+  0%   { transform: scale(1)    translate(2%, 1%); }
+  100% { transform: scale(1.14) translate(-2%, -1%); }
 }
-.floral-sway {
-  animation: floral-sway 8s ease-in-out infinite;
+@keyframes kb-zoom-in-right {
+  0%   { transform: scale(1)    translate(-2%, 1%); }
+  100% { transform: scale(1.14) translate(2%, -1%); }
+}
+@keyframes kb-zoom-out-left {
+  0%   { transform: scale(1.14) translate(-2%, -1%); }
+  100% { transform: scale(1)    translate(2%, 1%); }
+}
+@keyframes kb-zoom-out-right {
+  0%   { transform: scale(1.14) translate(2%, -1%); }
+  100% { transform: scale(1)    translate(-2%, 1%); }
+}
+@keyframes kb-drift-left {
+  0%   { transform: scale(1.1) translate(3%, 0); }
+  100% { transform: scale(1.16) translate(-3%, -1%); }
+}
+@keyframes kb-drift-right {
+  0%   { transform: scale(1.1) translate(-3%, 0); }
+  100% { transform: scale(1.16) translate(3%, -1%); }
+}
+
+.cinematic-kb {
+  animation-duration: 8000ms;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+.kb-zoom-in-left   { animation-name: kb-zoom-in-left; }
+.kb-zoom-in-right  { animation-name: kb-zoom-in-right; }
+.kb-zoom-out-left  { animation-name: kb-zoom-out-left; }
+.kb-zoom-out-right { animation-name: kb-zoom-out-right; }
+.kb-drift-left     { animation-name: kb-drift-left; }
+.kb-drift-right    { animation-name: kb-drift-right; }
+
+/* ── Scroll indicator ──────────────────────────────────────────────────────── */
+@keyframes scroll-line {
+  0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+  50%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+  100% { transform: scaleY(1); transform-origin: bottom; opacity: 0; }
+}
+.animate-scroll-line {
+  animation: scroll-line 2s ease-in-out infinite;
+}
+
+/* ── Music bar animation ───────────────────────────────────────────────────── */
+@keyframes music-bar {
+  0%, 100% { transform: scaleY(1); }
+  50%       { transform: scaleY(0.2); }
+}
+.animate-music-bar-1 { animation: music-bar 0.8s ease-in-out infinite; }
+.animate-music-bar-2 { animation: music-bar 0.8s ease-in-out infinite 0.2s; }
+.animate-music-bar-3 { animation: music-bar 0.8s ease-in-out infinite 0.4s; }
+
+/* ── Section transitions ───────────────────────────────────────────────────── */
+.section-fade-in {
+  opacity: 0;
+  animation: section-fade 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes section-fade {
+  to { opacity: 1; }
+}
+
+/* ── Elegant shimmer on section headings ───────────────────────────────────── */
+@keyframes shimmer-slide {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--color-deep-rose) 0%,
+    var(--color-blush) 45%,
+    var(--color-deep-rose) 55%,
+    var(--color-champagne) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer-slide 4s linear infinite;
 }
