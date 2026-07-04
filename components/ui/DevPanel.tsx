@@ -41,12 +41,13 @@ export default function DevPanel() {
     window.location.reload();
   }
 
-  // Show in dev always; in production only if ?dev=1 is in the URL
+  // Show in dev and on Vercel preview (staging); hide on production unless ?dev=1
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const isDev = process.env.NODE_ENV !== "production";
+    const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
     const hasFlag = window.location.search.includes("dev=1");
-    setVisible(isDev || hasFlag);
+    setVisible(isDev || isPreview || hasFlag);
   }, []);
 
   if (!visible) return null;
