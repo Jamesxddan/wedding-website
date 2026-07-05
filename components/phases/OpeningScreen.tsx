@@ -172,65 +172,82 @@ export default function OpeningScreen({ onComplete }: Props) {
       {/* Main content */}
       <div className="relative flex flex-col items-center gap-0" style={{ zIndex: 4 }}>
 
-        {/* Interlocking wedding rings */}
+        {/* Interlocking wedding rings — perspective (tilt) view so they read as 3D bands */}
         <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 22 }}>
           <svg
-            width="140" height="76" viewBox="0 0 140 76"
+            width="210" height="116" viewBox="0 0 200 110"
             style={{ overflow: "visible", animation: "pulse-glow 3s ease-in-out 2s infinite" }}
           >
             <defs>
-              {/* Left ring gradient — sweeps diagonally for metallic look */}
-              <linearGradient id="rg1" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%"   stopColor="#f5e070" />
-                <stop offset="25%"  stopColor="#D4AF37" />
-                <stop offset="55%"  stopColor="#a07820" />
-                <stop offset="80%"  stopColor="#D4AF37" />
-                <stop offset="100%" stopColor="#f0d060" />
+              {/* Rose gold band — polished metal has: bright highlight → warm gold → DARK mirror reflection → gold again */}
+              <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#fff4ea" />
+                <stop offset="10%"  stopColor="#f5c8a0" />
+                <stop offset="28%"  stopColor="#e8a060" />
+                <stop offset="46%"  stopColor="#2a0e04" />
+                <stop offset="58%"  stopColor="#c87848" />
+                <stop offset="74%"  stopColor="#f0b880" />
+                <stop offset="88%"  stopColor="#e09060" />
+                <stop offset="100%" stopColor="#8a3818" />
               </linearGradient>
-              {/* Right ring gradient */}
-              <linearGradient id="rg2" x1="1" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#f5e070" />
-                <stop offset="25%"  stopColor="#D4AF37" />
-                <stop offset="55%"  stopColor="#a07820" />
-                <stop offset="80%"  stopColor="#D4AF37" />
-                <stop offset="100%" stopColor="#f0d060" />
-              </linearGradient>
-              {/* Highlight — a lighter arc on top of each ring */}
-              <linearGradient id="hl1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="rgba(255,248,200,0.7)" />
-                <stop offset="100%" stopColor="rgba(255,248,200,0)" />
-              </linearGradient>
-              <linearGradient id="hl2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="rgba(255,248,200,0.7)" />
-                <stop offset="100%" stopColor="rgba(255,248,200,0)" />
-              </linearGradient>
-              {/* Clip to hide the back portion of left ring behind right ring */}
-              <clipPath id="hideRight">
-                <rect x="0" y="0" width="72" height="76" />
+              {/* Inner-shadow for the ring hole — dark rim makes the hole look deep */}
+              <radialGradient id="hole" cx="50%" cy="40%" r="60%">
+                <stop offset="0%"   stopColor="rgba(0,0,0,0)" />
+                <stop offset="100%" stopColor="rgba(0,0,0,0.22)" />
+              </radialGradient>
+              <filter id="ds" x="-25%" y="-25%" width="150%" height="180%">
+                <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="rgba(90,60,10,0.38)" />
+              </filter>
+              {/* Clip left ring to its left half */}
+              <clipPath id="lhalf">
+                <rect x="0" y="0" width="100" height="110" />
               </clipPath>
             </defs>
 
-            {/* ── Right ring (behind) ── */}
-            <circle cx="83" cy="38" r="30" fill="none" stroke="url(#rg2)" strokeWidth="9" />
-            {/* right ring highlight */}
-            <circle cx="83" cy="38" r="30" fill="none" stroke="url(#hl2)" strokeWidth="4"
-              strokeDasharray="60 130" strokeDashoffset="15" strokeLinecap="round" />
+            {/* Ground shadow */}
+            <ellipse cx="100" cy="104" rx="64" ry="5" fill="rgba(130,90,15,0.18)" />
 
-            {/* ── Left ring — draw only the part NOT covered by right ring ── */}
-            <circle cx="57" cy="38" r="30" fill="none" stroke="url(#rg1)" strokeWidth="9"
-              clipPath="url(#hideRight)" />
+            {/* Right ring (behind) — perspective ellipse */}
+            <g filter="url(#ds)">
+              <ellipse cx="128" cy="55" rx="36" ry="22"
+                fill="none" stroke="url(#band)" strokeWidth="13" />
+              {/* inner rim shadow — makes hole look recessed */}
+              <ellipse cx="128" cy="55" rx="29.5" ry="15.5"
+                fill="none" stroke="rgba(50,30,0,0.25)" strokeWidth="1" />
+              {/* outer edge highlight */}
+              <ellipse cx="128" cy="55" rx="42.5" ry="28.5"
+                fill="none" stroke="rgba(255,248,180,0.22)" strokeWidth="0.8" />
+              {/* specular highlight arc — crisp bright spot at 12 o'clock */}
+              <ellipse cx="128" cy="55" rx="36" ry="22"
+                fill="none" stroke="rgba(255,252,210,0.85)" strokeWidth="4"
+                strokeDasharray="48 185" strokeDashoffset="-115"
+                strokeLinecap="round" />
+            </g>
 
-            {/* ── Left ring front arc — the piece that crosses IN FRONT of right ring ── */}
-            {/* Intersection x ≈ 70; y range ≈ 18.3 to 57.7 */}
-            <path
-              d="M 70 18.3 A 30 30 0 0 1 70 57.7"
-              fill="none" stroke="url(#rg1)" strokeWidth="9.5" strokeLinecap="round"
-            />
+            {/* Left ring — clipped to left half (behind right ring) */}
+            <g filter="url(#ds)" clipPath="url(#lhalf)">
+              <ellipse cx="72" cy="55" rx="36" ry="22"
+                fill="none" stroke="url(#band)" strokeWidth="13" />
+              <ellipse cx="72" cy="55" rx="29.5" ry="15.5"
+                fill="none" stroke="rgba(50,30,0,0.25)" strokeWidth="1" />
+              <ellipse cx="72" cy="55" rx="42.5" ry="28.5"
+                fill="none" stroke="rgba(255,248,180,0.22)" strokeWidth="0.8" />
+              <ellipse cx="72" cy="55" rx="36" ry="22"
+                fill="none" stroke="rgba(255,252,210,0.85)" strokeWidth="4"
+                strokeDasharray="48 185" strokeDashoffset="-115"
+                strokeLinecap="round" />
+            </g>
 
-            {/* left ring highlight */}
-            <circle cx="57" cy="38" r="30" fill="none" stroke="url(#hl1)" strokeWidth="4"
-              strokeDasharray="60 130" strokeDashoffset="15" strokeLinecap="round"
-              clipPath="url(#hideRight)" />
+            {/* Left ring front arc — the piece crossing IN FRONT of the right ring */}
+            {/* Ellipse (cx=72,cy=55,rx=36,ry=22) at x=100: y ≈ 41.2 & 68.8 */}
+            <path d="M 100 41.2 A 36 22 0 0 1 100 68.8"
+              fill="none" stroke="url(#band)" strokeWidth="13.5" strokeLinecap="round" />
+            {/* specular highlight on front arc */}
+            <path d="M 100 41.2 A 36 22 0 0 1 100 53"
+              fill="none" stroke="rgba(255,252,210,0.8)" strokeWidth="4" strokeLinecap="round" />
+            {/* inner rim on front arc */}
+            <path d="M 100 44.5 A 29.5 15.5 0 0 1 100 65.5"
+              fill="none" stroke="rgba(50,30,0,0.22)" strokeWidth="1" strokeLinecap="round" />
           </svg>
         </div>
 
