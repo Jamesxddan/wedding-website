@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export default function BackgroundMusic({ src }: { src: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = useState(false);
-  const [ready, setReady] = useState(false);
+  const unlockedRef = useRef(false);
 
   useEffect(() => {
     const audio = new Audio(src);
@@ -14,28 +14,28 @@ export default function BackgroundMusic({ src }: { src: string }) {
     audio.preload = "auto";
     audioRef.current = audio;
 
-    const tryPlay = () => audio.play().catch(() => {});
+    // Try autoplay immediately (works on desktop + Android)
+    audio.play().catch(() => {});
 
-    // Try autoplay immediately
-    tryPlay();
-
-    // Also trigger on first interaction in case autoplay was blocked
-    const onInteraction = () => {
-      tryPlay();
-      setReady(true);
-      document.removeEventListener("click", onInteraction);
-      document.removeEventListener("touchstart", onInteraction);
+    // iOS Safari requires play() to be called synchronously inside a
+    // user-gesture handler. Using capture:true gets the event before
+    // React's synthetic event system, keeping it in the gesture context.
+    const unlock = () => {
+      if (unlockedRef.current) return;
+      unlockedRef.current = true;
+      audio.play().catch(() => {});
+      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("mousedown", unlock, true);
     };
-    document.addEventListener("click", onInteraction);
-    document.addEventListener("touchstart", onInteraction);
 
-    audio.addEventListener("playing", () => setReady(true));
+    document.addEventListener("touchstart", unlock, { capture: true, passive: true });
+    document.addEventListener("mousedown", unlock, { capture: true });
 
     return () => {
       audio.pause();
       audio.src = "";
-      document.removeEventListener("click", onInteraction);
-      document.removeEventListener("touchstart", onInteraction);
+      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("mousedown", unlock, true);
     };
   }, [src]);
 
@@ -74,8 +74,6 @@ export default function BackgroundMusic({ src }: { src: string }) {
         justifyContent: "center",
         fontSize: 14,
         boxShadow: "0 2px 12px rgba(90,31,46,0.1)",
-        transition: "opacity 0.3s",
-        opacity: ready ? 1 : 0.5,
       }}
     >
       {muted ? "🔇" : "🎵"}
