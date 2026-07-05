@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
-import FirstVisitForm from "@/components/phases/FirstVisitForm";
+import OpeningScreen from "@/components/phases/OpeningScreen";
 import InvitationCard from "@/components/phases/InvitationCard";
 import CountdownHero from "@/components/phases/CountdownHero";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
@@ -38,13 +38,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-cream">
       {(phase === Phase.FIRST_VISIT && !showInvitation) && (
-        <section className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
-          <div className="text-center">
-            <h1 className="font-heading text-5xl text-deep-rose mb-2">James &amp; Sharon</h1>
-            <p className="font-script italic text-xl text-sage">are getting married!</p>
-          </div>
-          <FirstVisitForm onComplete={(name) => { setSubmittedName(name); setShowInvitation(true); }} />
-        </section>
+        <OpeningScreen onComplete={(name) => { setSubmittedName(name); setShowInvitation(true); }} />
       )}
 
       {(showInvitation || phase === Phase.INVITATION) && (

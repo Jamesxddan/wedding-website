@@ -105,6 +105,40 @@ body {
   animation: marquee-scroll 22s linear infinite;
 }
 
+/* ── Opening screen animations ────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@keyframes gem-pop {
+  from { opacity: 0; transform: rotate(45deg) scale(0); }
+  to   { opacity: 1; transform: rotate(45deg) scale(1); }
+}
+@keyframes rings-drop {
+  from { opacity: 0; transform: scale(0.7) translateY(-14px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 4px 14px rgba(212,175,55,0.35)); }
+  50%       { filter: drop-shadow(0 4px 28px rgba(212,175,55,0.70)); }
+}
+@keyframes name-float {
+  from { opacity: 0; transform: translateY(22px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@keyframes underline-grow {
+  from { width: 0; }
+  to   { width: 140px; }
+}
+@keyframes form-rise {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Section transitions ───────────────────────────────────────────────────── */
 .section-fade-in {
   opacity: 0;
