@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import DevPanel from "@/components/ui/DevPanel";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-cream text-deep-rose font-body">
         {children}
         <DevPanel />
+        <SpeedInsights />
       </body>
     </html>
   );
