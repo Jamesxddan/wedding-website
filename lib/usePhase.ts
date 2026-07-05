@@ -8,15 +8,17 @@ export interface PhaseState {
   guestName: string | null;
   guestCity: string | null;
   isLoading: boolean;
+  refresh: () => void;
 }
 
 export function usePhase(): PhaseState {
-  const [state, setState] = useState<PhaseState>({
+  const [state, setState] = useState<Omit<PhaseState, "refresh">>({
     phase: Phase.FIRST_VISIT,
     guestName: null,
     guestCity: null,
     isLoading: true,
   });
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const name = localStorage.getItem("guest_name");
@@ -37,7 +39,7 @@ export function usePhase(): PhaseState {
       guestCity: city,
       isLoading: false,
     });
-  }, []);
+  }, [tick]);
 
-  return state;
+  return { ...state, refresh: () => setTick((t) => t + 1) };
 }

@@ -30,32 +30,32 @@ const mockUsePhase = vi.mocked(usePhase);
 
 describe("Home routing shell", () => {
   it("renders loading state when isLoading is true", () => {
-    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: true });
+    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: true, refresh: vi.fn() });
     render(<Home />);
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
   });
 
   it("renders first visit form when FIRST_VISIT", () => {
-    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: false });
+    mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: false, refresh: vi.fn() });
     render(<Home />);
     expect(screen.getByText(/James & Sharon/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
   });
 
   it("renders Phase 2 placeholder with guest name when RETURN_VISIT", () => {
-    mockUsePhase.mockReturnValue({ phase: Phase.RETURN_VISIT, guestName: "John", guestCity: "Chennai", isLoading: false });
+    mockUsePhase.mockReturnValue({ phase: Phase.RETURN_VISIT, guestName: "John", guestCity: "Chennai", isLoading: false, refresh: vi.fn() });
     render(<Home />);
     expect(screen.getByText(/Welcome back, John/)).toBeInTheDocument();
   });
 
   it("renders wedding day banner when WEDDING_DAY", () => {
-    mockUsePhase.mockReturnValue({ phase: Phase.WEDDING_DAY, guestName: "John", guestCity: null, isLoading: false });
+    mockUsePhase.mockReturnValue({ phase: Phase.WEDDING_DAY, guestName: "John", guestCity: null, isLoading: false, refresh: vi.fn() });
     render(<Home />);
     expect(screen.getByText(/Wedding Day — John/)).toBeInTheDocument();
   });
 
   it("renders post-wedding hero when POST_WEDDING", () => {
-    mockUsePhase.mockReturnValue({ phase: Phase.POST_WEDDING, guestName: "John", guestCity: null, isLoading: false });
+    mockUsePhase.mockReturnValue({ phase: Phase.POST_WEDDING, guestName: "John", guestCity: null, isLoading: false, refresh: vi.fn() });
     render(<Home />);
     expect(screen.getByText(/Post Wedding — John/)).toBeInTheDocument();
   });

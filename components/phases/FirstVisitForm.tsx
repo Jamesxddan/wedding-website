@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { searchCities, type City } from "@/lib/cities";
+import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -50,6 +51,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !selectedCity) return;
+    // Start music here — guaranteed user gesture on all mobile browsers
+    startBackgroundMusic("/song.mp3");
     localStorage.setItem("guest_name", name.trim());
     localStorage.setItem("guest_city", selectedCity.name);
     onComplete(name.trim());

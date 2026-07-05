@@ -22,7 +22,7 @@ import Reveal from "@/components/ui/Reveal";
 import BackgroundMusic from "@/components/ui/BackgroundMusic";
 
 export default function Home() {
-  const { phase, guestName, isLoading } = usePhase();
+  const { phase, guestName, isLoading, refresh } = usePhase();
   const [showInvitation, setShowInvitation] = useState(false);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export default function Home() {
       )}
 
       {(showInvitation || phase === Phase.INVITATION) && (
-        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} />
+        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} onExplore={refresh} />
       )}
 
       {phase === Phase.RETURN_VISIT && (

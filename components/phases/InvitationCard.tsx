@@ -6,9 +6,10 @@ import PetalScene from "@/components/webgl/PetalScene";
 
 interface Props {
   guestName: string;
+  onExplore: () => void;
 }
 
-export default function InvitationCard({ guestName }: Props) {
+export default function InvitationCard({ guestName, onExplore }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export default function InvitationCard({ guestName }: Props) {
 
   function handleExplore() {
     localStorage.setItem("invitation_seen", "true");
-    window.location.reload();
+    onExplore();
   }
 
   return (

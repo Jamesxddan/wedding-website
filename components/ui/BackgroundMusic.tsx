@@ -1,44 +1,55 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-// Module-level singleton — survives component unmounts and phase changes
+// Module-level singleton — never destroyed across renders or phase changes
 let _audio: HTMLAudioElement | null = null;
 let _unlocked = false;
 
-function getAudio(src: string) {
+export function getBackgroundAudio(src: string) {
   if (!_audio) {
     _audio = new Audio(src);
     _audio.loop = true;
     _audio.volume = 0.35;
     _audio.preload = "auto";
+    _audio.load();
   }
   return _audio;
+}
+
+// Call this from any guaranteed user-gesture (e.g. form submit button)
+export function startBackgroundMusic(src: string) {
+  if (_unlocked) return;
+  _unlocked = true;
+  const audio = getBackgroundAudio(src);
+  const doPlay = () => audio.play().catch(() => {});
+  if (audio.readyState >= 2) {
+    doPlay();
+  } else {
+    audio.addEventListener("canplay", doPlay, { once: true });
+  }
 }
 
 export default function BackgroundMusic({ src }: { src: string }) {
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
-    const audio = getAudio(src);
+    const audio = getBackgroundAudio(src);
 
-    // Try autoplay immediately (works on desktop + some Android)
+    // Try autoplay (desktop / Android without restrictions)
     audio.play().catch(() => {});
 
     const unlock = () => {
-      if (_unlocked) return;
-      _unlocked = true;
-      audio.play().catch(() => {});
+      startBackgroundMusic(src);
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
 
-    // Capture phase fires before React's synthetic events — required for iOS
+    // Capture phase = earliest possible point, before React's event system
     document.addEventListener("touchstart", unlock, { capture: true, passive: true });
     document.addEventListener("mousedown", unlock, { capture: true });
 
     return () => {
-      // Don't pause or clear — audio must keep playing across phase changes
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
@@ -46,7 +57,7 @@ export default function BackgroundMusic({ src }: { src: string }) {
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const audio = getAudio(src);
+    const audio = getBackgroundAudio(src);
     if (muted) {
       audio.volume = 0.35;
       audio.play().catch(() => {});
