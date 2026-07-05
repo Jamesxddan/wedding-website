@@ -8,7 +8,7 @@ interface Props {
   onComplete: (name: string) => void;
 }
 
-function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
+function useParticles(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
