@@ -2,38 +2,43 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// Module-level singleton — survives component unmounts and phase changes
+let _audio: HTMLAudioElement | null = null;
+let _unlocked = false;
+
+function getAudio(src: string) {
+  if (!_audio) {
+    _audio = new Audio(src);
+    _audio.loop = true;
+    _audio.volume = 0.35;
+    _audio.preload = "auto";
+  }
+  return _audio;
+}
+
 export default function BackgroundMusic({ src }: { src: string }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = useState(false);
-  const unlockedRef = useRef(false);
 
   useEffect(() => {
-    const audio = new Audio(src);
-    audio.loop = true;
-    audio.volume = 0.35;
-    audio.preload = "auto";
-    audioRef.current = audio;
+    const audio = getAudio(src);
 
-    // Try autoplay immediately (works on desktop + Android)
+    // Try autoplay immediately (works on desktop + some Android)
     audio.play().catch(() => {});
 
-    // iOS Safari requires play() to be called synchronously inside a
-    // user-gesture handler. Using capture:true gets the event before
-    // React's synthetic event system, keeping it in the gesture context.
     const unlock = () => {
-      if (unlockedRef.current) return;
-      unlockedRef.current = true;
+      if (_unlocked) return;
+      _unlocked = true;
       audio.play().catch(() => {});
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
 
+    // Capture phase fires before React's synthetic events — required for iOS
     document.addEventListener("touchstart", unlock, { capture: true, passive: true });
     document.addEventListener("mousedown", unlock, { capture: true });
 
     return () => {
-      audio.pause();
-      audio.src = "";
+      // Don't pause or clear — audio must keep playing across phase changes
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
@@ -41,8 +46,7 @@ export default function BackgroundMusic({ src }: { src: string }) {
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const audio = audioRef.current;
-    if (!audio) return;
+    const audio = getAudio(src);
     if (muted) {
       audio.volume = 0.35;
       audio.play().catch(() => {});
