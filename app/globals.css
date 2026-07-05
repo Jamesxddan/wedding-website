@@ -69,6 +69,42 @@ body {
 .animate-music-bar-2 { animation: music-bar 0.8s ease-in-out infinite 0.2s; }
 .animate-music-bar-3 { animation: music-bar 0.8s ease-in-out infinite 0.4s; }
 
+/* ── Split text reveal ─────────────────────────────────────────────────────── */
+@keyframes split-in {
+  from { opacity: 0; transform: translateY(0.55em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Blur text reveal ──────────────────────────────────────────────────────── */
+@keyframes blur-reveal {
+  from { filter: blur(14px); opacity: 0; }
+  to   { filter: blur(0px);  opacity: 1; }
+}
+
+/* ── Aurora drift ──────────────────────────────────────────────────────────── */
+@keyframes aurora-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%       { transform: translate(40px, -25px) scale(1.12); }
+  70%       { transform: translate(-20px, 15px) scale(0.95); }
+}
+@keyframes aurora-2 {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50%       { transform: translate(-50px, 30px) scale(1.18); }
+}
+@keyframes aurora-3 {
+  0%, 100% { transform: translate(0, 0) scale(0.95); }
+  60%       { transform: translate(30px, -10px) scale(1.08); }
+}
+
+/* ── Marquee ───────────────────────────────────────────────────────────────── */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-scroll 22s linear infinite;
+}
+
 /* ── Section transitions ───────────────────────────────────────────────────── */
 .section-fade-in {
   opacity: 0;

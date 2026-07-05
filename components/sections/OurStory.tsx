@@ -112,6 +112,11 @@ function TimelineEntry({
 export default function OurStory() {
   return (
     <section id="our-story" className="relative py-24 px-6 max-w-4xl mx-auto overflow-hidden">
+      {/* Aurora accent blobs */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
+        <div className="absolute rounded-full" style={{ width: 400, height: 240, top: 0, right: "-5%", background: "radial-gradient(ellipse, rgba(244,194,194,0.3) 0%, transparent 70%)", filter: "blur(50px)", animation: "aurora-1 14s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 320, height: 200, bottom: "10%", left: "-5%", background: "radial-gradient(ellipse, rgba(135,168,120,0.2) 0%, transparent 70%)", filter: "blur(45px)", animation: "aurora-3 18s ease-in-out infinite" }} />
+      </div>
       <FloralAccent position="top-right" size={160} opacity={0.12} animate="sway" />
       <FloralAccent position="bottom-left" size={120} opacity={0.10} animate="float" />
       <Reveal>

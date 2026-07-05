@@ -17,6 +17,8 @@ import Venue from "@/components/sections/Venue";
 import Itinerary from "@/components/sections/Itinerary";
 import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
+import Marquee from "@/components/ui/Marquee";
+import Reveal from "@/components/ui/Reveal";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -51,10 +53,11 @@ export default function Home() {
       {phase === Phase.RETURN_VISIT && (
         <>
           <CountdownHero guestName={guestName ?? "Friend"} />
+          <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <OurStory />
-          <AboutJames />
-          <AboutSharon />
+          <Reveal><AboutJames /></Reveal>
+          <Reveal delay={100}><AboutSharon /></Reveal>
           <Families />
           <Venue />
           <Itinerary />

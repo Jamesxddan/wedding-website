@@ -23,7 +23,42 @@ export default function InvitationCard({ guestName }: Props) {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center p-6 overflow-hidden bg-cream">
+      {/* Aurora background blobs */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 520, height: 320,
+            top: "5%", left: "-10%",
+            background: "radial-gradient(ellipse, rgba(244,194,194,0.45) 0%, transparent 70%)",
+            filter: "blur(60px)",
+            animation: "aurora-1 12s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 400, height: 260,
+            top: "20%", right: "-8%",
+            background: "radial-gradient(ellipse, rgba(139,94,131,0.3) 0%, transparent 70%)",
+            filter: "blur(55px)",
+            animation: "aurora-2 16s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 460, height: 200,
+            bottom: "10%", left: "20%",
+            background: "radial-gradient(ellipse, rgba(196,165,130,0.35) 0%, transparent 70%)",
+            filter: "blur(50px)",
+            animation: "aurora-3 14s ease-in-out infinite",
+          }}
+        />
+      </div>
+
       <PetalScene />
+
       <div className="relative z-10 w-full max-w-lg" style={{ perspective: "1200px" }}>
         {/* Envelope flap */}
         <div
@@ -47,29 +82,39 @@ export default function InvitationCard({ guestName }: Props) {
             transitionDelay: open ? "400ms" : "0ms",
           }}
         >
-          {/* Floral accent bar */}
           <div className="h-2 bg-gradient-to-r from-blush via-champagne to-sage" />
 
           <div className="p-10 flex flex-col gap-6 text-center">
-            <p className="font-script italic text-deep-rose text-lg">
+            <p
+              className="font-script italic text-deep-rose text-lg"
+              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "500ms" }}
+            >
               Dear {guestName},
             </p>
 
-            <p className="font-body text-deep-rose/80 leading-relaxed">
+            <p
+              className="font-body text-deep-rose/80 leading-relaxed"
+              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "650ms" }}
+            >
               We greet you in the name of the Lord Jesus Christ. With great joy
               in our hearts, we invite you to celebrate the wedding of
             </p>
 
-            <div>
+            <div
+              style={{ animation: open ? "blur-reveal 1s ease both" : "none", animationDelay: "800ms" }}
+            >
               <h1 className="font-heading text-4xl text-deep-rose">
                 James Daniel &amp; Sharon
               </h1>
               <p className="font-script italic text-sage text-xl mt-1">
-                "God's will was on our marriage"
+                &ldquo;God&apos;s will was on our marriage&rdquo;
               </p>
             </div>
 
-            <div className="border-t border-b border-champagne py-4 flex flex-col gap-1">
+            <div
+              className="border-t border-b border-champagne py-4 flex flex-col gap-1"
+              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "1000ms" }}
+            >
               <p className="font-heading text-deep-rose tracking-widest text-sm uppercase">
                 October 8th, 2026
               </p>
@@ -81,11 +126,13 @@ export default function InvitationCard({ guestName }: Props) {
               </p>
             </div>
 
-            <p className="font-body text-deep-rose/80 text-sm">
+            <p
+              className="font-body text-deep-rose/80 text-sm"
+              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "1150ms" }}
+            >
               Your presence is greatly needed and deeply cherished. 🌸
             </p>
 
-            {/* Calendar links */}
             <div className="flex flex-col gap-3">
               <p className="font-heading text-deep-rose text-xs tracking-widest uppercase">
                 Save the date

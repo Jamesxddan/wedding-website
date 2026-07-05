@@ -28,6 +28,28 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
+function SplitText({ text, delayBase = 300, stagger = 55 }: {
+  text: string; delayBase?: number; stagger?: number;
+}) {
+  return (
+    <span aria-label={text}>
+      {text.split("").map((char, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          style={{
+            display: "inline-block",
+            animation: `split-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both`,
+            animationDelay: `${delayBase + i * stagger}ms`,
+          }}
+        >
+          {char === " " ? " " : char}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 interface Props {
   guestName: string;
 }
@@ -41,13 +63,39 @@ export default function CountdownHero({ guestName }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
 
-  // Countdown
+  // Animated countdown — counts up from 0 to real value on mount
+  const [animDone, setAnimDone] = useState(false);
+  const [animValues, setAnimValues] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const initial = getTimeLeft(new Date());
+    const duration = 1500;
+    const start = performance.now();
+    function step(now: number) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setAnimValues({
+        days: Math.round(ease * initial.days),
+        hours: Math.round(ease * initial.hours),
+        minutes: Math.round(ease * initial.minutes),
+        seconds: Math.round(ease * initial.seconds),
+      });
+      if (t < 1) requestAnimationFrame(step);
+      else setAnimDone(true);
+    }
+    const id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const displayTime = animDone ? timeLeft : animValues;
+
+  // Live countdown ticker
   useEffect(() => {
     const id = setInterval(() => setTimeLeft(getTimeLeft(new Date())), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Fetch engagement photos — sorted by orientation to match device
+  // Fetch engagement photos — sort by device orientation
   useEffect(() => {
     fetch("/api/drive-photos?folder=engagement")
       .then((r) => r.json())
@@ -64,13 +112,11 @@ export default function CountdownHero({ guestName }: Props) {
       .catch(() => {});
   }, []);
 
-  // Entrance animations
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 100);
     return () => clearTimeout(t);
   }, []);
 
-  // Mouse/touch parallax
   const onMouseMove = useCallback((e: MouseEvent) => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
@@ -78,10 +124,10 @@ export default function CountdownHero({ guestName }: Props) {
   }, []);
 
   const onTouchMove = useCallback((e: TouchEvent) => {
-    const t = e.touches[0];
+    const touch = e.touches[0];
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    setMousePos({ x: (t.clientX - cx) / cx, y: (t.clientY - cy) / cy });
+    setMousePos({ x: (touch.clientX - cx) / cx, y: (touch.clientY - cy) / cy });
   }, []);
 
   useEffect(() => {
@@ -93,7 +139,6 @@ export default function CountdownHero({ guestName }: Props) {
     };
   }, [onMouseMove, onTouchMove]);
 
-  // Music
   useEffect(() => {
     if (!MUSIC_URL) return;
     const audio = new Audio(MUSIC_URL);
@@ -110,15 +155,12 @@ export default function CountdownHero({ guestName }: Props) {
     else { audio.play().then(() => setPlaying(true)).catch(() => {}); }
   }
 
-  // Parallax values in px — kept small so image never exposes edges
   const px = mousePos.x * 14;
   const py = mousePos.y * 8;
-
-  // Text parallax (opposite, subtle)
   const tx = -mousePos.x * 5;
   const ty = -mousePos.y * 3;
 
-  const slideClass = (delay: number) =>
+  const fadeIn = (delay: number) =>
     `transition-all duration-1000 ease-out ${appeared ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-8 blur-sm"}`;
 
   return (
@@ -129,17 +171,9 @@ export default function CountdownHero({ guestName }: Props) {
         id="home"
         className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden"
       >
-        {/* Cinematic photo background */}
-        <CinematicSlideshow
-          photos={photos}
-          parallaxX={px}
-          parallaxY={py}
-        />
-
-        {/* Particle layer */}
+        <CinematicSlideshow photos={photos} parallaxX={px} parallaxY={py} />
         <ParticleCanvas mouseX={mousePos.x} mouseY={mousePos.y} />
 
-        {/* Music button */}
         {MUSIC_URL && (
           <button
             onClick={toggleMusic}
@@ -156,33 +190,26 @@ export default function CountdownHero({ guestName }: Props) {
               </span>
             ) : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 18V5l12-2v13M9 18c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-2c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+                <path d="M9 18V5l12-2v13M9 18c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-2c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
               </svg>
             )}
           </button>
         )}
 
-        {/* Content */}
         <div
           className="relative z-10 flex flex-col items-center gap-8 px-6 text-center select-none"
-          style={{
-            transform: `translate(${tx}px, ${ty}px)`,
-            transition: "transform 0.15s ease-out",
-          }}
+          style={{ transform: `translate(${tx}px, ${ty}px)`, transition: "transform 0.15s ease-out" }}
         >
           {/* Eyebrow */}
           <p
-            className={`font-body text-xs tracking-[0.4em] uppercase text-white/60 ${slideClass(0)}`}
+            className={`font-body text-xs tracking-[0.4em] uppercase text-white/60 ${fadeIn(0)}`}
             style={{ transitionDelay: "0ms" }}
           >
             You are warmly invited to celebrate
           </p>
 
-          {/* Couple names — main cinematic title */}
-          <div
-            className={slideClass(1)}
-            style={{ transitionDelay: "200ms" }}
-          >
+          {/* Couple names — split text letter-by-letter */}
+          <div className={fadeIn(1)} style={{ transitionDelay: "150ms" }}>
             <h1
               className="font-heading leading-none text-white"
               style={{
@@ -191,19 +218,34 @@ export default function CountdownHero({ guestName }: Props) {
                 letterSpacing: "-0.01em",
               }}
             >
-              James &amp; Sharon
+              <SplitText text="James" delayBase={350} stagger={60} />
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "inline-block",
+                  animation: "split-in 0.75s cubic-bezier(0.22,1,0.36,1) both",
+                  animationDelay: "710ms",
+                }}
+              >
+                {" & "}
+              </span>
+              <SplitText text="Sharon" delayBase={780} stagger={60} />
             </h1>
             <p
               className="font-script italic text-blush/80 mt-3"
-              style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.6rem)" }}
+              style={{
+                fontSize: "clamp(1.1rem, 2.5vw, 1.6rem)",
+                animation: "blur-reveal 1.4s ease both",
+                animationDelay: "1300ms",
+              }}
             >
-              "God&apos;s will was on our marriage"
+              &ldquo;God&apos;s will was on our marriage&rdquo;
             </p>
           </div>
 
           {/* Date pill */}
           <div
-            className={`px-6 py-2 rounded-full border border-white/20 backdrop-blur-sm bg-white/8 ${slideClass(2)}`}
+            className={`px-6 py-2 rounded-full border border-white/20 backdrop-blur-sm ${fadeIn(2)}`}
             style={{ transitionDelay: "400ms", background: "rgba(255,255,255,0.06)" }}
           >
             <p className="font-heading text-white/80 tracking-widest text-sm uppercase">
@@ -211,16 +253,16 @@ export default function CountdownHero({ guestName }: Props) {
             </p>
           </div>
 
-          {/* Countdown */}
+          {/* Countdown — animated from 0 to real values */}
           <div
-            className={`flex gap-4 md:gap-8 ${slideClass(3)}`}
+            className={`flex gap-4 md:gap-8 ${fadeIn(3)}`}
             style={{ transitionDelay: "600ms" }}
           >
             {[
-              { value: timeLeft.days, label: "Days" },
-              { value: timeLeft.hours, label: "Hours" },
-              { value: timeLeft.minutes, label: "Minutes" },
-              { value: timeLeft.seconds, label: "Seconds" },
+              { value: displayTime.days, label: "Days" },
+              { value: displayTime.hours, label: "Hours" },
+              { value: displayTime.minutes, label: "Minutes" },
+              { value: displayTime.seconds, label: "Seconds" },
             ].map(({ value, label }) => (
               <div key={label} className="flex flex-col items-center gap-2">
                 <div
@@ -237,7 +279,7 @@ export default function CountdownHero({ guestName }: Props) {
                     className="font-heading text-white tabular-nums"
                     style={{ fontSize: "clamp(1.6rem, 4vw, 3.2rem)" }}
                   >
-                    {label === "Days" ? timeLeft.days : pad(value)}
+                    {label === "Days" ? value : pad(value)}
                   </span>
                 </div>
                 <span className="font-body text-[10px] md:text-xs tracking-widest uppercase text-white/50">
@@ -249,11 +291,8 @@ export default function CountdownHero({ guestName }: Props) {
 
           {/* Greeting */}
           <p
-            className={`font-script italic text-white/60 ${slideClass(4)}`}
-            style={{
-              transitionDelay: "800ms",
-              fontSize: "clamp(1rem, 2vw, 1.3rem)",
-            }}
+            className={`font-script italic text-white/60 ${fadeIn(4)}`}
+            style={{ transitionDelay: "800ms", fontSize: "clamp(1rem, 2vw, 1.3rem)" }}
           >
             Counting down with you, {guestName} 🌸
           </p>

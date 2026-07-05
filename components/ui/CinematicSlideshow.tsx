@@ -21,13 +21,11 @@ export default function CinematicSlideshow({ photos }: Props) {
   const [op1, setOp1] = useState(0);
   const [z0, setZ0] = useState(2);
   const [z1, setZ1] = useState(1);
-  // Blurred background tracks the TOP (visible) slot's photo
   const [bgSrc, setBgSrc] = useState<string | undefined>(undefined);
   const nextIdxRef = useRef(2);
   const busyRef = useRef(false);
   const topRef = useRef(0);
 
-  // Set initial background when photos load
   useEffect(() => {
     if (list) setBgSrc(list[0]?.heroUrl);
   }, [list]);
@@ -60,10 +58,7 @@ export default function CinematicSlideshow({ photos }: Props) {
             setOp1(1); setOp0(0);
           }
           topRef.current = hidden;
-          // Update blurred background mid-fade so the change is imperceptible
-          setTimeout(() => {
-            setBgSrc(nextSrc);
-          }, FADE_MS / 2);
+          setTimeout(() => { setBgSrc(nextSrc); }, FADE_MS / 2);
           setTimeout(() => { busyRef.current = false; }, FADE_MS);
         });
       };
@@ -87,7 +82,6 @@ export default function CinematicSlideshow({ photos }: Props) {
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      {/* Single stable blurred background — updated mid-fade so swap is invisible */}
       {bgSrc && (
         <img
           src={bgSrc}
@@ -102,12 +96,9 @@ export default function CinematicSlideshow({ photos }: Props) {
         />
       )}
 
-      {/* Slot 0 — always first in DOM */}
       <SlideLayer src={list[slot0Photo]?.heroUrl} opacity={op0} zIndex={z0} />
-      {/* Slot 1 — always second in DOM */}
       <SlideLayer src={list[slot1Photo]?.heroUrl} opacity={op1} zIndex={z1} />
 
-      {/* Vignette */}
       <div className="absolute inset-0" style={{
         background: `
           radial-gradient(ellipse at center, rgba(5,2,10,0.15) 0%, rgba(5,2,10,0.52) 100%),
@@ -116,7 +107,6 @@ export default function CinematicSlideshow({ photos }: Props) {
         zIndex: 10,
       }} />
 
-      {/* Fade to cream */}
       <div className="absolute bottom-0 left-0 right-0 h-40" style={{
         background: "linear-gradient(to bottom, transparent, rgba(253,246,236,0.85))",
         zIndex: 11,
