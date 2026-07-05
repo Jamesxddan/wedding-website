@@ -250,18 +250,17 @@ export default function OpeningScreen({ onComplete }: Props) {
 
         {/* Names */}
         <div className="text-center" style={{ marginBottom: 8 }}>
-          <GradientText
-            colors={["#D4AF37", "#c8956a", "#9C4A5A", "#c8956a", "#D4AF37"]}
-            animationSpeed={3}
+          <span
+            className="block"
             style={{
               fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
-              fontSize: 52, lineHeight: 1.05, display: "block",
+              fontSize: 52, lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               animation: "name-float 0.9s cubic-bezier(0.22,1,0.36,1) 2.4s both",
             }}
           >
             James
-          </GradientText>
+          </span>
           <div style={{
             height: 1.5, width: 0, margin: "3px auto 0", borderRadius: 1,
             background: `linear-gradient(90deg, transparent, ${GOLD_RGBA(0.7)}, transparent)`,
@@ -277,18 +276,17 @@ export default function OpeningScreen({ onComplete }: Props) {
           >
             &amp;
           </span>
-          <GradientText
-            colors={["#D4AF37", "#c8956a", "#9C4A5A", "#c8956a", "#D4AF37"]}
-            animationSpeed={3}
+          <span
+            className="block"
             style={{
               fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
-              fontSize: 52, lineHeight: 1.05, display: "block",
+              fontSize: 52, lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               animation: "name-float 0.9s cubic-bezier(0.22,1,0.36,1) 2.9s both",
             }}
           >
             Sharon
-          </GradientText>
+          </span>
           <div style={{
             height: 1.5, width: 0, margin: "3px auto 0", borderRadius: 1,
             background: `linear-gradient(90deg, transparent, ${GOLD_RGBA(0.7)}, transparent)`,
