@@ -179,7 +179,7 @@ export default function OpeningScreen({ onComplete }: Props) {
             src="/rings.png"
             alt="Wedding rings"
             width={200}
-            style={{ filter: "drop-shadow(0 6px 16px rgba(120,80,20,0.35))", animation: "pulse-glow 3s ease-in-out 2s infinite" }}
+            style={{ mixBlendMode: "multiply", animation: "pulse-glow 3s ease-in-out 2s infinite" }}
           />
         </div>
 
