@@ -23,6 +23,7 @@ import Reveal from "@/components/ui/Reveal";
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
   const [showInvitation, setShowInvitation] = useState(false);
+  const [submittedName, setSubmittedName] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -42,12 +43,12 @@ export default function Home() {
             <h1 className="font-heading text-5xl text-deep-rose mb-2">James &amp; Sharon</h1>
             <p className="font-script italic text-xl text-sage">are getting married!</p>
           </div>
-          <FirstVisitForm onComplete={() => setShowInvitation(true)} />
+          <FirstVisitForm onComplete={(name) => { setSubmittedName(name); setShowInvitation(true); }} />
         </section>
       )}
 
       {(showInvitation || phase === Phase.INVITATION) && (
-        <InvitationCard guestName={guestName ?? "Friend"} />
+        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} />
       )}
 
       {phase === Phase.RETURN_VISIT && (

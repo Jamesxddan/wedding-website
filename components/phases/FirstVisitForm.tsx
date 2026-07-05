@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { searchCities, type City } from "@/lib/cities";
 
 interface Props {
-  onComplete: () => void;
+  onComplete: (name: string) => void;
 }
 
 export default function FirstVisitForm({ onComplete }: Props) {
@@ -52,7 +52,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
     if (!name.trim() || !selectedCity) return;
     localStorage.setItem("guest_name", name.trim());
     localStorage.setItem("guest_city", selectedCity.name);
-    onComplete();
+    onComplete(name.trim());
   }
 
   const canSubmit = name.trim().length > 0 && selectedCity !== null;
