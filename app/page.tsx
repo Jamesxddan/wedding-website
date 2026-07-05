@@ -44,7 +44,7 @@ export default function Home() {
       )}
 
       {(showInvitation || phase === Phase.INVITATION) && (
-        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} onExplore={refresh} />
+        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} onExplore={() => { setShowInvitation(false); refresh(); }} />
       )}
 
       {phase === Phase.RETURN_VISIT && (
