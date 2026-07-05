@@ -87,21 +87,21 @@ export default function InvitationCard({ guestName }: Props) {
           <div className="p-10 flex flex-col gap-6 text-center">
             <p
               className="font-script italic text-deep-rose text-lg"
-              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "500ms" }}
+              style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "500ms" }}
             >
               Dear {guestName},
             </p>
 
             <p
               className="font-body text-deep-rose/80 leading-relaxed"
-              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "650ms" }}
+              style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "650ms" }}
             >
               We greet you in the name of the Lord Jesus Christ. With great joy
               in our hearts, we invite you to celebrate the wedding of
             </p>
 
             <div
-              style={{ animation: open ? "blur-reveal 1s ease both" : "none", animationDelay: "800ms" }}
+              style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "1s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "800ms" }}
             >
               <h1 className="font-heading text-4xl text-deep-rose">
                 James Daniel &amp; Sharon
@@ -113,7 +113,7 @@ export default function InvitationCard({ guestName }: Props) {
 
             <div
               className="border-t border-b border-champagne py-4 flex flex-col gap-1"
-              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "1000ms" }}
+              style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "1000ms" }}
             >
               <p className="font-heading text-deep-rose tracking-widest text-sm uppercase">
                 October 8th, 2026
@@ -128,7 +128,7 @@ export default function InvitationCard({ guestName }: Props) {
 
             <p
               className="font-body text-deep-rose/80 text-sm"
-              style={{ animation: open ? "blur-reveal 0.9s ease both" : "none", animationDelay: "1150ms" }}
+              style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "1150ms" }}
             >
               Your presence is greatly needed and deeply cherished. 🌸
             </p>
