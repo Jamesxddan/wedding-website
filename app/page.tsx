@@ -19,6 +19,7 @@ import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
 import Marquee from "@/components/ui/Marquee";
 import Reveal from "@/components/ui/Reveal";
+import BackgroundMusic from "@/components/ui/BackgroundMusic";
 
 export default function Home() {
   const { phase, guestName, isLoading } = usePhase();
@@ -37,6 +38,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-cream">
+      <BackgroundMusic src="/song.mp3" />
       {(phase === Phase.FIRST_VISIT && !showInvitation) && (
         <OpeningScreen onComplete={(name) => { setSubmittedName(name); setShowInvitation(true); }} />
       )}
