@@ -5,37 +5,30 @@ import Reveal from "@/components/ui/Reveal";
 interface VenueCardProps {
   tag: string;
   name: string;
-  role: string;
   address: string;
-  mapQuery: string;
-  externalUrl: string;
-  externalLabel: string;
+  lat: number;
+  lng: number;
   details: { label: string; value: string }[];
   accent: "blush" | "sage";
 }
 
-function VenueCard({
-  tag,
-  name,
-  role,
-  address,
-  mapQuery,
-  externalUrl,
-  externalLabel,
-  details,
-  accent,
-}: VenueCardProps) {
-  const accentBg = accent === "blush" ? "bg-blush/20" : "bg-sage/20";
-  const accentBorder = accent === "blush" ? "border-blush" : "border-sage";
-  const accentText = accent === "blush" ? "text-deep-rose" : "text-sage";
+function VenueCard({ tag, name, address, lat, lng, details, accent }: VenueCardProps) {
+  const accentBg     = accent === "blush" ? "bg-blush/20"    : "bg-sage/20";
+  const accentBorder = accent === "blush" ? "border-blush"   : "border-sage";
+  const accentText   = accent === "blush" ? "text-deep-rose" : "text-sage";
+
+  const mapsNav = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${lat}&dropoff[longitude]=${lng}&dropoff[nickname]=${encodeURIComponent(name)}`;
+  const rapidoUrl = `https://rapido.bike/`;
+  const embedSrc = `https://maps.google.com/maps?q=${lat},${lng}&output=embed&z=16`;
 
   return (
     <div className={`flex flex-col rounded-2xl overflow-hidden border ${accentBorder} shadow-md`}>
-      {/* Map embed */}
+      {/* Map embed — pinned to exact coordinates */}
       <div className="relative w-full h-56">
         <iframe
           title={`Map of ${name}`}
-          src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`}
+          src={embedSrc}
           className="absolute inset-0 w-full h-full border-0"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
@@ -63,25 +56,35 @@ function VenueCard({
           ))}
         </ul>
 
+        {/* Navigation buttons — all pre-filled with exact destination */}
         <div className="flex flex-wrap gap-3 mt-auto pt-2">
           <a
-            href={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}`}
+            href={mapsNav}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-full border border-deep-rose text-deep-rose font-body text-xs tracking-widest uppercase hover:bg-blush/30 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-deep-rose text-deep-rose font-body text-xs tracking-widest uppercase hover:bg-blush/30 transition-colors"
           >
-            Open in Maps
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            Google Maps
           </a>
-          {externalUrl && (
-            <a
-              href={externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-full border border-sage text-sage font-body text-xs tracking-widest uppercase hover:bg-sage/20 transition-colors"
-            >
-              {externalLabel}
-            </a>
-          )}
+          <a
+            href={uberUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-sage text-sage font-body text-xs tracking-widest uppercase hover:bg-sage/20 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+            Uber
+          </a>
+          <a
+            href={rapidoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-champagne text-deep-rose/60 font-body text-xs tracking-widest uppercase hover:bg-blush/20 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            Rapido
+          </a>
         </div>
       </div>
     </div>
@@ -102,39 +105,39 @@ export default function Venue() {
         </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <VenueCard
-            tag="Ceremony"
-            name="St Andrews Kirk"
-            role="ceremony"
-            address="Poonamallee High Rd, Vepery, Chennai, Tamil Nadu 600 007"
-            mapQuery="St Andrews Kirk Chennai"
-            externalUrl=""
-            externalLabel="Kirk Website"
-            accent="blush"
-            details={[
-              { label: "Event", value: "Wedding Ceremony" },
-              { label: "Date", value: "October 8, 2026" },
-              { label: "Time", value: "TBD" },
-              { label: "Dress code", value: "Formals / Ethnic" },
-            ]}
-          />
+          <Reveal>
+            <VenueCard
+              tag="Ceremony"
+              name="St Andrews Kirk"
+              address="Poonamallee High Rd, Vepery, Chennai 600 007"
+              lat={13.0795825}
+              lng={80.2640559}
+              accent="blush"
+              details={[
+                { label: "Event",     value: "Wedding Ceremony" },
+                { label: "Date",      value: "October 8, 2026" },
+                { label: "Time",      value: "TBD" },
+                { label: "Dress",     value: "Formals / Ethnic" },
+              ]}
+            />
+          </Reveal>
 
-          <VenueCard
-            tag="Reception"
-            name="BKN Auditorium"
-            role="reception"
-            address="Chennai, Tamil Nadu"
-            mapQuery="BKN Auditorium Chennai"
-            externalUrl=""
-            externalLabel="BKN on YouTube"
-            accent="sage"
-            details={[
-              { label: "Event", value: "Wedding Reception" },
-              { label: "Date", value: "October 8, 2026" },
-              { label: "Time", value: "TBD" },
-              { label: "Dress code", value: "Formals / Ethnic" },
-            ]}
-          />
+          <Reveal delay={100}>
+            <VenueCard
+              tag="Reception"
+              name="BKN Auditorium"
+              address="Chennai, Tamil Nadu"
+              lat={13.0825229}
+              lng={80.2601169}
+              accent="sage"
+              details={[
+                { label: "Event",     value: "Wedding Reception" },
+                { label: "Date",      value: "October 8, 2026" },
+                { label: "Time",      value: "TBD" },
+                { label: "Dress",     value: "Formals / Ethnic" },
+              ]}
+            />
+          </Reveal>
         </div>
       </div>
     </section>
