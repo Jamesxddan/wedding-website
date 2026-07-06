@@ -6,6 +6,9 @@ const VP_WIDTHS: Record<string, number> = { mobile: 390, tablet: 768 };
 
 export default function DevViewportFrame({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    // Skip CSS constraint when running inside the /preview iframe — the
+    // iframe already has the correct viewport width, no need to clamp further.
+    if (window.self !== window.top) return;
     const vp = localStorage.getItem("dev_viewport");
     if (!vp) return;
     const el = document.getElementById("dev-viewport-frame");
