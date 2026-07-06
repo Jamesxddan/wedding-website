@@ -43,7 +43,7 @@ function SplitText({ text, delayBase = 300, stagger = 55 }: {
             animationDelay: `${delayBase + i * stagger}ms`,
           }}
         >
-          {char === " " ? "Â " : char}
+          {char === " " ? " " : char}
         </span>
       ))}
     </span>
@@ -63,7 +63,7 @@ export default function CountdownHero({ guestName }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
 
-  // Animated countdown â€” counts up from 0 to real value on mount
+  // Animated countdown — counts up from 0 to real value on mount
   const [animDone, setAnimDone] = useState(false);
   const [animValues, setAnimValues] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -95,7 +95,7 @@ export default function CountdownHero({ guestName }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  // Fetch engagement photos â€” sort by device orientation
+  // Fetch engagement photos — sort by device orientation
   useEffect(() => {
     fetch("/api/drive-photos?folder=engagement")
       .then((r) => r.json())
@@ -209,7 +209,7 @@ export default function CountdownHero({ guestName }: Props) {
             You are warmly invited to celebrate
           </p>
 
-          {/* Couple names â€” split text letter-by-letter */}
+          {/* Couple names — split text letter-by-letter */}
           <div className={fadeIn(1)} style={{ transitionDelay: "150ms" }}>
             <h1
               className="font-heading leading-none text-white"
@@ -230,7 +230,7 @@ export default function CountdownHero({ guestName }: Props) {
                   animationDelay: "710ms",
                 }}
               >
-                {"Â &Â "}
+                {" & "}
               </span>
               <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
                 <SplitText text="Sharon" delayBase={780} stagger={60} />
@@ -254,11 +254,11 @@ export default function CountdownHero({ guestName }: Props) {
             style={{ transitionDelay: "400ms", background: "rgba(255,255,255,0.06)" }}
           >
             <p className="font-heading text-white/80 tracking-widest text-sm uppercase">
-              October 8 th &nbsp;Â·&nbsp; 2026 &nbsp;Â·&nbsp; Chennai
+              October 8 th &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Chennai
             </p>
           </div>
 
-          {/* Countdown â€” animated from 0 to real values */}
+          {/* Countdown — animated from 0 to real values */}
           <div
             className={`flex gap-4 md:gap-8 ${fadeIn(3)}`}
             style={{ transitionDelay: "600ms" }}
@@ -299,7 +299,7 @@ export default function CountdownHero({ guestName }: Props) {
             className={`font-script italic text-white/60 ${fadeIn(4)}`}
             style={{ transitionDelay: "800ms", fontSize: "clamp(1rem, 2vw, 1.3rem)" }}
           >
-            Counting down with you, {guestName} ðŸŒ¸
+            Counting down with you, {guestName} 🌸
           </p>
         </div>
 
