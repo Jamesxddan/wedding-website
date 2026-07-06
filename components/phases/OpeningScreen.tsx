@@ -203,8 +203,9 @@ export default function OpeningScreen({ onComplete }: Props) {
             className="block"
             style={{
               fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
-              fontSize: 52, lineHeight: 1.05, color: ROSE,
+              fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
+              whiteSpace: "nowrap",
               animation: "name-float 0.9s cubic-bezier(0.22,1,0.36,1) 2.4s both",
             }}
           >
@@ -229,8 +230,9 @@ export default function OpeningScreen({ onComplete }: Props) {
             className="block"
             style={{
               fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
-              fontSize: 52, lineHeight: 1.05, color: ROSE,
+              fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
+              whiteSpace: "nowrap",
               animation: "name-float 0.9s cubic-bezier(0.22,1,0.36,1) 2.9s both",
             }}
           >

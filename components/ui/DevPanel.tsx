@@ -11,13 +11,41 @@ const STAGES: { label: string; phase: Phase; color: string; desc: string }[] = [
   { label: "Post-Wedding", phase: Phase.POST_WEDDING, color: "#4A7C59", desc: "Gallery & memories" },
 ];
 
+const VIEWPORTS: { label: string; icon: string; key: string; width: number | null; desc: string }[] = [
+  { label: "Mobile",  icon: "📱", key: "mobile",  width: 390,  desc: "390px · portrait photos" },
+  { label: "Tablet",  icon: "💻", key: "tablet",  width: 768,  desc: "768px · landscape photos" },
+  { label: "Desktop", icon: "🖥", key: "desktop", width: null, desc: "Full width" },
+];
+
+export const DEV_VIEWPORT_KEY = "dev_viewport";
+
 export default function DevPanel() {
   const [current, setCurrent] = useState<string | null>(null);
+  const [viewport, setViewportState] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setCurrent(localStorage.getItem("dev_phase"));
+    const vp = localStorage.getItem(DEV_VIEWPORT_KEY);
+    setViewportState(vp);
+    applyViewportCSS(vp);
   }, []);
+
+  function applyViewportCSS(vp: string | null) {
+    const vConfig = VIEWPORTS.find((v) => v.key === vp);
+    const el = document.getElementById("dev-viewport-frame");
+    if (el) {
+      el.style.maxWidth = vConfig?.width ? `${vConfig.width}px` : "";
+      el.style.margin = vConfig?.width ? "0 auto" : "";
+      el.style.boxShadow = vConfig?.width ? "0 0 0 1px rgba(99,102,241,0.3), 0 8px 40px rgba(0,0,0,0.15)" : "";
+    }
+    // Store width hint for components that need to know simulated viewport
+    if (vp) {
+      document.documentElement.dataset.devViewport = vp;
+    } else {
+      delete document.documentElement.dataset.devViewport;
+    }
+  }
 
   function setPhase(phase: Phase | null) {
     if (phase === null) {
@@ -27,7 +55,6 @@ export default function DevPanel() {
       setCurrent(null);
     } else {
       localStorage.setItem("dev_phase", phase);
-      // Pre-populate guest data so non-first-visit phases work correctly
       if (phase !== Phase.FIRST_VISIT) {
         if (!localStorage.getItem("guest_name")) {
           localStorage.setItem("guest_name", "Test Guest");
@@ -41,7 +68,16 @@ export default function DevPanel() {
     window.location.reload();
   }
 
-  // Show in dev and on Vercel preview (staging); hide on production unless ?dev=1
+  function setViewport(key: string | null) {
+    if (key === null) {
+      localStorage.removeItem(DEV_VIEWPORT_KEY);
+    } else {
+      localStorage.setItem(DEV_VIEWPORT_KEY, key);
+    }
+    setViewportState(key);
+    window.location.reload();
+  }
+
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const isDev = process.env.NODE_ENV !== "production";
@@ -56,11 +92,12 @@ export default function DevPanel() {
     <div className="fixed bottom-5 right-5 z-[9999] flex flex-col items-end gap-2">
       {open && (
         <div
-          className="flex flex-col gap-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl min-w-[200px]"
+          className="flex flex-col gap-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl min-w-[220px]"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
+          {/* Phase switcher */}
           <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 pb-1 border-b border-gray-100">
-            Dev · Phase Switcher
+            Phase
           </p>
           {STAGES.map(({ label, phase, color, desc }) => {
             const active = current === phase;
@@ -75,17 +112,47 @@ export default function DevPanel() {
                 }}
                 className="rounded-xl px-3 py-2 text-xs font-semibold text-left transition-all duration-200 hover:opacity-80"
               >
-                <span>{active ? `✓ ` : ""}{label}</span>
+                <span>{active ? "✓ " : ""}{label}</span>
                 <span style={{ opacity: 0.7, fontSize: "10px", display: "block", fontWeight: 400 }}>{desc}</span>
               </button>
             );
           })}
           <button
             onClick={() => setPhase(null)}
-            className="rounded-xl px-3 py-2 text-xs font-semibold text-left text-gray-400 hover:text-gray-600 transition-colors border border-dashed border-gray-200 mt-1"
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-left text-gray-400 hover:text-gray-600 transition-colors border border-dashed border-gray-200"
           >
-            Reset all (auto-detect)
+            Reset phase (auto-detect)
           </button>
+
+          {/* Viewport switcher */}
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 pb-1 border-b border-gray-100 mt-2">
+            View As
+          </p>
+          {VIEWPORTS.map(({ label, icon, key, desc }) => {
+            const active = viewport === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setViewport(active ? null : key)}
+                style={{
+                  backgroundColor: active ? "#1e293b" : "transparent",
+                  color: active ? "white" : "#475569",
+                  border: `1.5px solid ${active ? "#1e293b" : "#cbd5e1"}`,
+                }}
+                className="rounded-xl px-3 py-2 text-xs font-semibold text-left transition-all duration-200 hover:opacity-80"
+              >
+                <span>{icon} {active ? "✓ " : ""}{label}</span>
+                <span style={{ opacity: 0.6, fontSize: "10px", display: "block", fontWeight: 400 }}>{desc}</span>
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setViewport(null)}
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-left text-gray-400 hover:text-gray-600 transition-colors border border-dashed border-gray-200"
+          >
+            Reset viewport
+          </button>
+
           <p className="text-[9px] text-gray-300 text-center pt-1">
             Reloads page on change
           </p>
@@ -94,7 +161,7 @@ export default function DevPanel() {
 
       <button
         onClick={() => setOpen((o) => !o)}
-        title="Dev phase switcher"
+        title="Dev tools"
         style={{ fontFamily: "system-ui, sans-serif" }}
         className="w-11 h-11 rounded-full bg-gray-900/80 backdrop-blur-md text-white text-base shadow-lg hover:bg-gray-800 transition-all duration-200 flex items-center justify-center border border-white/10"
       >

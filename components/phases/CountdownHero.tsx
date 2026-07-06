@@ -101,7 +101,8 @@ export default function CountdownHero({ guestName }: Props) {
       .then((r) => r.json())
       .then((d) => {
         if (!d.photos?.length) return;
-        const isMobile = window.innerWidth < 768;
+        const devVp = localStorage.getItem("dev_viewport");
+        const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
         const sorted = [...d.photos].sort((a, b) => {
           const aMatch = isMobile ? a.landscape === false : a.landscape === true;
           const bMatch = isMobile ? b.landscape === false : b.landscape === true;
