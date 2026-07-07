@@ -15,6 +15,12 @@ interface Place {
   lng: number;
 }
 
+interface Prediction {
+  place_id: string;
+  description: string;
+  structured_formatting: { main_text: string; secondary_text: string };
+}
+
 const VENUES: VenueOption[] = [
   {
     name: "St Andrews Kirk",
@@ -124,7 +130,7 @@ export default function CabDialog({ mode, onClose }: Props) {
   // Home mode: address autocomplete
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,7 +165,7 @@ export default function CabDialog({ mode, onClose }: Props) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (value.trim().length < 3) {
-      setSuggestions([]);
+      setPredictions([]);
       setShowSuggestions(false);
       return;
     }
@@ -168,27 +174,12 @@ export default function CabDialog({ mode, onClose }: Props) {
     setShowSuggestions(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({
-          q: value,
-          format: "json",
-          limit: "5",
-          countrycodes: "in",
-          addressdetails: "0",
-        });
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?${params}`,
-          { headers: { "Accept-Language": "en" } }
-        );
+        const res = await fetch(`/api/places?q=${encodeURIComponent(value)}`);
         const data = await res.json();
-        const places: Place[] = data.map((r: { display_name: string; lat: string; lon: string }) => ({
-          address: r.display_name,
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon),
-        }));
-        setSuggestions(places);
-        setShowSuggestions(places.length > 0);
+        setPredictions(data.predictions ?? []);
+        setShowSuggestions((data.predictions ?? []).length > 0);
       } catch {
-        setSuggestions([]);
+        setPredictions([]);
         setShowSuggestions(false);
       } finally {
         setIsSearching(false);
@@ -196,13 +187,20 @@ export default function CabDialog({ mode, onClose }: Props) {
     }, 400);
   }
 
-  function selectPlace(place: Place) {
-    setSelectedPlace(place);
-    // Show a shortened label in the input
-    const short = place.address.split(",").slice(0, 3).join(", ");
-    setQuery(short);
-    setSuggestions([]);
+  async function selectPrediction(pred: Prediction) {
+    // Fetch coordinates for the selected place via Places Details
+    setQuery(pred.structured_formatting.main_text);
+    setPredictions([]);
     setShowSuggestions(false);
+    try {
+      const res = await fetch(`/api/places?place_id=${encodeURIComponent(pred.place_id)}`);
+      const data = await res.json();
+      if (data.lat && data.lng) {
+        setSelectedPlace({ address: pred.description, lat: data.lat, lng: data.lng });
+      }
+    } catch {
+      // If details fail, use description as fallback (no coordinates)
+    }
   }
 
   function copyAddress() {
@@ -352,7 +350,7 @@ export default function CabDialog({ mode, onClose }: Props) {
                     type="text"
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
-                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    onFocus={() => predictions.length > 0 && setShowSuggestions(true)}
                     placeholder="Start typing your address…"
                     className={`w-full border rounded-lg px-4 py-3 bg-white text-deep-rose font-body text-sm placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush pr-8 ${
                       selectedPlace ? "border-sage" : "border-champagne"
@@ -371,30 +369,25 @@ export default function CabDialog({ mode, onClose }: Props) {
                 </div>
 
                 {/* Suggestions dropdown */}
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && predictions.length > 0 && (
                   <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-champagne rounded-xl shadow-lg overflow-hidden">
-                    {suggestions.map((place, i) => {
-                      const parts = place.address.split(",");
-                      const main = parts.slice(0, 2).join(",").trim();
-                      const sub = parts.slice(2, 4).join(",").trim();
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => selectPlace(place)}
-                          className="w-full text-left px-4 py-3 hover:bg-blush/20 transition-colors border-b border-champagne/50 last:border-0"
-                        >
-                          <span className="font-body text-sm text-deep-rose block">{main}</span>
-                          {sub && (
-                            <span className="font-body text-xs text-deep-rose/50 block mt-0.5">{sub}</span>
-                          )}
-                        </button>
-                      );
-                    })}
+                    {predictions.map((pred) => (
+                      <button
+                        key={pred.place_id}
+                        onClick={() => selectPrediction(pred)}
+                        className="w-full text-left px-4 py-3 hover:bg-blush/20 transition-colors border-b border-champagne/50 last:border-0"
+                      >
+                        <span className="font-body text-sm text-deep-rose block">{pred.structured_formatting.main_text}</span>
+                        {pred.structured_formatting.secondary_text && (
+                          <span className="font-body text-xs text-deep-rose/50 block mt-0.5">{pred.structured_formatting.secondary_text}</span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 )}
 
                 {/* No results hint */}
-                {showSuggestions && !isSearching && query.trim().length >= 3 && suggestions.length === 0 && (
+                {showSuggestions && !isSearching && query.trim().length >= 3 && predictions.length === 0 && (
                   <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-champagne rounded-xl shadow-lg px-4 py-3">
                     <span className="font-body text-sm text-deep-rose/50">No results found — try a different area or landmark</span>
                   </div>
