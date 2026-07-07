@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
 
     const guest = fp.guests as {
       name: string; city: string; invitation_seen: boolean; is_owner: boolean;
-    };
+    } | null;
+    if (!guest) return NextResponse.json({ status: "new" });
 
     return NextResponse.json({
       status: "known",
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
 
       const guest = byHash.guests as {
         name: string; city: string; invitation_seen: boolean; is_owner: boolean;
-      };
+      } | null;
+      if (!guest) return NextResponse.json({ status: "new" });
 
       return NextResponse.json({
         status: "known",
