@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getPhase, Phase } from "./phase";
 
 export interface PhaseState {
@@ -8,6 +8,7 @@ export interface PhaseState {
   guestName: string | null;
   guestCity: string | null;
   isLoading: boolean;
+  sessionRestored: boolean;
   refresh: () => void;
 }
 
@@ -17,29 +18,84 @@ export function usePhase(): PhaseState {
     guestName: null,
     guestCity: null,
     isLoading: true,
+    sessionRestored: false,
   });
   const [tick, setTick] = useState(0);
+  const sessionChecked = useRef(false);
 
   useEffect(() => {
     const name = localStorage.getItem("guest_name");
     const city = localStorage.getItem("guest_city");
     const invitationSeen = localStorage.getItem("invitation_seen") === "true";
 
-    // Dev/preview phase override: set localStorage key "dev_phase" to one of:
-    // FIRST_VISIT | INVITATION | RETURN_VISIT | WEDDING_DAY | POST_WEDDING
-    // Always read it — DevPanel guards its own visibility so it's only settable in dev/preview.
     const devOverride = localStorage.getItem("dev_phase");
-    const overridePhase = devOverride && Object.values(Phase).includes(devOverride as Phase)
-      ? (devOverride as Phase)
-      : null;
+    const overridePhase =
+      devOverride && Object.values(Phase).includes(devOverride as Phase)
+        ? (devOverride as Phase)
+        : null;
 
-    setState({
+    setState((prev) => ({
+      ...prev,
       phase: overridePhase ?? getPhase(name, new Date(), invitationSeen),
       guestName: name,
       guestCity: city,
       isLoading: false,
-    });
+    }));
+
+    // Fire session check once per mount, only when no local guest data
+    if (!sessionChecked.current && !name) {
+      sessionChecked.current = true;
+      _runSessionCheck(setState);
+    }
   }, [tick]);
 
   return { ...state, refresh: () => setTick((t) => t + 1) };
+}
+
+async function _runSessionCheck(
+  setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh">>>
+): Promise<void> {
+  try {
+    const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
+    const device_uuid = await getOrCreateDeviceUUID();
+    const browser_signals_hash = await getBrowserSignalsHash();
+
+    const res = await fetch("/api/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_uuid, browser_signals_hash }),
+    });
+
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      status: string;
+      name?: string;
+      city?: string;
+      invitation_seen?: boolean;
+      session_token?: string;
+    };
+
+    if (data.status !== "known" || !data.name) return;
+
+    localStorage.setItem("guest_name", data.name);
+    if (data.city) localStorage.setItem("guest_city", data.city);
+    if (data.invitation_seen) localStorage.setItem("invitation_seen", "true");
+    if (data.session_token) localStorage.setItem("session_token", data.session_token);
+
+    const devOverride = localStorage.getItem("dev_phase");
+    const overridePhase =
+      devOverride && Object.values(Phase).includes(devOverride as Phase)
+        ? (devOverride as Phase)
+        : null;
+
+    setState({
+      phase: overridePhase ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
+      guestName: data.name,
+      guestCity: data.city ?? null,
+      isLoading: false,
+      sessionRestored: true,
+    });
+  } catch {
+    // Network failure or non-production env — silent
+  }
 }

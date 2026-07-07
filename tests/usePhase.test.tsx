@@ -18,11 +18,19 @@ const localStorageMock = (() => {
 
 Object.defineProperty(globalThis, "localStorage", { value: localStorageMock, writable: true });
 
+// Mock fingerprint module (browser APIs not fully available in vitest)
+vi.mock("@/lib/fingerprint", () => ({
+  getOrCreateDeviceUUID: vi.fn().mockResolvedValue("test-uuid"),
+  getBrowserSignalsHash: vi.fn().mockResolvedValue("test-hash"),
+}));
+
 describe("usePhase", () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.useRealTimers();
     vi.resetModules();
+    // Prevent real network calls in background session check
+    global.fetch = vi.fn().mockRejectedValue(new Error("no network in test"));
   });
 
   it("returns FIRST_VISIT when localStorage has no guest_name", async () => {
@@ -30,9 +38,10 @@ describe("usePhase", () => {
     vi.setSystemTime(DAY_BEFORE);
     const { usePhase } = await import("@/lib/usePhase");
     const { result } = renderHook(() => usePhase());
-    await act(async () => {});
+    await act(async () => { await vi.runAllTimersAsync(); });
     expect(result.current.phase).toBe(Phase.FIRST_VISIT);
     expect(result.current.guestName).toBeNull();
+    expect(result.current.sessionRestored).toBe(false);
   });
 
   it("returns INVITATION when name set but invitation not seen", async () => {
@@ -41,7 +50,7 @@ describe("usePhase", () => {
     vi.setSystemTime(DAY_BEFORE);
     const { usePhase } = await import("@/lib/usePhase");
     const { result } = renderHook(() => usePhase());
-    await act(async () => {});
+    await act(async () => { await vi.runAllTimersAsync(); });
     expect(result.current.phase).toBe(Phase.INVITATION);
   });
 
@@ -52,7 +61,7 @@ describe("usePhase", () => {
     vi.setSystemTime(DAY_BEFORE);
     const { usePhase } = await import("@/lib/usePhase");
     const { result } = renderHook(() => usePhase());
-    await act(async () => {});
+    await act(async () => { await vi.runAllTimersAsync(); });
     expect(result.current.phase).toBe(Phase.RETURN_VISIT);
     expect(result.current.guestName).toBe("John");
   });
@@ -64,7 +73,42 @@ describe("usePhase", () => {
     vi.setSystemTime(DAY_AFTER);
     const { usePhase } = await import("@/lib/usePhase");
     const { result } = renderHook(() => usePhase());
-    await act(async () => {});
+    await act(async () => { await vi.runAllTimersAsync(); });
     expect(result.current.phase).toBe(Phase.POST_WEDDING);
+  });
+
+  it("silently restores session when /api/session returns 'known'", async () => {
+    // No guest_name in localStorage — simulates cleared storage
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        status: "known",
+        name: "Sharon",
+        city: "Chennai",
+        invitation_seen: true,
+        session_token: "tok-abc",
+      }),
+    });
+    vi.useFakeTimers();
+    vi.setSystemTime(DAY_BEFORE);
+    const { usePhase } = await import("@/lib/usePhase");
+    const { result } = renderHook(() => usePhase());
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(localStorageMock.getItem("guest_name")).toBe("Sharon");
+    expect(localStorageMock.getItem("session_token")).toBe("tok-abc");
+    expect(result.current.sessionRestored).toBe(true);
+    expect(result.current.phase).toBe(Phase.RETURN_VISIT);
+    expect(result.current.guestName).toBe("Sharon");
+  });
+
+  it("does not fire session check when guest_name is already in localStorage", async () => {
+    localStorageMock.setItem("guest_name", "John");
+    localStorageMock.setItem("invitation_seen", "true");
+    vi.useFakeTimers();
+    vi.setSystemTime(DAY_BEFORE);
+    const { usePhase } = await import("@/lib/usePhase");
+    renderHook(() => usePhase());
+    await act(async () => { await vi.runAllTimersAsync(); });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
