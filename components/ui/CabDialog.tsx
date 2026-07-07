@@ -134,6 +134,8 @@ export default function CabDialog({ mode, onClose }: Props) {
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const placesCallCount = useRef(0);
+  const PLACES_SESSION_LIMIT = 50;
   const suggestionBoxRef = useRef<HTMLDivElement>(null);
 
   const [copied, setCopied] = useState(false);
@@ -170,10 +172,17 @@ export default function CabDialog({ mode, onClose }: Props) {
       return;
     }
 
+    if (placesCallCount.current >= PLACES_SESSION_LIMIT) {
+      setPredictions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
     setIsSearching(true);
     setShowSuggestions(true);
     debounceRef.current = setTimeout(async () => {
       try {
+        placesCallCount.current += 1;
         const res = await fetch(`/api/places?q=${encodeURIComponent(value)}`);
         const data = await res.json();
         setPredictions(data.predictions ?? []);
