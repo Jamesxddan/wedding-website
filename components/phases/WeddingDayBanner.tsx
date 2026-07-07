@@ -4,13 +4,11 @@ import { useState } from "react";
 import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import LiveStream from "@/components/sections/LiveStream";
-import CabDialog from "@/components/ui/CabDialog";
+import CabDialog, { type CabMode } from "@/components/ui/CabDialog";
 import Footer from "@/components/ui/Footer";
 import Gallery from "@/components/sections/Gallery";
 import Venue from "@/components/sections/Venue";
 import Comments from "@/components/sections/Comments";
-
-type CabMode = "to-venue" | "home" | null;
 
 interface Props {
   guestName: string;
@@ -45,7 +43,7 @@ export default function WeddingDayBanner({ guestName }: Props) {
           Dear {guestName}, we are so glad you are here with us today.
         </p>
 
-        {/* Cab booking buttons */}
+        {/* Ride booking buttons */}
         <div className="relative flex flex-col items-center gap-4 mt-4">
           <p className="font-body text-deep-rose/60 text-sm">
             If you need help joining us today, please use the options below
@@ -55,13 +53,19 @@ export default function WeddingDayBanner({ guestName }: Props) {
               onClick={() => setCabMode("to-venue")}
               className="px-6 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity"
             >
-              🚗 Get a ride to the venue
+              Get a ride to the venue
             </button>
             <button
               onClick={() => setCabMode("home")}
               className="px-6 py-3 rounded-full border border-deep-rose text-deep-rose font-heading tracking-widest uppercase text-sm hover:bg-blush/30 transition-colors"
             >
-              🏠 Book a ride home
+              Book a ride home
+            </button>
+            <button
+              onClick={() => setCabMode("ceremony-to-reception")}
+              className="px-6 py-3 rounded-full border border-sage text-sage font-heading tracking-widest uppercase text-sm hover:bg-sage/10 transition-colors"
+            >
+              Ceremony to Reception
             </button>
           </div>
         </div>

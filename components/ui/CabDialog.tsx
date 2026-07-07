@@ -2,42 +2,95 @@
 
 import { useState, useEffect, useRef } from "react";
 
-interface Venue {
+interface VenueOption {
   name: string;
   address: string;
+  lat: number;
+  lng: number;
 }
 
-const VENUES: Venue[] = [
-  { name: "St Andrews Kirk", address: "Poonamallee High Rd, Vepery, Chennai, Tamil Nadu 600007" },
-  { name: "BKN Auditorium", address: "BKN Auditorium, Chennai, Tamil Nadu" },
+const VENUES: VenueOption[] = [
+  {
+    name: "St Andrews Kirk",
+    address: "Poonamallee High Rd, Vepery, Chennai 600007",
+    lat: 13.0795825,
+    lng: 80.2640559,
+  },
+  {
+    name: "BKN Auditorium",
+    address: "BKN Auditorium, Chennai, Tamil Nadu",
+    lat: 13.0825229,
+    lng: 80.2601169,
+  },
 ];
 
-function uberUrl(dropoffName: string, dropoffAddress: string) {
+function uberToVenue(venue: VenueOption) {
   const p = new URLSearchParams({
     action: "setPickup",
     "pickup[my_location]": "true",
-    "dropoff[nickname]": dropoffName,
-    "dropoff[formatted_address]": dropoffAddress,
+    "dropoff[latitude]": String(venue.lat),
+    "dropoff[longitude]": String(venue.lng),
+    "dropoff[nickname]": venue.name,
+    "dropoff[formatted_address]": venue.address,
   });
   return `https://m.uber.com/ul/?${p}`;
 }
 
-function rapidoUrl(dropoffAddress: string) {
-  // Rapido doesn't have a public deep-link spec — open the app search page
-  return `https://rapido.bike/`;
+function uberFromVenueTo(from: VenueOption, toAddress: string) {
+  const p = new URLSearchParams({
+    action: "setPickup",
+    "pickup[latitude]": String(from.lat),
+    "pickup[longitude]": String(from.lng),
+    "pickup[nickname]": from.name,
+    "dropoff[formatted_address]": toAddress,
+  });
+  return `https://m.uber.com/ul/?${p}`;
 }
 
+function uberCeremonyToReception() {
+  const from = VENUES[0];
+  const to = VENUES[1];
+  const p = new URLSearchParams({
+    action: "setPickup",
+    "pickup[latitude]": String(from.lat),
+    "pickup[longitude]": String(from.lng),
+    "pickup[nickname]": from.name,
+    "dropoff[latitude]": String(to.lat),
+    "dropoff[longitude]": String(to.lng),
+    "dropoff[nickname]": to.name,
+  });
+  return `https://m.uber.com/ul/?${p}`;
+}
+
+// Rapido doesn't publish a deep-link spec — best-effort coordinate URL.
+// Falls back gracefully to the homepage if the app doesn't handle it.
+function rapidoToVenue(venue: VenueOption) {
+  return `https://rapido.bike/book?src_lat=0&src_lng=0&dst_lat=${venue.lat}&dst_lng=${venue.lng}&dst_name=${encodeURIComponent(venue.name)}`;
+}
+
+function rapidoFromVenueTo(from: VenueOption, toAddress: string) {
+  return `https://rapido.bike/book?src_lat=${from.lat}&src_lng=${from.lng}&src_name=${encodeURIComponent(from.name)}&dst_name=${encodeURIComponent(toAddress)}`;
+}
+
+function rapidoCeremonyToReception() {
+  const from = VENUES[0];
+  const to = VENUES[1];
+  return `https://rapido.bike/book?src_lat=${from.lat}&src_lng=${from.lng}&src_name=${encodeURIComponent(from.name)}&dst_lat=${to.lat}&dst_lng=${to.lng}&dst_name=${encodeURIComponent(to.name)}`;
+}
+
+export type CabMode = "to-venue" | "home" | "ceremony-to-reception" | null;
+
 interface Props {
-  mode: "to-venue" | "home";
+  mode: CabMode;
   onClose: () => void;
 }
 
 export default function CabDialog({ mode, onClose }: Props) {
-  const [selectedVenue, setSelectedVenue] = useState<Venue>(VENUES[0]);
+  const [selectedVenue, setSelectedVenue] = useState<VenueOption>(VENUES[0]);
   const [destination, setDestination] = useState("");
+  const [copied, setCopied] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -46,26 +99,44 @@ export default function CabDialog({ mode, onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const dropoffName = mode === "to-venue" ? selectedVenue.name : destination;
-  const dropoffAddress = mode === "to-venue" ? selectedVenue.address : destination;
+  function copyAddress() {
+    const text = mode === "home" ? destination : mode === "ceremony-to-reception" ? VENUES[1].address : selectedVenue.address;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
-  const canBook = mode === "to-venue" || destination.trim().length > 0;
+  const canBook = mode === "to-venue" || mode === "ceremony-to-reception" || destination.trim().length > 0;
+
+  const uberHref =
+    mode === "to-venue" ? uberToVenue(selectedVenue) :
+    mode === "home" ? uberFromVenueTo(selectedVenue, destination) :
+    mode === "ceremony-to-reception" ? uberCeremonyToReception() : "";
+
+  const rapidoHref =
+    mode === "to-venue" ? rapidoToVenue(selectedVenue) :
+    mode === "home" ? rapidoFromVenueTo(selectedVenue, destination) :
+    mode === "ceremony-to-reception" ? rapidoCeremonyToReception() : "";
+
+  const title =
+    mode === "to-venue" ? "Ride to the Venue" :
+    mode === "home" ? "Ride Home" :
+    "Ceremony → Reception";
 
   return (
     <div
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label={mode === "to-venue" ? "Get a ride to the venue" : "Book a ride home"}
+      aria-label={title}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className="bg-cream rounded-2xl border border-champagne shadow-2xl w-full max-w-sm p-7 flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h3 className="font-heading text-xl text-deep-rose">
-            {mode === "to-venue" ? "Ride to the Venue" : "Ride Home"}
-          </h3>
+          <h3 className="font-heading text-xl text-deep-rose">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -75,7 +146,24 @@ export default function CabDialog({ mode, onClose }: Props) {
           </button>
         </div>
 
-        {/* Venue selector (to-venue mode) */}
+        {/* Ceremony → Reception: fixed route summary */}
+        {mode === "ceremony-to-reception" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1 px-4 py-3 rounded-xl bg-blush/20 border border-blush">
+              <span className="font-heading text-[10px] tracking-widest uppercase text-sage">From</span>
+              <span className="font-body text-sm text-deep-rose font-semibold">St Andrews Kirk</span>
+              <span className="font-body text-xs text-deep-rose/60">Poonamallee High Rd, Vepery</span>
+            </div>
+            <div className="flex items-center justify-center text-deep-rose/40 text-xl">↓</div>
+            <div className="flex flex-col gap-1 px-4 py-3 rounded-xl bg-sage/10 border border-sage/30">
+              <span className="font-heading text-[10px] tracking-widest uppercase text-sage">To</span>
+              <span className="font-body text-sm text-deep-rose font-semibold">BKN Auditorium</span>
+              <span className="font-body text-xs text-deep-rose/60">Chennai, Tamil Nadu</span>
+            </div>
+          </div>
+        )}
+
+        {/* To venue: choose which venue */}
         {mode === "to-venue" && (
           <div className="flex flex-col gap-2">
             <p className="font-heading text-xs tracking-widest uppercase text-sage">
@@ -100,27 +188,50 @@ export default function CabDialog({ mode, onClose }: Props) {
           </div>
         )}
 
-        {/* Destination input (home mode) */}
+        {/* Home mode: pickup = venue, drop = typed address */}
         {mode === "home" && (
-          <div className="flex flex-col gap-2">
-            <label className="font-heading text-xs tracking-widest uppercase text-sage">
-              Your destination
-            </label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="Enter your address"
-              className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body text-sm placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
-              autoFocus
-            />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <p className="font-heading text-xs tracking-widest uppercase text-sage">
+                Returning from
+              </p>
+              <div className="flex flex-col gap-2">
+                {VENUES.map((v) => (
+                  <button
+                    key={v.name}
+                    onClick={() => setSelectedVenue(v)}
+                    className={`text-left px-4 py-3 rounded-xl border font-body text-sm transition-colors ${
+                      selectedVenue.name === v.name
+                        ? "border-deep-rose bg-blush/30 text-deep-rose"
+                        : "border-champagne text-deep-rose/70 hover:border-deep-rose/40"
+                    }`}
+                  >
+                    <span className="font-heading block">{v.name}</span>
+                    <span className="text-xs text-deep-rose/50">{v.address}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="font-heading text-xs tracking-widest uppercase text-sage">
+                Your destination
+              </label>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="Enter your address or area"
+                className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body text-sm placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+                autoFocus
+              />
+            </div>
           </div>
         )}
 
         {/* Booking buttons */}
         <div className="flex flex-col gap-3">
           <a
-            href={canBook ? uberUrl(dropoffName, dropoffAddress) : undefined}
+            href={canBook ? uberHref : undefined}
             target="_blank"
             rel="noopener noreferrer"
             aria-disabled={!canBook}
@@ -133,7 +244,7 @@ export default function CabDialog({ mode, onClose }: Props) {
             🚗 Book with Uber
           </a>
           <a
-            href={canBook ? rapidoUrl(dropoffAddress) : undefined}
+            href={canBook ? rapidoHref : undefined}
             target="_blank"
             rel="noopener noreferrer"
             aria-disabled={!canBook}
@@ -145,10 +256,20 @@ export default function CabDialog({ mode, onClose }: Props) {
           >
             🛵 Open Rapido
           </a>
-          {mode === "home" && canBook && (
-            <p className="font-body text-xs text-deep-rose/50 text-center">
-              Copy this address into Rapido: <span className="font-heading">{destination}</span>
-            </p>
+
+          {/* Rapido copy-address fallback */}
+          {canBook && (
+            <div className="flex flex-col gap-1">
+              <p className="font-body text-xs text-deep-rose/50 text-center">
+                If Rapido doesn&apos;t pre-fill the address, tap to copy it:
+              </p>
+              <button
+                onClick={copyAddress}
+                className="font-body text-xs text-sage underline underline-offset-2 text-center transition-opacity hover:opacity-70"
+              >
+                {copied ? "✓ Copied!" : mode === "ceremony-to-reception" ? `Copy: ${VENUES[1].address}` : mode === "home" ? `Copy: ${destination}` : `Copy: ${selectedVenue.address}`}
+              </button>
+            </div>
           )}
         </div>
       </div>

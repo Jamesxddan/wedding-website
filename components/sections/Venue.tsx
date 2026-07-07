@@ -18,8 +18,6 @@ function VenueCard({ tag, name, address, lat, lng, details, accent }: VenueCardP
   const accentText   = accent === "blush" ? "text-deep-rose" : "text-sage";
 
   const mapsNav = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${lat}&dropoff[longitude]=${lng}&dropoff[nickname]=${encodeURIComponent(name)}`;
-  const rapidoUrl = `https://rapido.bike/`;
   const embedSrc = `https://maps.google.com/maps?q=${lat},${lng}&output=embed&z=16`;
 
   return (
@@ -56,7 +54,7 @@ function VenueCard({ tag, name, address, lat, lng, details, accent }: VenueCardP
           ))}
         </ul>
 
-        {/* Navigation buttons — all pre-filled with exact destination */}
+        {/* Google Maps directions — ride options are on the Wedding Day screen */}
         <div className="flex flex-wrap gap-3 mt-auto pt-2">
           <a
             href={mapsNav}
@@ -66,24 +64,6 @@ function VenueCard({ tag, name, address, lat, lng, details, accent }: VenueCardP
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
             Google Maps
-          </a>
-          <a
-            href={uberUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-sage text-sage font-body text-xs tracking-widest uppercase hover:bg-sage/20 transition-colors"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-            Uber
-          </a>
-          <a
-            href={rapidoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-champagne text-deep-rose/60 font-body text-xs tracking-widest uppercase hover:bg-blush/20 transition-colors"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            Rapido
           </a>
         </div>
       </div>
