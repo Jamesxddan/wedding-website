@@ -9,6 +9,12 @@ interface VenueOption {
   lng: number;
 }
 
+interface Place {
+  address: string;
+  lat: number;
+  lng: number;
+}
+
 const VENUES: VenueOption[] = [
   {
     name: "St Andrews Kirk",
@@ -36,13 +42,15 @@ function uberToVenue(venue: VenueOption) {
   return `https://m.uber.com/ul/?${p}`;
 }
 
-function uberFromVenueTo(from: VenueOption, toAddress: string) {
+function uberFromVenueTo(from: VenueOption, to: Place) {
   const p = new URLSearchParams({
     action: "setPickup",
     "pickup[latitude]": String(from.lat),
     "pickup[longitude]": String(from.lng),
     "pickup[nickname]": from.name,
-    "dropoff[formatted_address]": toAddress,
+    "dropoff[latitude]": String(to.lat),
+    "dropoff[longitude]": String(to.lng),
+    "dropoff[formatted_address]": to.address,
   });
   return `https://m.uber.com/ul/?${p}`;
 }
@@ -62,20 +70,45 @@ function uberCeremonyToReception() {
   return `https://m.uber.com/ul/?${p}`;
 }
 
-// Rapido doesn't publish a deep-link spec — best-effort coordinate URL.
-// Falls back gracefully to the homepage if the app doesn't handle it.
-function rapidoToVenue(venue: VenueOption) {
-  return `https://rapido.bike/book?src_lat=0&src_lng=0&dst_lat=${venue.lat}&dst_lng=${venue.lng}&dst_name=${encodeURIComponent(venue.name)}`;
+// Rapido has no public deep-link spec — open their homepage and rely on copy-address fallback.
+const RAPIDO_URL = "https://rapido.bike";
+
+function olaToVenue(venue: VenueOption) {
+  const p = new URLSearchParams({
+    serviceType: "p2p",
+    drop_lat: String(venue.lat),
+    drop_lng: String(venue.lng),
+    drop_name: venue.name,
+  });
+  return `https://book.olacabs.com/?${p}`;
 }
 
-function rapidoFromVenueTo(from: VenueOption, toAddress: string) {
-  return `https://rapido.bike/book?src_lat=${from.lat}&src_lng=${from.lng}&src_name=${encodeURIComponent(from.name)}&dst_name=${encodeURIComponent(toAddress)}`;
+function olaFromVenueTo(from: VenueOption, to: Place) {
+  const p = new URLSearchParams({
+    serviceType: "p2p",
+    pickup_lat: String(from.lat),
+    pickup_lng: String(from.lng),
+    pickup_name: from.name,
+    drop_lat: String(to.lat),
+    drop_lng: String(to.lng),
+    drop_name: to.address,
+  });
+  return `https://book.olacabs.com/?${p}`;
 }
 
-function rapidoCeremonyToReception() {
+function olaCeremonyToReception() {
   const from = VENUES[0];
   const to = VENUES[1];
-  return `https://rapido.bike/book?src_lat=${from.lat}&src_lng=${from.lng}&src_name=${encodeURIComponent(from.name)}&dst_lat=${to.lat}&dst_lng=${to.lng}&dst_name=${encodeURIComponent(to.name)}`;
+  const p = new URLSearchParams({
+    serviceType: "p2p",
+    pickup_lat: String(from.lat),
+    pickup_lng: String(from.lng),
+    pickup_name: from.name,
+    drop_lat: String(to.lat),
+    drop_lng: String(to.lng),
+    drop_name: to.name,
+  });
+  return `https://book.olacabs.com/?${p}`;
 }
 
 export type CabMode = "to-venue" | "home" | "ceremony-to-reception" | null;
@@ -87,7 +120,16 @@ interface Props {
 
 export default function CabDialog({ mode, onClose }: Props) {
   const [selectedVenue, setSelectedVenue] = useState<VenueOption>(VENUES[0]);
-  const [destination, setDestination] = useState("");
+
+  // Home mode: address autocomplete
+  const [query, setQuery] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionBoxRef = useRef<HTMLDivElement>(null);
+
   const [copied, setCopied] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -99,30 +141,114 @@ export default function CabDialog({ mode, onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Close suggestions on outside click
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    setSelectedPlace(null);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.trim().length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowSuggestions(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          q: value,
+          format: "json",
+          limit: "5",
+          countrycodes: "in",
+          addressdetails: "0",
+        });
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?${params}`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        const places: Place[] = data.map((r: { display_name: string; lat: string; lon: string }) => ({
+          address: r.display_name,
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }));
+        setSuggestions(places);
+        setShowSuggestions(places.length > 0);
+      } catch {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+  }
+
+  function selectPlace(place: Place) {
+    setSelectedPlace(place);
+    // Show a shortened label in the input
+    const short = place.address.split(",").slice(0, 3).join(", ");
+    setQuery(short);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
+
   function copyAddress() {
-    const text = mode === "home" ? destination : mode === "ceremony-to-reception" ? VENUES[1].address : selectedVenue.address;
+    const text =
+      mode === "home"
+        ? (selectedPlace?.address ?? query)
+        : mode === "ceremony-to-reception"
+        ? VENUES[1].address
+        : selectedVenue.address;
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   }
 
-  const canBook = mode === "to-venue" || mode === "ceremony-to-reception" || destination.trim().length > 0;
+  const canBook =
+    mode === "to-venue" ||
+    mode === "ceremony-to-reception" ||
+    (mode === "home" && selectedPlace !== null);
 
   const uberHref =
-    mode === "to-venue" ? uberToVenue(selectedVenue) :
-    mode === "home" ? uberFromVenueTo(selectedVenue, destination) :
-    mode === "ceremony-to-reception" ? uberCeremonyToReception() : "";
+    mode === "to-venue"
+      ? uberToVenue(selectedVenue)
+      : mode === "home" && selectedPlace
+      ? uberFromVenueTo(selectedVenue, selectedPlace)
+      : mode === "ceremony-to-reception"
+      ? uberCeremonyToReception()
+      : "";
 
-  const rapidoHref =
-    mode === "to-venue" ? rapidoToVenue(selectedVenue) :
-    mode === "home" ? rapidoFromVenueTo(selectedVenue, destination) :
-    mode === "ceremony-to-reception" ? rapidoCeremonyToReception() : "";
+  const rapidoHref = canBook ? RAPIDO_URL : "";
+
+  const olaHref =
+    mode === "to-venue"
+      ? olaToVenue(selectedVenue)
+      : mode === "home" && selectedPlace
+      ? olaFromVenueTo(selectedVenue, selectedPlace)
+      : mode === "ceremony-to-reception"
+      ? olaCeremonyToReception()
+      : "";
 
   const title =
-    mode === "to-venue" ? "Ride to the Venue" :
-    mode === "home" ? "Ride Home" :
-    "Ceremony → Reception";
+    mode === "to-venue"
+      ? "Ride to the Venue"
+      : mode === "home"
+      ? "Ride Home"
+      : "Ceremony → Reception";
 
   return (
     <div
@@ -131,7 +257,9 @@ export default function CabDialog({ mode, onClose }: Props) {
       aria-modal="true"
       aria-label={title}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
     >
       <div className="bg-cream rounded-2xl border border-champagne shadow-2xl w-full max-w-sm p-7 flex flex-col gap-6">
         {/* Header */}
@@ -188,7 +316,7 @@ export default function CabDialog({ mode, onClose }: Props) {
           </div>
         )}
 
-        {/* Home mode: pickup = venue, drop = typed address */}
+        {/* Home mode: pickup = venue, drop = autocomplete address */}
         {mode === "home" && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
@@ -212,18 +340,66 @@ export default function CabDialog({ mode, onClose }: Props) {
                 ))}
               </div>
             </div>
+
+            {/* Destination autocomplete */}
             <div className="flex flex-col gap-2">
               <label className="font-heading text-xs tracking-widest uppercase text-sage">
                 Your destination
               </label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Enter your address or area"
-                className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body text-sm placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
-                autoFocus
-              />
+              <div className="relative" ref={suggestionBoxRef}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    placeholder="Start typing your address…"
+                    className={`w-full border rounded-lg px-4 py-3 bg-white text-deep-rose font-body text-sm placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush pr-8 ${
+                      selectedPlace ? "border-sage" : "border-champagne"
+                    }`}
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  {/* Status icon */}
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">
+                    {isSearching ? (
+                      <span className="text-deep-rose/30 animate-pulse">⋯</span>
+                    ) : selectedPlace ? (
+                      <span className="text-sage">✓</span>
+                    ) : null}
+                  </span>
+                </div>
+
+                {/* Suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-champagne rounded-xl shadow-lg overflow-hidden">
+                    {suggestions.map((place, i) => {
+                      const parts = place.address.split(",");
+                      const main = parts.slice(0, 2).join(",").trim();
+                      const sub = parts.slice(2, 4).join(",").trim();
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => selectPlace(place)}
+                          className="w-full text-left px-4 py-3 hover:bg-blush/20 transition-colors border-b border-champagne/50 last:border-0"
+                        >
+                          <span className="font-body text-sm text-deep-rose block">{main}</span>
+                          {sub && (
+                            <span className="font-body text-xs text-deep-rose/50 block mt-0.5">{sub}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* No results hint */}
+                {showSuggestions && !isSearching && query.trim().length >= 3 && suggestions.length === 0 && (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-champagne rounded-xl shadow-lg px-4 py-3">
+                    <span className="font-body text-sm text-deep-rose/50">No results found — try a different area or landmark</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -256,22 +432,48 @@ export default function CabDialog({ mode, onClose }: Props) {
           >
             🛵 Open Rapido
           </a>
+          <a
+            href={canBook ? olaHref : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!canBook}
+            className={`flex items-center justify-center gap-2 px-5 py-3 rounded-full border font-heading tracking-widest uppercase text-sm transition-colors ${
+              canBook
+                ? "border-sage text-sage hover:bg-sage/10"
+                : "border-sage/30 text-sage/30 cursor-not-allowed pointer-events-none"
+            }`}
+          >
+            🚖 Book with Ola
+          </a>
 
           {/* Rapido copy-address fallback */}
           {canBook && (
             <div className="flex flex-col gap-1">
               <p className="font-body text-xs text-deep-rose/50 text-center">
-                If Rapido doesn&apos;t pre-fill the address, tap to copy it:
+                For Rapido, copy the address then paste it after opening:
               </p>
               <button
                 onClick={copyAddress}
                 className="font-body text-xs text-sage underline underline-offset-2 text-center transition-opacity hover:opacity-70"
               >
-                {copied ? "✓ Copied!" : mode === "ceremony-to-reception" ? `Copy: ${VENUES[1].address}` : mode === "home" ? `Copy: ${destination}` : `Copy: ${selectedVenue.address}`}
+                {copied
+                  ? "✓ Copied!"
+                  : mode === "ceremony-to-reception"
+                  ? `Copy: ${VENUES[1].address}`
+                  : mode === "home" && selectedPlace
+                  ? `Copy destination address`
+                  : `Copy: ${selectedVenue.address}`}
               </button>
             </div>
           )}
         </div>
+
+        {/* Destination hint for home mode */}
+        {mode === "home" && !selectedPlace && (
+          <p className="font-body text-xs text-deep-rose/40 text-center -mt-3">
+            Select an address from the dropdown to enable booking
+          </p>
+        )}
       </div>
     </div>
   );
