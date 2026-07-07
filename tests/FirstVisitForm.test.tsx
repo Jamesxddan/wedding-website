@@ -8,6 +8,16 @@ vi.mock("@/lib/cities", () => ({
   ),
 }));
 
+vi.mock("@/lib/fingerprint", () => ({
+  getOrCreateDeviceUUID: vi.fn().mockResolvedValue("test-uuid"),
+  getBrowserSignalsHash: vi.fn().mockResolvedValue("test-hash"),
+}));
+
+// BackgroundMusic.startBackgroundMusic may not be defined in jsdom
+vi.mock("@/components/ui/BackgroundMusic", () => ({
+  startBackgroundMusic: vi.fn(),
+}));
+
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
@@ -21,9 +31,26 @@ Object.defineProperty(globalThis, "localStorage", { value: localStorageMock });
 
 import FirstVisitForm from "@/components/phases/FirstVisitForm";
 
+async function fillAndSubmit(onComplete = vi.fn()) {
+  render(<FirstVisitForm onComplete={onComplete} />);
+  await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
+  await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
+  await waitFor(() => screen.getByText("Chennai"));
+  fireEvent.mouseDown(screen.getByText("Chennai"));
+  await waitFor(() => {
+    expect((screen.getByPlaceholderText(/search your city/i) as HTMLInputElement).value).toBe("Chennai");
+  });
+  return onComplete;
+}
+
 describe("FirstVisitForm", () => {
   beforeEach(() => {
     localStorageMock.clear();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ session_token: "tok-xyz" }),
+    });
   });
 
   it("renders name input and city search", () => {
@@ -53,20 +80,16 @@ describe("FirstVisitForm", () => {
     });
   });
 
-  it("saves name and city to localStorage and calls onComplete on submit", async () => {
-    const onComplete = vi.fn();
-    render(<FirstVisitForm onComplete={onComplete} />);
-    await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
-    await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
-    await waitFor(() => screen.getByText("Chennai"));
-    fireEvent.mouseDown(screen.getByText("Chennai"));
-    await waitFor(() => {
-      expect((screen.getByPlaceholderText(/search your city/i) as HTMLInputElement).value).toBe("Chennai");
-    });
+  it("calls /api/register, saves to localStorage, and calls onComplete on submit", async () => {
+    const onComplete = await fillAndSubmit();
     fireEvent.click(screen.getByRole("button", { name: /open your invitation/i }));
-    expect(localStorageMock.getItem("guest_name")).toBe("James");
-    expect(localStorageMock.getItem("guest_city")).toBe("Chennai");
-    expect(onComplete).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/register", expect.objectContaining({ method: "POST" }));
+      expect(localStorageMock.getItem("guest_name")).toBe("James");
+      expect(localStorageMock.getItem("guest_city")).toBe("Chennai");
+      expect(localStorageMock.getItem("session_token")).toBe("tok-xyz");
+      expect(onComplete).toHaveBeenCalledWith("James");
+    });
   });
 
   it("submit is disabled when city is typed but not selected from dropdown", async () => {
@@ -74,5 +97,32 @@ describe("FirstVisitForm", () => {
     await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
     await userEvent.type(screen.getByPlaceholderText(/search your city/i), "Chen");
     expect(screen.getByRole("button", { name: /open your invitation/i })).toBeDisabled();
+  });
+
+  it("shows error message on 429 response", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: () => Promise.resolve({ message: "Please try again in a little while." }),
+    });
+    const onComplete = await fillAndSubmit();
+    fireEvent.click(screen.getByRole("button", { name: /open your invitation/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/please try again/i)).toBeInTheDocument();
+    });
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("shows generic error message on non-ok response", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    });
+    const onComplete = await fillAndSubmit();
+    fireEvent.click(screen.getByRole("button", { name: /open your invitation/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+    });
   });
 });

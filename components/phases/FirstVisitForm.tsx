@@ -14,6 +14,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [suggestions, setSuggestions] = useState<City[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,17 +50,53 @@ export default function FirstVisitForm({ onComplete }: Props) {
     setSelectedCity(null);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !selectedCity) return;
-    // Start music here — guaranteed user gesture on all mobile browsers
-    startBackgroundMusic("/song.mp3");
-    localStorage.setItem("guest_name", name.trim());
-    localStorage.setItem("guest_city", selectedCity.name);
-    onComplete(name.trim());
+    if (!name.trim() || !selectedCity || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("@/lib/fingerprint");
+      const device_uuid = await getOrCreateDeviceUUID();
+      const browser_signals_hash = await getBrowserSignalsHash();
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          city: selectedCity.name,
+          device_uuid,
+          browser_signals_hash,
+        }),
+      });
+
+      if (res.status === 429) {
+        const data = await res.json();
+        setError(data.message ?? "Please try again in a little while.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!res.ok) throw new Error("failed");
+
+      const data = await res.json();
+
+      startBackgroundMusic("/song.mp3");
+      localStorage.setItem("guest_name", name.trim());
+      localStorage.setItem("guest_city", selectedCity.name);
+      if (data.session_token) localStorage.setItem("session_token", data.session_token);
+      onComplete(name.trim());
+    } catch {
+      setError("Something went wrong — please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  const canSubmit = name.trim().length > 0 && selectedCity !== null;
+  const canSubmit = name.trim().length > 0 && selectedCity !== null && !isSubmitting;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full max-w-md">
@@ -107,12 +145,18 @@ export default function FirstVisitForm({ onComplete }: Props) {
         )}
       </div>
 
+      {error && (
+        <p className="font-body text-deep-rose/80 text-sm text-center bg-blush/30 rounded-lg px-4 py-3">
+          {error}
+        </p>
+      )}
+
       <button
         type="submit"
         disabled={!canSubmit}
         className="mt-2 px-8 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm transition-opacity disabled:opacity-40 hover:opacity-90"
       >
-        Open your invitation
+        {isSubmitting ? "One moment…" : "Open your invitation"}
       </button>
     </form>
   );
