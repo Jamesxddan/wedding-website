@@ -27,7 +27,7 @@ describe("getOrCreateDeviceUUID", () => {
   it("generates a valid UUID when nothing is stored", async () => {
     const { getOrCreateDeviceUUID } = await import("@/lib/fingerprint");
     const uuid = await getOrCreateDeviceUUID();
-    expect(uuid).toMatch(/^[0-9a-f-]{36}$/);
+    expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
   it("returns the same UUID on repeated calls (localStorage cache)", async () => {
@@ -42,5 +42,13 @@ describe("getOrCreateDeviceUUID", () => {
     const { getOrCreateDeviceUUID } = await import("@/lib/fingerprint");
     const uuid = await getOrCreateDeviceUUID();
     expect(uuid).toBe("test-uuid-1234");
+  });
+
+  it("recovers UUID from cookie when localStorage is empty", async () => {
+    document.cookie = "device_uuid=cookie-uuid-5678; path=/";
+    // localStorage is already cleared by beforeEach
+    const { getOrCreateDeviceUUID } = await import("@/lib/fingerprint");
+    const uuid = await getOrCreateDeviceUUID();
+    expect(uuid).toBe("cookie-uuid-5678");
   });
 });
