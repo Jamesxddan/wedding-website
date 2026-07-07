@@ -52,9 +52,10 @@ function SplitText({ text, delayBase = 300, stagger = 55 }: {
 
 interface Props {
   guestName: string;
+  sessionRestored?: boolean;
 }
 
-export default function CountdownHero({ guestName }: Props) {
+export default function CountdownHero({ guestName, sessionRestored = false }: Props) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft(new Date()));
   const [photos, setPhotos] = useState<DrivePhoto[]>([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -301,6 +302,22 @@ export default function CountdownHero({ guestName }: Props) {
           >
             Counting down with you, {guestName} 🌸
           </p>
+
+          {sessionRestored && (
+            <button
+              onClick={() => {
+                localStorage.removeItem("guest_name");
+                localStorage.removeItem("guest_city");
+                localStorage.removeItem("invitation_seen");
+                localStorage.removeItem("session_token");
+                window.location.reload();
+              }}
+              className={`font-body text-[11px] text-white/50 underline underline-offset-4 hover:text-white/80 transition-colors ${fadeIn(5)}`}
+              style={{ transitionDelay: "1000ms" }}
+            >
+              ↩ Replay the invitation
+            </button>
+          )}
         </div>
 
         {/* Scroll indicator */}

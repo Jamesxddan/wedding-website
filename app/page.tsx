@@ -22,7 +22,7 @@ import Reveal from "@/components/ui/Reveal";
 import BackgroundMusic from "@/components/ui/BackgroundMusic";
 
 export default function Home() {
-  const { phase, guestName, isLoading, refresh } = usePhase();
+  const { phase, guestName, isLoading, refresh, sessionRestored } = usePhase();
   const [showInvitation, setShowInvitation] = useState(false);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && (
         <>
-          <CountdownHero guestName={guestName ?? "Friend"} />
+          <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} />
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <OurStory />
