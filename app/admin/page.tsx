@@ -86,7 +86,7 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: g.id, is_owner: !g.is_owner }),
     });
-    load("guests");
+    await load("guests");
   }
 
   async function unblock(f: Flag) {

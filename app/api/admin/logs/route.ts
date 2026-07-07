@@ -13,11 +13,13 @@ export async function GET(req: NextRequest) {
   const guestFilter = req.nextUrl.searchParams.get("guest");
   const typeFilter = req.nextUrl.searchParams.get("type");
 
+  const fetchLimit = guestFilter ? 2000 : 200;
+
   let query = supabase
     .from("access_logs")
     .select(`id, device_uuid, event_type, event_data, ip, created_at, guests ( name )`)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(fetchLimit);
 
   if (typeFilter) query = query.eq("event_type", typeFilter);
 

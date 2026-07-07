@@ -26,7 +26,7 @@ export async function GET() {
       is_owner: g.is_owner,
       created_at: g.created_at,
       last_seen_at: g.last_seen_at,
-      device_count: (g.device_fingerprints as { id: string }[]).length,
+      device_count: (g.device_fingerprints as { id: string }[] | null ?? []).length,
     }))
   );
 }
