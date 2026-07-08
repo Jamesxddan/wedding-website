@@ -37,34 +37,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Fallback: browser signals hash (UUID was cleared but same browser)
-  if (browser_signals_hash) {
-    const { data: byHash } = await supabase
-      .from("device_fingerprints")
-      .select(`id, session_token, guests ( name, city, invitation_seen, is_owner )`)
-      .eq("browser_signals_hash", browser_signals_hash)
-      .maybeSingle();
-
-    if (byHash) {
-      await supabase
-        .from("device_fingerprints")
-        .update({ device_uuid, last_seen_at: new Date().toISOString() })
-        .eq("id", byHash.id);
-
-      const guest = byHash.guests as unknown as {
-        name: string; city: string; invitation_seen: boolean; is_owner: boolean;
-      } | null;
-      if (!guest) return NextResponse.json({ status: "new" });
-
-      return NextResponse.json({
-        status: "known",
-        name: guest.name,
-        city: guest.city,
-        invitation_seen: guest.invitation_seen,
-        session_token: byHash.session_token,
-      });
-    }
-  }
-
   return NextResponse.json({ status: "new" });
 }
