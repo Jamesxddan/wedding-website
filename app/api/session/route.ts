@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       .update({ last_seen_at: new Date().toISOString() })
       .eq("device_uuid", device_uuid);
 
-    const guest = fp.guests as {
+    const guest = fp.guests as unknown as {
       name: string; city: string; invitation_seen: boolean; is_owner: boolean;
     } | null;
     if (!guest) return NextResponse.json({ status: "new" });
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         .update({ device_uuid, last_seen_at: new Date().toISOString() })
         .eq("id", byHash.id);
 
-      const guest = byHash.guests as {
+      const guest = byHash.guests as unknown as {
         name: string; city: string; invitation_seen: boolean; is_owner: boolean;
       } | null;
       if (!guest) return NextResponse.json({ status: "new" });
