@@ -13,8 +13,16 @@ export async function GET(req: NextRequest) {
   const weddingFolderId = process.env.WEDDING_FOLDER_ID;
 
   const view = req.nextUrl.searchParams.get("view"); // "albums" | "flat"
+  const device = req.nextUrl.searchParams.get("device") ?? "desktop";
 
-  const folderId = folder === "wedding" ? weddingFolderId : engagementFolderId;
+  let folderId: string | undefined;
+  if (folder === "wedding") {
+    folderId = weddingFolderId;
+  } else if (device === "mobile") {
+    folderId = process.env.ENGAGEMENT_FOLDER_ID_MOBILE ?? engagementFolderId;
+  } else {
+    folderId = process.env.ENGAGEMENT_FOLDER_ID_DESKTOP ?? engagementFolderId;
+  }
 
   if (!apiKey || !folderId) {
     return NextResponse.json({ photos: [], albums: [], configured: false });

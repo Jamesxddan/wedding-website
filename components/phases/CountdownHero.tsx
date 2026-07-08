@@ -96,22 +96,18 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
     return () => clearInterval(id);
   }, []);
 
-  // Fetch engagement photos — sort by device orientation
+  // Fetch engagement photos for the slideshow — use device-specific folder
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
-    fetch("/api/drive-photos?folder=engagement", { headers })
+    const devVp = localStorage.getItem("dev_viewport");
+    const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
+    const device = isMobile ? "mobile" : "desktop";
+    fetch(`/api/drive-photos?folder=engagement&device=${device}`, { headers })
       .then((r) => r.json())
       .then((d) => {
         if (!d.photos?.length) return;
-        const devVp = localStorage.getItem("dev_viewport");
-        const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
-        const sorted = [...d.photos].sort((a, b) => {
-          const aMatch = isMobile ? a.landscape === false : a.landscape === true;
-          const bMatch = isMobile ? b.landscape === false : b.landscape === true;
-          return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
-        });
-        setPhotos(sorted);
+        setPhotos(d.photos);
       })
       .catch(() => {});
   }, []);

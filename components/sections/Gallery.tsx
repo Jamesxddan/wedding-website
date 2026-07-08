@@ -11,6 +11,7 @@ interface Props {
 
 interface GalleryState {
   albums: DriveAlbum[];
+  photos: DrivePhoto[];
   configured: boolean;
   loading: boolean;
   error: boolean;
@@ -30,7 +31,6 @@ function AlbumCard({ album, onClick }: { album: DriveAlbum; onClick: () => void 
     >
       {cover && (
         <>
-          {/* Shimmer placeholder */}
           {!imgLoaded && (
             <div className="absolute inset-0 bg-gradient-to-r from-champagne/40 via-blush/20 to-champagne/40 animate-pulse" />
           )}
@@ -111,7 +111,6 @@ function PhotoTile({ photo, onClick }: { photo: DrivePhoto; onClick: () => void 
 
 function MasonryGrid({ photos, onPhotoClick }: { photos: DrivePhoto[]; onPhotoClick: (p: DrivePhoto) => void }) {
   const numCols = useColumnCount();
-  // Round-robin distribution keeps columns balanced regardless of photo count
   const columns = Array.from({ length: numCols }, (_, col) =>
     photos.filter((_, i) => i % numCols === col)
   );
@@ -131,6 +130,7 @@ function MasonryGrid({ photos, onPhotoClick }: { photos: DrivePhoto[]; onPhotoCl
 export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [state, setState] = useState<GalleryState>({
     albums: [],
+    photos: [],
     configured: false,
     loading: true,
     error: false,
@@ -142,11 +142,23 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
-    fetch(`/api/drive-photos?folder=${folder}&view=albums`, { headers })
+
+    let url: string;
+    if (folder === "engagement") {
+      const devVp = localStorage.getItem("dev_viewport");
+      const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
+      const device = isMobile ? "mobile" : "desktop";
+      url = `/api/drive-photos?folder=${folder}&device=${device}`;
+    } else {
+      url = `/api/drive-photos?folder=${folder}&view=albums`;
+    }
+
+    fetch(url, { headers })
       .then((r) => r.json())
       .then((data) => {
         setState({
           albums: data.albums ?? [],
+          photos: data.photos ?? [],
           configured: data.configured ?? false,
           loading: false,
           error: !!data.error,
@@ -155,7 +167,6 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
       .catch(() => setState((s) => ({ ...s, loading: false, error: true })));
   }, [folder]);
 
-  // Reset page when album changes
   useEffect(() => { setPage(1); }, [openAlbum]);
 
   const closeLightbox = useCallback(() => setLightbox(null), []);
@@ -171,6 +182,11 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [lightbox, openAlbum, closeLightbox]);
 
+  // Engagement: paginate flat photos
+  const flatVisible = state.photos.slice(0, page * PAGE_SIZE);
+  const flatHasMore = folder === "engagement" && state.photos.length > page * PAGE_SIZE;
+
+  // Wedding: paginate open album photos
   const visiblePhotos = openAlbum?.photos.slice(0, page * PAGE_SIZE) ?? [];
   const hasMore = openAlbum ? openAlbum.photos.length > page * PAGE_SIZE : false;
 
@@ -205,8 +221,25 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
         </div>
       )}
 
-      {/* Album folder cards */}
-      {!state.loading && !openAlbum && state.albums.length > 0 && (
+      {/* Engagement: flat masonry grid */}
+      {folder === "engagement" && !state.loading && state.configured && !state.error && flatVisible.length > 0 && (
+        <Reveal delay={150}>
+          <MasonryGrid photos={flatVisible} onPhotoClick={setLightbox} />
+          {flatHasMore && (
+            <div className="flex justify-center mt-10">
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                className="px-8 py-3 rounded-full border border-deep-rose text-deep-rose font-heading text-sm tracking-widest uppercase hover:bg-blush/20 transition-colors"
+              >
+                Load more
+              </button>
+            </div>
+          )}
+        </Reveal>
+      )}
+
+      {/* Wedding: album cards */}
+      {folder === "wedding" && !state.loading && !openAlbum && state.albums.length > 0 && (
         <Reveal delay={150}>
           <div className={`grid gap-6 ${
             state.albums.length === 1 ? "grid-cols-1 max-w-sm mx-auto"
@@ -220,8 +253,8 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
         </Reveal>
       )}
 
-      {/* Open album */}
-      {!state.loading && openAlbum && (
+      {/* Wedding: open album detail */}
+      {folder === "wedding" && !state.loading && openAlbum && (
         <div>
           <div className="flex items-center gap-3 mb-8 flex-wrap">
             <button
@@ -239,11 +272,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
               {openAlbum.photos.length} photos
             </span>
           </div>
-
-          {/* Masonry photo grid — JS columns for proper bottom alignment */}
           <MasonryGrid photos={visiblePhotos} onPhotoClick={setLightbox} />
-
-          {/* Load more */}
           {hasMore && (
             <div className="flex justify-center mt-10">
               <button

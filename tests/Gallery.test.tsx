@@ -25,48 +25,47 @@ describe("Gallery", () => {
     await waitFor(() => expect(screen.getByText(/photos coming soon/i)).toBeInTheDocument());
   });
 
-  it("renders album cards when albums are returned", async () => {
+  it("renders flat photo tiles for engagement folder", async () => {
     fetchMock.mockResolvedValue({
       json: async () => ({
-        albums: [
-          { id: "a1", name: "Candid", photos: [{ id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" }] },
-          { id: "a2", name: "Trad", photos: [{ id: "2", name: "photo2.jpg", thumbnailUrl: "/t2.jpg", fullUrl: "/f2.jpg" }] },
+        photos: [
+          { id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" },
+          { id: "2", name: "photo2.jpg", thumbnailUrl: "/t2.jpg", fullUrl: "/f2.jpg" },
         ],
         configured: true,
       }),
     });
     render(<Gallery folder="engagement" title="Engagement Gallery" />);
-    await waitFor(() => expect(screen.getByText("Candid")).toBeInTheDocument());
-    expect(screen.getByText("Trad")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /view photo/i })).toHaveLength(2)
+    );
   });
 
-  it("opens photo grid when an album is clicked", async () => {
+  it("opens lightbox when a photo tile is clicked", async () => {
     fetchMock.mockResolvedValue({
       json: async () => ({
-        albums: [
-          { id: "a1", name: "Candid", photos: [{ id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" }] },
+        photos: [
+          { id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" },
         ],
         configured: true,
       }),
     });
     render(<Gallery folder="engagement" />);
-    await waitFor(() => screen.getByText("Candid"));
-    fireEvent.click(screen.getByRole("button", { name: /open Candid album/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /view photo/i })).toBeInTheDocument());
+    await waitFor(() => screen.getByRole("button", { name: /view photo/i }));
+    fireEvent.click(screen.getByRole("button", { name: /view photo/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("opens and closes lightbox", async () => {
+  it("closes lightbox when close button is clicked", async () => {
     fetchMock.mockResolvedValue({
       json: async () => ({
-        albums: [
-          { id: "a1", name: "Candid", photos: [{ id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" }] },
+        photos: [
+          { id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" },
         ],
         configured: true,
       }),
     });
     render(<Gallery folder="engagement" />);
-    await waitFor(() => screen.getByText("Candid"));
-    fireEvent.click(screen.getByRole("button", { name: /open Candid album/i }));
     await waitFor(() => screen.getByRole("button", { name: /view photo/i }));
     fireEvent.click(screen.getByRole("button", { name: /view photo/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -82,7 +81,18 @@ describe("Gallery", () => {
     await waitFor(() => expect(screen.getByText(/could not load photos/i)).toBeInTheDocument());
   });
 
-  it("fetches from the correct folder endpoint", async () => {
+  it("fetches engagement folder without view=albums", async () => {
+    fetchMock.mockResolvedValue({ json: async () => ({ photos: [], configured: false }) });
+    render(<Gallery folder="engagement" />);
+    await waitFor(() => {
+      const url: string = fetchMock.mock.calls[0][0];
+      expect(url).toContain("/api/drive-photos?folder=engagement");
+      expect(url).not.toContain("view=albums");
+      expect(url).toMatch(/device=(mobile|desktop)/);
+    });
+  });
+
+  it("fetches wedding folder with view=albums", async () => {
     fetchMock.mockResolvedValue({ json: async () => ({ albums: [], configured: false }) });
     render(<Gallery folder="wedding" />);
     await waitFor(() => {
@@ -91,6 +101,21 @@ describe("Gallery", () => {
         expect.objectContaining({ headers: expect.any(Object) })
       );
     });
+  });
+
+  it("renders album cards for wedding folder", async () => {
+    fetchMock.mockResolvedValue({
+      json: async () => ({
+        albums: [
+          { id: "a1", name: "Ceremony", photos: [{ id: "1", name: "photo1.jpg", thumbnailUrl: "/t1.jpg", fullUrl: "/f1.jpg" }] },
+          { id: "a2", name: "Reception", photos: [{ id: "2", name: "photo2.jpg", thumbnailUrl: "/t2.jpg", fullUrl: "/f2.jpg" }] },
+        ],
+        configured: true,
+      }),
+    });
+    render(<Gallery folder="wedding" title="Wedding Gallery" />);
+    await waitFor(() => expect(screen.getByText("Ceremony")).toBeInTheDocument());
+    expect(screen.getByText("Reception")).toBeInTheDocument();
   });
 
   it("renders the section title", async () => {
