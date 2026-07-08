@@ -77,6 +77,25 @@ async function _runSessionCheck(
       session_token?: string;
     };
 
+    // Device not in Supabase yet — auto-register using stored name/city
+    // so pre-Supabase visitors silently get a session_token
+    if (data.status === "new") {
+      const existingName = localStorage.getItem("guest_name");
+      const existingCity = localStorage.getItem("guest_city");
+      if (existingName && existingCity) {
+        const regRes = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: existingName, city: existingCity, device_uuid, browser_signals_hash }),
+        });
+        if (regRes.ok) {
+          const regData = (await regRes.json()) as { session_token?: string };
+          if (regData.session_token) localStorage.setItem("session_token", regData.session_token);
+        }
+      }
+      return;
+    }
+
     if (data.status !== "known" || !data.name) return;
 
     localStorage.setItem("guest_name", data.name);
