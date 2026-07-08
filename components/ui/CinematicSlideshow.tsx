@@ -152,7 +152,7 @@ function SlideLayer({ src, opacity, zIndex }: {
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-contain"
-        style={{ filter: "saturate(1.06) contrast(1.02)" }}
+        style={{ filter: "brightness(0.75) saturate(1.06) contrast(1.02)" }}
         draggable={false}
       />
     </div>
