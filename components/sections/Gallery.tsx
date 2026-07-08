@@ -11,13 +11,114 @@ interface Props {
 
 interface GalleryState {
   albums: DriveAlbum[];
-  photos: DrivePhoto[];
+  photos: DrivePhoto[]; // engagement: priority-sorted flat list
   configured: boolean;
   loading: boolean;
   error: boolean;
 }
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 32;
+
+// Subfolder priority: main photos come first, then sub, sub1, sub2
+const ALBUM_PRIORITY: Record<string, number> = { main: 0, sub: 1, sub1: 2, sub2: 3 };
+function albumPriority(name: string) {
+  return ALBUM_PRIORITY[name.toLowerCase()] ?? 99;
+}
+
+// ─── Spotlight tile ───────────────────────────────────────────────────────────
+
+function SpotlightTile({
+  photo, onClick, featured = false, dimmed, onEnter, onLeave,
+}: {
+  photo: DrivePhoto;
+  onClick: () => void;
+  featured?: boolean;
+  dimmed: boolean;
+  onEnter: () => void;
+  onLeave: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      aria-label={featured ? "View featured photo" : "View photo"}
+      className="relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blush"
+      style={{
+        aspectRatio: "1 / 1",
+        gridColumn: featured ? "span 2" : undefined,
+        gridRow: featured ? "span 2" : undefined,
+        opacity: dimmed ? 0.38 : 1,
+        transform: dimmed ? "scale(0.985)" : "scale(1)",
+        transition: "opacity 0.22s ease, transform 0.22s ease",
+        borderRadius: "6px",
+      }}
+    >
+      {!loaded && (
+        <div className="absolute inset-0 bg-champagne/30 animate-pulse" />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.thumbnailUrl}
+        alt=""
+        onLoad={() => setLoaded(true)}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.3s" }}
+      />
+    </button>
+  );
+}
+
+// ─── Spotlight grid ───────────────────────────────────────────────────────────
+
+function SpotlightGrid({
+  photos, onPhotoClick,
+}: {
+  photos: DrivePhoto[];
+  onPhotoClick: (p: DrivePhoto) => void;
+}) {
+  const [cols, setCols] = useState(4);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  useEffect(() => {
+    function update() { setCols(window.innerWidth < 640 ? 2 : 4); }
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const [featured, ...rest] = photos;
+  const anyHovered = hoveredId !== null;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "4px" }}>
+      {featured && (
+        <SpotlightTile
+          photo={featured}
+          onClick={() => onPhotoClick(featured)}
+          featured
+          dimmed={anyHovered && hoveredId !== featured.id}
+          onEnter={() => setHoveredId(featured.id)}
+          onLeave={() => setHoveredId(null)}
+        />
+      )}
+      {rest.map((photo) => (
+        <SpotlightTile
+          key={photo.id}
+          photo={photo}
+          onClick={() => onPhotoClick(photo)}
+          dimmed={anyHovered && hoveredId !== photo.id}
+          onEnter={() => setHoveredId(photo.id)}
+          onLeave={() => setHoveredId(null)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Wedding album card ───────────────────────────────────────────────────────
 
 function AlbumCard({ album, onClick }: { album: DriveAlbum; onClick: () => void }) {
   const cover = album.photos[0];
@@ -59,6 +160,8 @@ function AlbumCard({ album, onClick }: { album: DriveAlbum; onClick: () => void 
   );
 }
 
+// ─── Wedding masonry grid ─────────────────────────────────────────────────────
+
 function useColumnCount() {
   const [cols, setCols] = useState(3);
   useEffect(() => {
@@ -70,7 +173,7 @@ function useColumnCount() {
   return cols;
 }
 
-function PhotoTile({ photo, onClick }: { photo: DrivePhoto; onClick: () => void }) {
+function MasonryTile({ photo, onClick }: { photo: DrivePhoto; onClick: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -119,13 +222,30 @@ function MasonryGrid({ photos, onPhotoClick }: { photos: DrivePhoto[]; onPhotoCl
       {columns.map((colPhotos, colIdx) => (
         <div key={colIdx} className="flex-1 flex flex-col min-w-0">
           {colPhotos.map((photo) => (
-            <PhotoTile key={photo.id} photo={photo} onClick={() => onPhotoClick(photo)} />
+            <MasonryTile key={photo.id} photo={photo} onClick={() => onPhotoClick(photo)} />
           ))}
         </div>
       ))}
     </div>
   );
 }
+
+// ─── Load more ────────────────────────────────────────────────────────────────
+
+function LoadMoreButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex justify-center mt-10">
+      <button
+        onClick={onClick}
+        className="px-8 py-3 rounded-full border border-deep-rose text-deep-rose font-heading text-sm tracking-widest uppercase hover:bg-blush/20 transition-colors"
+      >
+        Load more
+      </button>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [state, setState] = useState<GalleryState>({
@@ -148,7 +268,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
       const devVp = localStorage.getItem("dev_viewport");
       const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
       const device = isMobile ? "mobile" : "desktop";
-      url = `/api/drive-photos?folder=${folder}&device=${device}`;
+      url = `/api/drive-photos?folder=${folder}&view=albums&device=${device}`;
     } else {
       url = `/api/drive-photos?folder=${folder}&view=albums`;
     }
@@ -156,9 +276,16 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     fetch(url, { headers })
       .then((r) => r.json())
       .then((data) => {
+        // Sort engagement albums by name priority, then flatten into one ordered list
+        const sortedPhotos =
+          folder === "engagement"
+            ? (data.albums ?? [])
+                .sort((a: DriveAlbum, b: DriveAlbum) => albumPriority(a.name) - albumPriority(b.name))
+                .flatMap((album: DriveAlbum) => album.photos)
+            : [];
         setState({
           albums: data.albums ?? [],
-          photos: data.photos ?? [],
+          photos: sortedPhotos,
           configured: data.configured ?? false,
           loading: false,
           error: !!data.error,
@@ -182,13 +309,11 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [lightbox, openAlbum, closeLightbox]);
 
-  // Engagement: paginate flat photos
-  const flatVisible = state.photos.slice(0, page * PAGE_SIZE);
-  const flatHasMore = folder === "engagement" && state.photos.length > page * PAGE_SIZE;
+  const spotlightVisible = state.photos.slice(0, page * PAGE_SIZE);
+  const spotlightHasMore = folder === "engagement" && state.photos.length > page * PAGE_SIZE;
 
-  // Wedding: paginate open album photos
-  const visiblePhotos = openAlbum?.photos.slice(0, page * PAGE_SIZE) ?? [];
-  const hasMore = openAlbum ? openAlbum.photos.length > page * PAGE_SIZE : false;
+  const albumPhotosVisible = openAlbum?.photos.slice(0, page * PAGE_SIZE) ?? [];
+  const albumHasMore = openAlbum ? openAlbum.photos.length > page * PAGE_SIZE : false;
 
   const subtitle = folder === "engagement" ? "Moments before forever" : "Moments we treasure";
 
@@ -221,20 +346,11 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
         </div>
       )}
 
-      {/* Engagement: flat masonry grid */}
-      {folder === "engagement" && !state.loading && state.configured && !state.error && flatVisible.length > 0 && (
+      {/* Engagement: Spotlight mosaic (main → sub → sub1 → sub2 priority) */}
+      {folder === "engagement" && !state.loading && state.configured && !state.error && spotlightVisible.length > 0 && (
         <Reveal delay={150}>
-          <MasonryGrid photos={flatVisible} onPhotoClick={setLightbox} />
-          {flatHasMore && (
-            <div className="flex justify-center mt-10">
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                className="px-8 py-3 rounded-full border border-deep-rose text-deep-rose font-heading text-sm tracking-widest uppercase hover:bg-blush/20 transition-colors"
-              >
-                Load more
-              </button>
-            </div>
-          )}
+          <SpotlightGrid photos={spotlightVisible} onPhotoClick={setLightbox} />
+          {spotlightHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </Reveal>
       )}
 
@@ -272,17 +388,8 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
               {openAlbum.photos.length} photos
             </span>
           </div>
-          <MasonryGrid photos={visiblePhotos} onPhotoClick={setLightbox} />
-          {hasMore && (
-            <div className="flex justify-center mt-10">
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                className="px-8 py-3 rounded-full border border-deep-rose text-deep-rose font-heading text-sm tracking-widest uppercase hover:bg-blush/20 transition-colors"
-              >
-                Load more
-              </button>
-            </div>
-          )}
+          <MasonryGrid photos={albumPhotosVisible} onPhotoClick={setLightbox} />
+          {albumHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </div>
       )}
 
