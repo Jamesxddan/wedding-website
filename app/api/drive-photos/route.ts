@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchDrivePhotos, fetchDriveAlbums } from "@/lib/drive";
+import { validateSession } from "@/lib/session-check";
 
 export async function GET(req: NextRequest) {
+  const folder = req.nextUrl.searchParams.get("folder") ?? "engagement";
+
+  const check = await validateSession(req, "photo_api", { folder });
+  if (check instanceof NextResponse) return check;
+
   const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
   const engagementFolderId = process.env.ENGAGEMENT_FOLDER_ID;
   const weddingFolderId = process.env.WEDDING_FOLDER_ID;
 
-  const folder = req.nextUrl.searchParams.get("folder");
   const view = req.nextUrl.searchParams.get("view"); // "albums" | "flat"
 
   const folderId = folder === "wedding" ? weddingFolderId : engagementFolderId;

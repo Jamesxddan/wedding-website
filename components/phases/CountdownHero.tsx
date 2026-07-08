@@ -98,7 +98,9 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
 
   // Fetch engagement photos — sort by device orientation
   useEffect(() => {
-    fetch("/api/drive-photos?folder=engagement")
+    const sessionToken = localStorage.getItem("session_token");
+    const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
+    fetch("/api/drive-photos?folder=engagement", { headers })
       .then((r) => r.json())
       .then((d) => {
         if (!d.photos?.length) return;

@@ -140,7 +140,9 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [lightbox, setLightbox] = useState<DrivePhoto | null>(null);
 
   useEffect(() => {
-    fetch(`/api/drive-photos?folder=${folder}&view=albums`)
+    const sessionToken = localStorage.getItem("session_token");
+    const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
+    fetch(`/api/drive-photos?folder=${folder}&view=albums`, { headers })
       .then((r) => r.json())
       .then((data) => {
         setState({
