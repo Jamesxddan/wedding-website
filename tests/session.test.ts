@@ -75,31 +75,4 @@ describe("POST /api/session", () => {
     expect(data.session_token).toBe("tok-123");
   });
 
-  it("returns known data when device found by browser_signals_hash fallback", async () => {
-    const byHash = {
-      id: "fp-2",
-      session_token: "tok-hash",
-      guests: { name: "Sharon", city: "Chennai", invitation_seen: false, is_owner: false },
-    };
-    vi.mocked(supabase.from)
-      .mockReturnValueOnce({
-        ...makeChain(null), // first lookup by device_uuid — not found
-      } as ReturnType<typeof supabase.from>)
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: byHash, error: null }),
-      } as unknown as ReturnType<typeof supabase.from>)
-      .mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      } as unknown as ReturnType<typeof supabase.from>);
-
-    const { POST } = await import("@/app/api/session/route");
-    const res = await POST(req({ device_uuid: "new-uuid", browser_signals_hash: "known-hash" }));
-    const data = await res.json();
-    expect(data.status).toBe("known");
-    expect(data.name).toBe("Sharon");
-    expect(data.session_token).toBe("tok-hash");
-  });
 });

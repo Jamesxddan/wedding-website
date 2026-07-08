@@ -28,7 +28,9 @@ describe("CountdownHero", () => {
 
   it("renders the couple names", () => {
     render(<CountdownHero guestName="James" />);
-    expect(screen.getAllByText(/James & Sharon/).length).toBeGreaterThan(0);
+    // SplitText renders each name with aria-label; the & separator is aria-hidden
+    expect(document.querySelector('[aria-label="James"]')).toBeInTheDocument();
+    expect(document.querySelector('[aria-label="Sharon"]')).toBeInTheDocument();
   });
 
   it("renders personalised greeting", () => {
@@ -44,8 +46,10 @@ describe("CountdownHero", () => {
     expect(screen.getByText(/^seconds$/i)).toBeInTheDocument();
   });
 
-  it("renders non-zero days until wedding", () => {
+  it("renders non-zero days until wedding", async () => {
     render(<CountdownHero guestName="James" />);
+    // Let the count-up animation complete (animates over 1500ms via rAF)
+    await act(async () => { vi.advanceTimersByTime(2000); });
     const days = screen.getByText(/^days$/i).closest("div")?.querySelector("span");
     expect(Number(days?.textContent)).toBeGreaterThan(0);
   });

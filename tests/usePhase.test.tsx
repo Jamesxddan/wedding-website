@@ -103,6 +103,7 @@ describe("usePhase", () => {
 
   it("does not fire session check when guest_name is already in localStorage", async () => {
     localStorageMock.setItem("guest_name", "John");
+    localStorageMock.setItem("session_token", "tok-existing");
     localStorageMock.setItem("invitation_seen", "true");
     vi.useFakeTimers();
     vi.setSystemTime(DAY_BEFORE);

@@ -13,8 +13,8 @@ describe("fetchDrivePhotos", () => {
       ok: true,
       json: async () => ({
         files: [
-          { id: "abc123", name: "wedding.jpg" },
-          { id: "def456", name: "couple.jpg" },
+          { id: "abc123", name: "wedding.jpg", mimeType: "image/jpeg" },
+          { id: "def456", name: "couple.jpg", mimeType: "image/jpeg" },
         ],
       }),
     });
@@ -27,7 +27,11 @@ describe("fetchDrivePhotos", () => {
   });
 
   it("throws on non-ok response", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 403 });
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => '{"error":{"code":403}}',
+    });
     await expect(fetchDrivePhotos("folder_id", "api_key")).rejects.toThrow("403");
   });
 

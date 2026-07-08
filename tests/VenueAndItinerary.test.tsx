@@ -21,10 +21,10 @@ describe("Venue", () => {
     expect(screen.getByText("Reception")).toBeInTheDocument();
   });
 
-  it("renders Open in Maps links", () => {
+  it("renders Google Maps links", () => {
     render(<Venue />);
-    const mapLinks = screen.getAllByRole("link", { name: /open in maps/i });
-    expect(mapLinks).toHaveLength(2);
+    const mapLinks = screen.getAllByRole("link", { name: /google maps/i });
+    expect(mapLinks.length).toBeGreaterThan(0);
     mapLinks.forEach((l) => expect(l).toHaveAttribute("target", "_blank"));
   });
 

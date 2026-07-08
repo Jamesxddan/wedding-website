@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 vi.mock("@/components/webgl/PetalScene", () => ({ default: () => null }));
 vi.mock("@/components/sections/Gallery", () => ({ default: () => <div>Gallery</div> }));
@@ -13,6 +13,8 @@ vi.mock("@/components/sections/YoutubeComments", () => ({ default: () => null })
 global.fetch = vi.fn().mockResolvedValue({ json: async () => ({ photos: [], configured: false }) });
 
 describe("CabDialog", () => {
+  afterEach(() => { vi.useRealTimers(); });
+
   it("renders to-venue mode with venue options", async () => {
     const { default: CabDialog } = await import("@/components/ui/CabDialog");
     render(<CabDialog mode="to-venue" onClose={() => {}} />);
@@ -25,7 +27,7 @@ describe("CabDialog", () => {
     const { default: CabDialog } = await import("@/components/ui/CabDialog");
     render(<CabDialog mode="home" onClose={() => {}} />);
     expect(screen.getByText("Ride Home")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter your address/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/start typing your address/i)).toBeInTheDocument();
   });
 
   it("calls onClose when close button clicked", async () => {
@@ -51,14 +53,39 @@ describe("CabDialog", () => {
     expect(uber).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("Uber link becomes active after entering destination", async () => {
+  it("Uber link becomes active after selecting a place from autocomplete", async () => {
+    const savedFetch = global.fetch;
+    // First call returns predictions; second returns place coordinates
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          predictions: [{
+            place_id: "p1",
+            structured_formatting: { main_text: "Anna Nagar" },
+            description: "Anna Nagar, Chennai, India",
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({ lat: 13.085, lng: 80.211 }),
+      });
+
     const { default: CabDialog } = await import("@/components/ui/CabDialog");
     render(<CabDialog mode="home" onClose={() => {}} />);
-    fireEvent.change(screen.getByPlaceholderText(/enter your address/i), {
-      target: { value: "Anna Nagar, Chennai" },
+
+    fireEvent.change(screen.getByPlaceholderText(/start typing your address/i), {
+      target: { value: "Anna Nagar" },
     });
-    const uber = screen.getByText(/book with uber/i).closest("a");
-    expect(uber).toHaveAttribute("aria-disabled", "false");
+
+    // Debounce is 400ms; waitFor polls until prediction appears
+    await waitFor(() => screen.getByText("Anna Nagar"), { timeout: 2000 });
+    fireEvent.click(screen.getByText("Anna Nagar"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/book with uber/i).closest("a")).toHaveAttribute("aria-disabled", "false");
+    }, { timeout: 2000 });
+
+    global.fetch = savedFetch;
   });
 });
 
