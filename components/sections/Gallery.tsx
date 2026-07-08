@@ -22,7 +22,7 @@ const PAGE_SIZE = 32;
 // Subfolder priority: main photos come first, then sub, sub1, sub2
 const ALBUM_PRIORITY: Record<string, number> = { main: 0, sub: 1, sub1: 2, sub2: 3 };
 function albumPriority(name: string) {
-  return ALBUM_PRIORITY[name.toLowerCase()] ?? 99;
+  return ALBUM_PRIORITY[name.toLowerCase()] ?? 1;
 }
 
 // ─── Spotlight tile ───────────────────────────────────────────────────────────
