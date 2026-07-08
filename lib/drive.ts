@@ -36,7 +36,11 @@ async function listFolderContents(
     includeItemsFromAllDrives: "true",
     key: apiKey,
   });
+  const origin = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
   const res = await fetch(`${DRIVE_API}/files?${params}`, {
+    headers: { Referer: `${origin}/` },
     cache: "no-store",
   });
   if (!res.ok) {
