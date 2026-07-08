@@ -103,7 +103,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
     const devVp = localStorage.getItem("dev_viewport");
     const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
     const device = isMobile ? "mobile" : "desktop";
-    fetch(`/api/drive-photos?folder=engagement&device=${device}`, { headers })
+    fetch(`/api/drive-photos?folder=engagement&device=${device}&view=albums`, { headers })
       .then((r) => r.json())
       .then((d) => {
         if (!d.photos?.length) return;

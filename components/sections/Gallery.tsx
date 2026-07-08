@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { DrivePhoto, DriveAlbum } from "@/lib/drive";
 import Reveal from "@/components/ui/Reveal";
+import { albumPriority } from "@/lib/album-priority";
 
 interface Props {
   folder: "engagement" | "wedding";
@@ -18,16 +19,6 @@ interface GalleryState {
 }
 
 const PAGE_SIZE = 32;
-
-// Subfolder priority: main first, then sub1, sub2, … subN, unknown folders last
-function albumPriority(name: string): number {
-  const lower = name.toLowerCase();
-  if (lower === "main") return 0;
-  const subMatch = lower.match(/^sub(\d+)$/);
-  if (subMatch) return parseInt(subMatch[1], 10);
-  if (lower === "sub") return 1;
-  return 50; // unrecognised folder names sort after numbered subs
-}
 
 // ─── Spotlight tile ───────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchDrivePhotos, fetchDriveAlbums } from "@/lib/drive";
 import { validateSession } from "@/lib/session-check";
+import { albumPriority } from "@/lib/album-priority";
 
 export async function GET(req: NextRequest) {
   const folder = req.nextUrl.searchParams.get("folder") ?? "engagement";
@@ -36,7 +37,10 @@ export async function GET(req: NextRequest) {
   try {
     if (view === "albums") {
       const { albums, flat } = await fetchDriveAlbums(folderId, apiKey);
-      return NextResponse.json({ albums, photos: flat, configured: true });
+      // Return photos sorted by album priority so slideshow and gallery both respect main/sub1/sub2…
+      const sorted = [...albums].sort((a, b) => albumPriority(a.name) - albumPriority(b.name));
+      const priorityPhotos = sorted.flatMap((a) => a.photos);
+      return NextResponse.json({ albums, photos: priorityPhotos, configured: true });
     }
     const photos = await fetchDrivePhotos(folderId, apiKey);
     return NextResponse.json({ photos, configured: true });
