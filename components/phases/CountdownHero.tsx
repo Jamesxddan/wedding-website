@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { WEDDING_DATE, MUSIC_URL } from "@/lib/constants";
@@ -43,11 +43,45 @@ function SplitText({ text, delayBase = 300, stagger = 55 }: {
             animationDelay: `${delayBase + i * stagger}ms`,
           }}
         >
-          {char === " " ? " " : char}
+          {char === " " ? " " : char}
         </span>
       ))}
     </span>
   );
+}
+
+// Draws thumbnail on a tiny offscreen canvas and returns average relative luminance (0–1).
+// Uses same-origin /api/drive-image URLs so no crossOrigin attribute is needed.
+async function analyzeImageLuminance(src: string): Promise<number> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const SIZE = 40;
+        const canvas = document.createElement("canvas");
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(0.2); return; }
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+        let total = 0;
+        const count = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i] / 255;
+          const g = data[i + 1] / 255;
+          const b = data[i + 2] / 255;
+          // ITU-R BT.709 relative luminance
+          total += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+        resolve(total / count);
+      } catch {
+        resolve(0.2);
+      }
+    };
+    img.onerror = () => resolve(0.2);
+    img.src = src;
+  });
 }
 
 interface Props {
@@ -63,6 +97,10 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
   const [appeared, setAppeared] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const heroRef = useRef<HTMLElement | null>(null);
+
+  // Luminance tracking
+  const luminanceCache = useRef<Map<string, number>>(new Map());
+  const [currentLuminance, setCurrentLuminance] = useState(0.2); // default: dark → white text
 
   // Animated countdown — counts up from 0 to real value on mount
   const [animDone, setAnimDone] = useState(false);
@@ -111,6 +149,38 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
       })
       .catch(() => {});
   }, []);
+
+  // Analyse all thumbnails in the background once photos load
+  useEffect(() => {
+    if (!photos.length) return;
+    let cancelled = false;
+    async function runAnalysis() {
+      for (const photo of photos) {
+        if (cancelled) break;
+        if (luminanceCache.current.has(photo.id)) continue;
+        const lum = await analyzeImageLuminance(photo.thumbnailUrl);
+        luminanceCache.current.set(photo.id, lum);
+      }
+    }
+    runAnalysis();
+    return () => { cancelled = true; };
+  }, [photos]);
+
+  // Called by CinematicSlideshow when the active photo changes
+  const handlePhotoChange = useCallback((index: number) => {
+    const photo = photos[index];
+    if (!photo) return;
+    const cached = luminanceCache.current.get(photo.id);
+    if (cached !== undefined) {
+      setCurrentLuminance(cached);
+    } else {
+      // Not analysed yet — run it now (first photo on initial load)
+      analyzeImageLuminance(photo.thumbnailUrl).then((lum) => {
+        luminanceCache.current.set(photo.id, lum);
+        setCurrentLuminance(lum);
+      });
+    }
+  }, [photos]);
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 100);
@@ -163,6 +233,29 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
   const fadeIn = (delay: number) =>
     `transition-all duration-1000 ease-out ${appeared ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-8 blur-sm"}`;
 
+  // ─── Adaptive colour palette ───────────────────────────────────────────────
+  const isLight = currentLuminance > 0.45;
+  const CT = "1.5s ease"; // colour transition duration
+
+  const cPrimary       = isLight ? "rgba(18,12,8,0.95)"   : "rgba(255,255,255,1.0)";
+  const cSecondary     = isLight ? "rgba(18,12,8,0.65)"   : "rgba(255,255,255,0.6)";
+  const cMuted         = isLight ? "rgba(18,12,8,0.50)"   : "rgba(255,255,255,0.5)";
+  const cScript        = isLight ? "rgba(140,50,70,0.90)" : "rgba(244,194,194,0.8)";
+  const cHeadShadow    = isLight
+    ? "0 2px 20px rgba(255,255,255,0.6), 0 0 40px rgba(255,255,255,0.3)"
+    : "0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
+  const cPillBg        = isLight ? "rgba(18,12,8,0.06)"   : "rgba(255,255,255,0.06)";
+  const cPillBorder    = isLight ? "rgba(18,12,8,0.20)"   : "rgba(255,255,255,0.20)";
+  const cBoxBg         = isLight ? "rgba(18,12,8,0.06)"   : "rgba(255,255,255,0.08)";
+  const cBoxBorder     = isLight ? "rgba(18,12,8,0.15)"   : "rgba(255,255,255,0.18)";
+  const cBoxShadow     = isLight
+    ? "0 4px 32px rgba(18,12,8,0.08), inset 0 1px 0 rgba(255,255,255,0.6)"
+    : "0 4px 32px rgba(244,194,194,0.15), inset 0 1px 0 rgba(255,255,255,0.12)";
+  const cMusicBtnColor  = isLight ? "rgba(18,12,8,0.55)"  : "rgba(255,255,255,0.70)";
+  const cMusicBtnBorder = isLight ? "rgba(18,12,8,0.22)"  : "rgba(255,255,255,0.20)";
+  const cMusicBtnBg     = isLight ? "rgba(255,255,255,0.30)" : "rgba(0,0,0,0.20)";
+  // ──────────────────────────────────────────────────────────────────────────
+
   return (
     <>
       <Nav />
@@ -171,15 +264,29 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
         id="home"
         className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden"
       >
-        <CinematicSlideshow photos={photos} parallaxX={px} parallaxY={py} />
+        <CinematicSlideshow
+          photos={photos}
+          parallaxX={px}
+          parallaxY={py}
+          onPhotoChange={handlePhotoChange}
+          lightBackdrop={isLight}
+        />
         <ParticleCanvas mouseX={mousePos.x} mouseY={mousePos.y} />
 
         {MUSIC_URL && (
           <button
             onClick={toggleMusic}
             aria-label={playing ? "Pause music" : "Play ambient music"}
-            className="absolute top-20 right-6 z-20 w-10 h-10 rounded-full flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/50 backdrop-blur-sm bg-black/20 transition-all duration-300"
-            style={{ zIndex: 20 }}
+            className="absolute top-20 right-6 z-20 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300"
+            style={{
+              zIndex: 20,
+              color: cMusicBtnColor,
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: cMusicBtnBorder,
+              background: cMusicBtnBg,
+              transition: `color ${CT}, border-color ${CT}, background-color ${CT}`,
+            }}
           >
             {playing ? (
               <span className="music-playing flex gap-0.5 items-end h-4">
@@ -202,8 +309,12 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
         >
           {/* Eyebrow */}
           <p
-            className={`font-body text-xs tracking-[0.4em] uppercase text-white/60 ${fadeIn(0)}`}
-            style={{ transitionDelay: "0ms" }}
+            className={`font-body text-xs tracking-[0.4em] uppercase ${fadeIn(0)}`}
+            style={{
+              transitionDelay: "0ms",
+              color: cSecondary,
+              transition: `color ${CT}`,
+            }}
           >
             You are warmly invited to celebrate
           </p>
@@ -211,11 +322,13 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
           {/* Couple names — split text letter-by-letter */}
           <div className={fadeIn(1)} style={{ transitionDelay: "150ms" }}>
             <h1
-              className="font-heading leading-none text-white"
+              className="font-heading leading-none"
               style={{
                 fontSize: "clamp(2.6rem, 9vw, 9rem)",
-                textShadow: "0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)",
                 letterSpacing: "-0.01em",
+                color: cPrimary,
+                textShadow: cHeadShadow,
+                transition: `color ${CT}, text-shadow ${CT}`,
               }}
             >
               <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
@@ -236,11 +349,13 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
               </span>
             </h1>
             <p
-              className="font-script italic text-blush/80 mt-3"
+              className="font-script italic mt-3"
               style={{
                 fontSize: "clamp(1.1rem, 2.5vw, 1.6rem)",
                 animation: "blur-reveal 1.4s ease both",
                 animationDelay: "1300ms",
+                color: cScript,
+                transition: `color ${CT}`,
               }}
             >
               &ldquo;God&apos;s will was on our marriage&rdquo;
@@ -249,10 +364,20 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
 
           {/* Date pill */}
           <div
-            className={`px-6 py-2 rounded-full border border-white/20 backdrop-blur-sm ${fadeIn(2)}`}
-            style={{ transitionDelay: "400ms", background: "rgba(255,255,255,0.06)" }}
+            className={`px-6 py-2 rounded-full backdrop-blur-sm ${fadeIn(2)}`}
+            style={{
+              transitionDelay: "400ms",
+              background: cPillBg,
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: cPillBorder,
+              transition: `background-color ${CT}, border-color ${CT}`,
+            }}
           >
-            <p className="font-heading text-white/80 tracking-widest text-sm uppercase">
+            <p
+              className="font-heading tracking-widest text-sm uppercase"
+              style={{ color: cSecondary, transition: `color ${CT}` }}
+            >
               October 8 th &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Chennai
             </p>
           </div>
@@ -274,19 +399,29 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                   style={{
                     width: "clamp(64px, 14vw, 110px)",
                     height: "clamp(64px, 14vw, 110px)",
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    boxShadow: "0 4px 32px rgba(244,194,194,0.15), inset 0 1px 0 rgba(255,255,255,0.12)",
+                    background: cBoxBg,
+                    borderWidth: 1,
+                    borderStyle: "solid",
+                    borderColor: cBoxBorder,
+                    boxShadow: cBoxShadow,
+                    transition: `background-color ${CT}, border-color ${CT}, box-shadow ${CT}`,
                   }}
                 >
                   <span
-                    className="font-heading text-white tabular-nums"
-                    style={{ fontSize: "clamp(1.6rem, 4vw, 3.2rem)" }}
+                    className="font-heading tabular-nums"
+                    style={{
+                      fontSize: "clamp(1.6rem, 4vw, 3.2rem)",
+                      color: cPrimary,
+                      transition: `color ${CT}`,
+                    }}
                   >
                     {label === "Days" ? value : pad(value)}
                   </span>
                 </div>
-                <span className="font-body text-[10px] md:text-xs tracking-widest uppercase text-white/50">
+                <span
+                  className="font-body text-[10px] md:text-xs tracking-widest uppercase"
+                  style={{ color: cMuted, transition: `color ${CT}` }}
+                >
                   {label}
                 </span>
               </div>
@@ -295,8 +430,13 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
 
           {/* Greeting */}
           <p
-            className={`font-script italic text-white/60 ${fadeIn(4)}`}
-            style={{ transitionDelay: "800ms", fontSize: "clamp(1rem, 2vw, 1.3rem)" }}
+            className={`font-script italic ${fadeIn(4)}`}
+            style={{
+              transitionDelay: "800ms",
+              fontSize: "clamp(1rem, 2vw, 1.3rem)",
+              color: cSecondary,
+              transition: `color ${CT}`,
+            }}
           >
             Counting down with you, {guestName} 🌸
           </p>
@@ -310,8 +450,11 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                 localStorage.removeItem("session_token");
                 window.location.reload();
               }}
-              className={`font-body text-[11px] text-white/50 underline underline-offset-4 hover:text-white/80 transition-colors ${fadeIn(5)}`}
-              style={{ transitionDelay: "1000ms" }}
+              className={`font-body text-[11px] underline underline-offset-4 transition-colors ${fadeIn(5)}`}
+              style={{
+                transitionDelay: "1000ms",
+                color: cMuted,
+              }}
             >
               ↩ Replay the invitation
             </button>
@@ -323,8 +466,19 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
           className={`absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 transition-all duration-1000 ${appeared ? "opacity-60" : "opacity-0"}`}
           style={{ transitionDelay: "1200ms" }}
         >
-          <span className="font-body text-[10px] tracking-widest uppercase text-white/50">Scroll</span>
-          <div className="w-px h-10 bg-gradient-to-b from-white/40 to-transparent animate-scroll-line" />
+          <span
+            className="font-body text-[10px] tracking-widest uppercase"
+            style={{ color: cMuted, transition: `color ${CT}` }}
+          >
+            Scroll
+          </span>
+          <div
+            className="w-px h-10 animate-scroll-line"
+            style={{
+              background: `linear-gradient(to bottom, ${cMuted}, transparent)`,
+              transition: `background ${CT}`,
+            }}
+          />
         </div>
       </section>
     </>

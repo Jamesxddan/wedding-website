@@ -7,12 +7,14 @@ interface Props {
   photos: DrivePhoto[];
   parallaxX: number;
   parallaxY: number;
+  onPhotoChange?: (index: number) => void;
+  lightBackdrop?: boolean;
 }
 
 const SLIDE_DURATION = 8000;
 const FADE_MS = 3000;
 
-export default function CinematicSlideshow({ photos }: Props) {
+export default function CinematicSlideshow({ photos, onPhotoChange, lightBackdrop = false }: Props) {
   const list = photos.length > 0 ? photos : null;
 
   const [slot0Photo, setSlot0Photo] = useState(0);
@@ -27,7 +29,11 @@ export default function CinematicSlideshow({ photos }: Props) {
   const topRef = useRef(0);
 
   useEffect(() => {
-    if (list) setBgSrc(list[0]?.heroUrl);
+    if (list) {
+      setBgSrc(list[0]?.heroUrl);
+      onPhotoChange?.(0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list]);
 
   useEffect(() => {
@@ -49,6 +55,9 @@ export default function CinematicSlideshow({ photos }: Props) {
         if (hidden === 0) setSlot0Photo(nextIdx);
         else setSlot1Photo(nextIdx);
 
+        // Notify parent — fires as the new slide starts fading in
+        onPhotoChange?.(nextIdx);
+
         requestAnimationFrame(() => {
           if (hidden === 0) {
             setZ0(2); setZ1(1);
@@ -68,6 +77,7 @@ export default function CinematicSlideshow({ photos }: Props) {
 
     const id = setInterval(advance, SLIDE_DURATION + FADE_MS);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list]);
 
   if (!list) {
@@ -99,13 +109,19 @@ export default function CinematicSlideshow({ photos }: Props) {
       <SlideLayer src={list[slot0Photo]?.heroUrl} opacity={op0} zIndex={z0} />
       <SlideLayer src={list[slot1Photo]?.heroUrl} opacity={op1} zIndex={z1} />
 
-      <div className="absolute inset-0" style={{
-        background: `
-          radial-gradient(ellipse at center, rgba(5,2,10,0.15) 0%, rgba(5,2,10,0.52) 100%),
-          linear-gradient(to bottom, rgba(5,2,10,0.25) 0%, rgba(5,2,10,0.02) 40%, rgba(5,2,10,0.02) 60%, rgba(5,2,10,0.48) 100%)
-        `,
-        zIndex: 10,
-      }} />
+      {/* Dark overlay — fades out when backdrop is light so the photo shows through */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(ellipse at center, rgba(5,2,10,0.15) 0%, rgba(5,2,10,0.52) 100%),
+            linear-gradient(to bottom, rgba(5,2,10,0.25) 0%, rgba(5,2,10,0.02) 40%, rgba(5,2,10,0.02) 60%, rgba(5,2,10,0.48) 100%)
+          `,
+          zIndex: 10,
+          opacity: lightBackdrop ? 0.28 : 1,
+          transition: "opacity 1.5s ease",
+        }}
+      />
 
       <div className="absolute bottom-0 left-0 right-0 h-40" style={{
         background: "linear-gradient(to bottom, transparent, rgba(253,246,236,0.85))",
