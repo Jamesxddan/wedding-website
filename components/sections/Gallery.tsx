@@ -14,6 +14,7 @@ interface GalleryState {
   configured: boolean;
   loading: boolean;
   error: boolean;
+  errorMsg?: string;
 }
 
 const PAGE_SIZE = 30;
@@ -134,6 +135,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     configured: false,
     loading: true,
     error: false,
+    errorMsg: undefined,
   });
   const [openAlbum, setOpenAlbum] = useState<DriveAlbum | null>(null);
   const [page, setPage] = useState(1);
@@ -150,6 +152,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
           configured: data.configured ?? false,
           loading: false,
           error: !!data.error,
+          errorMsg: data.message,
         });
       })
       .catch(() => setState((s) => ({ ...s, loading: false, error: true })));
@@ -200,8 +203,11 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
       )}
 
       {!state.loading && state.configured && state.error && (
-        <div className="flex justify-center py-16">
+        <div className="flex flex-col items-center gap-2 py-16">
           <p className="font-body text-deep-rose/60 text-sm">Could not load photos right now.</p>
+          {state.errorMsg && (
+            <p className="font-mono text-deep-rose/40 text-xs max-w-lg text-center break-all">{state.errorMsg}</p>
+          )}
         </div>
       )}
 
