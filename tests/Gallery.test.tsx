@@ -84,14 +84,14 @@ describe("Gallery", () => {
     await waitFor(() => expect(screen.getByText(/could not load photos/i)).toBeInTheDocument());
   });
 
-  it("fetches engagement with view=albums and device param", async () => {
+  it("fetches engagement with view=albums and no device param", async () => {
     fetchMock.mockResolvedValue({ json: async () => ({ albums: [], configured: false }) });
     render(<Gallery folder="engagement" />);
     await waitFor(() => {
-      const url: string = fetchMock.mock.calls[0][0];
-      expect(url).toContain("/api/drive-photos?folder=engagement");
-      expect(url).toContain("view=albums");
-      expect(url).toMatch(/device=(mobile|desktop)/);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/drive-photos?folder=engagement&view=albums",
+        expect.objectContaining({ headers: expect.any(Object) })
+      );
     });
   });
 

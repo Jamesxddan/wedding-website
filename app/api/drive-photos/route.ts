@@ -13,15 +13,20 @@ export async function GET(req: NextRequest) {
   const weddingFolderId = process.env.WEDDING_FOLDER_ID;
 
   const view = req.nextUrl.searchParams.get("view"); // "albums" | "flat"
-  const device = req.nextUrl.searchParams.get("device") ?? "desktop";
+  const device = req.nextUrl.searchParams.get("device"); // only sent by CountdownHero
 
   let folderId: string | undefined;
   if (folder === "wedding") {
     folderId = weddingFolderId;
   } else if (device === "mobile") {
+    // CountdownHero slideshow — portrait photos
     folderId = process.env.ENGAGEMENT_FOLDER_ID_MOBILE ?? engagementFolderId;
-  } else {
+  } else if (device === "desktop") {
+    // CountdownHero slideshow — landscape photos
     folderId = process.env.ENGAGEMENT_FOLDER_ID_DESKTOP ?? engagementFolderId;
+  } else {
+    // Gallery (no device param) — general folder for all devices
+    folderId = engagementFolderId;
   }
 
   if (!apiKey || !folderId) {

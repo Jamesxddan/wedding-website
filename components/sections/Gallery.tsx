@@ -19,10 +19,14 @@ interface GalleryState {
 
 const PAGE_SIZE = 32;
 
-// Subfolder priority: main photos come first, then sub, sub1, sub2
-const ALBUM_PRIORITY: Record<string, number> = { main: 0, sub: 1, sub1: 2, sub2: 3 };
-function albumPriority(name: string) {
-  return ALBUM_PRIORITY[name.toLowerCase()] ?? 1;
+// Subfolder priority: main first, then sub1, sub2, … subN, unknown folders last
+function albumPriority(name: string): number {
+  const lower = name.toLowerCase();
+  if (lower === "main") return 0;
+  const subMatch = lower.match(/^sub(\d+)$/);
+  if (subMatch) return parseInt(subMatch[1], 10);
+  if (lower === "sub") return 1;
+  return 50; // unrecognised folder names sort after numbered subs
 }
 
 // ─── Spotlight tile ───────────────────────────────────────────────────────────
@@ -263,15 +267,9 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const sessionToken = localStorage.getItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
 
-    let url: string;
-    if (folder === "engagement") {
-      const devVp = localStorage.getItem("dev_viewport");
-      const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
-      const device = isMobile ? "mobile" : "desktop";
-      url = `/api/drive-photos?folder=${folder}&view=albums&device=${device}`;
-    } else {
-      url = `/api/drive-photos?folder=${folder}&view=albums`;
-    }
+    // Gallery always uses the general engagement folder (no device param).
+    // Device-specific folders are only for the CountdownHero slideshow.
+    const url = `/api/drive-photos?folder=${folder}&view=albums`;
 
     fetch(url, { headers })
       .then((r) => r.json())
