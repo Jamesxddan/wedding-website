@@ -37,7 +37,7 @@ async function listFolderContents(
     key: apiKey,
   });
   const res = await fetch(`${DRIVE_API}/files?${params}`, {
-    next: { revalidate: 300 },
+    cache: "no-store",
   });
   if (!res.ok) {
     const body = await res.text();
