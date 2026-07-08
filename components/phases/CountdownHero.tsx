@@ -238,22 +238,26 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
   const CT = "1.5s ease"; // colour transition duration
 
   const cPrimary       = isLight ? "rgba(18,12,8,0.95)"   : "rgba(255,255,255,1.0)";
-  const cSecondary     = isLight ? "rgba(18,12,8,0.65)"   : "rgba(255,255,255,0.6)";
-  const cMuted         = isLight ? "rgba(18,12,8,0.50)"   : "rgba(255,255,255,0.5)";
-  const cScript        = isLight ? "rgba(140,50,70,0.90)" : "rgba(244,194,194,0.8)";
+  const cSecondary     = isLight ? "rgba(18,12,8,0.85)"   : "rgba(255,255,255,0.90)";
+  const cMuted         = isLight ? "rgba(18,12,8,0.68)"   : "rgba(255,255,255,0.72)";
+  const cScript        = isLight ? "rgba(140,50,70,0.95)" : "rgba(244,194,194,0.9)";
+  // Text-shadow halo ensures text pops against any photo regardless of colour
+  const cHalo          = isLight
+    ? "0 1px 8px rgba(255,255,255,0.95), 0 2px 24px rgba(255,255,255,0.7)"   // white halo behind dark text
+    : "0 1px 8px rgba(0,0,0,0.85),       0 2px 24px rgba(0,0,0,0.55)";        // dark halo behind white text
   const cHeadShadow    = isLight
-    ? "0 2px 20px rgba(255,255,255,0.6), 0 0 40px rgba(255,255,255,0.3)"
+    ? "0 2px 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5)"
     : "0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
-  const cPillBg        = isLight ? "rgba(18,12,8,0.06)"   : "rgba(255,255,255,0.06)";
-  const cPillBorder    = isLight ? "rgba(18,12,8,0.20)"   : "rgba(255,255,255,0.20)";
-  const cBoxBg         = isLight ? "rgba(18,12,8,0.06)"   : "rgba(255,255,255,0.08)";
-  const cBoxBorder     = isLight ? "rgba(18,12,8,0.15)"   : "rgba(255,255,255,0.18)";
+  const cPillBg        = isLight ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.06)";
+  const cPillBorder    = isLight ? "rgba(18,12,8,0.20)"     : "rgba(255,255,255,0.20)";
+  const cBoxBg         = isLight ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.08)";
+  const cBoxBorder     = isLight ? "rgba(18,12,8,0.15)"     : "rgba(255,255,255,0.18)";
   const cBoxShadow     = isLight
-    ? "0 4px 32px rgba(18,12,8,0.08), inset 0 1px 0 rgba(255,255,255,0.6)"
+    ? "0 4px 32px rgba(18,12,8,0.08), inset 0 1px 0 rgba(255,255,255,0.8)"
     : "0 4px 32px rgba(244,194,194,0.15), inset 0 1px 0 rgba(255,255,255,0.12)";
-  const cMusicBtnColor  = isLight ? "rgba(18,12,8,0.55)"  : "rgba(255,255,255,0.70)";
-  const cMusicBtnBorder = isLight ? "rgba(18,12,8,0.22)"  : "rgba(255,255,255,0.20)";
-  const cMusicBtnBg     = isLight ? "rgba(255,255,255,0.30)" : "rgba(0,0,0,0.20)";
+  const cMusicBtnColor  = isLight ? "rgba(18,12,8,0.65)"     : "rgba(255,255,255,0.70)";
+  const cMusicBtnBorder = isLight ? "rgba(18,12,8,0.22)"     : "rgba(255,255,255,0.20)";
+  const cMusicBtnBg     = isLight ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.20)";
   // ──────────────────────────────────────────────────────────────────────────
 
   return (
@@ -313,7 +317,8 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
             style={{
               transitionDelay: "0ms",
               color: cSecondary,
-              transition: `color ${CT}`,
+              textShadow: cHalo,
+              transition: `color ${CT}, text-shadow ${CT}`,
             }}
           >
             You are warmly invited to celebrate
@@ -338,11 +343,12 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                 aria-hidden="true"
                 style={{
                   display: "inline-block",
+                  margin: "0 0.18em",
                   animation: "split-in 0.75s cubic-bezier(0.22,1,0.36,1) both",
                   animationDelay: "710ms",
                 }}
               >
-                {" & "}
+                &amp;
               </span>
               <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
                 <SplitText text="Sharon" delayBase={780} stagger={60} />
@@ -355,7 +361,8 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                 animation: "blur-reveal 1.4s ease both",
                 animationDelay: "1300ms",
                 color: cScript,
-                transition: `color ${CT}`,
+                textShadow: cHalo,
+                transition: `color ${CT}, text-shadow ${CT}`,
               }}
             >
               &ldquo;God&apos;s will was on our marriage&rdquo;
@@ -376,7 +383,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
           >
             <p
               className="font-heading tracking-widest text-sm uppercase"
-              style={{ color: cSecondary, transition: `color ${CT}` }}
+              style={{ color: cSecondary, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
             >
               October 8 th &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Chennai
             </p>
@@ -412,7 +419,8 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                     style={{
                       fontSize: "clamp(1.6rem, 4vw, 3.2rem)",
                       color: cPrimary,
-                      transition: `color ${CT}`,
+                      textShadow: cHalo,
+                      transition: `color ${CT}, text-shadow ${CT}`,
                     }}
                   >
                     {label === "Days" ? value : pad(value)}
@@ -420,7 +428,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                 </div>
                 <span
                   className="font-body text-[10px] md:text-xs tracking-widest uppercase"
-                  style={{ color: cMuted, transition: `color ${CT}` }}
+                  style={{ color: cMuted, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
                 >
                   {label}
                 </span>
@@ -435,7 +443,8 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
               transitionDelay: "800ms",
               fontSize: "clamp(1rem, 2vw, 1.3rem)",
               color: cSecondary,
-              transition: `color ${CT}`,
+              textShadow: cHalo,
+              transition: `color ${CT}, text-shadow ${CT}`,
             }}
           >
             Counting down with you, {guestName} 🌸
@@ -468,7 +477,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
         >
           <span
             className="font-body text-[10px] tracking-widest uppercase"
-            style={{ color: cMuted, transition: `color ${CT}` }}
+            style={{ color: cMuted, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
           >
             Scroll
           </span>

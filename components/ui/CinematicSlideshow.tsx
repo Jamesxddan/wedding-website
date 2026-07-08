@@ -118,7 +118,7 @@ export default function CinematicSlideshow({ photos, onPhotoChange, lightBackdro
             linear-gradient(to bottom, rgba(5,2,10,0.25) 0%, rgba(5,2,10,0.02) 40%, rgba(5,2,10,0.02) 60%, rgba(5,2,10,0.48) 100%)
           `,
           zIndex: 10,
-          opacity: lightBackdrop ? 0.28 : 1,
+          opacity: lightBackdrop ? 0.50 : 1,
           transition: "opacity 1.5s ease",
         }}
       />
