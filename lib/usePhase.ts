@@ -42,8 +42,10 @@ export function usePhase(): PhaseState {
       isLoading: false,
     }));
 
-    // Fire session check once per mount, only when no local guest data
-    if (!sessionChecked.current && !name) {
+    // Fire session check once per mount: no guest yet, or guest exists but
+    // missing a session_token (e.g. registered before Supabase was live)
+    const hasToken = !!localStorage.getItem("session_token");
+    if (!sessionChecked.current && (!name || !hasToken)) {
       sessionChecked.current = true;
       _runSessionCheck(setState);
     }
