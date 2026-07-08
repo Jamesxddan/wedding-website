@@ -17,13 +17,37 @@ export async function checkAndBlock(
 ): Promise<BreachBlock | null> {
   if (process.env.VERCEL_ENV !== "production") return null;
 
-  // Owner check — always run so mocks align; non-owners and unknown devices continue
-  const { data: guest } = await supabase
-    .from("guests")
-    .select("is_owner")
-    .eq("id", guest_id ?? "")
-    .maybeSingle();
-  if (guest?.is_owner) return null;
+  // Owners are exempt — only check when guest_id is known
+  if (guest_id) {
+    const { data: guest } = await supabase
+      .from("guests")
+      .select("is_owner")
+      .eq("id", guest_id)
+      .maybeSingle();
+    if (guest?.is_owner) return null;
+  }
+
+  // API rate limit: 30 calls / 60 seconds
+  const rateWindow = new Date(Date.now() - API_RATE_WINDOW_S * 1000).toISOString();
+  const { count: recentCalls } = await supabase
+    .from("access_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("device_uuid", device_uuid)
+    .gt("created_at", rateWindow)
+    .single();
+
+  if ((recentCalls ?? 0) > API_RATE_LIMIT) {
+    await supabase.from("breach_flags").insert({
+      device_uuid,
+      ip,
+      reason: "api_rate_limit",
+      blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+    return {
+      message: "We're just catching our breath — please give it a moment and try again.",
+      status: 429,
+    };
+  }
 
   // Check active block
   const { data: flag } = await supabase
@@ -43,23 +67,25 @@ export async function checkAndBlock(
     };
   }
 
-  // API rate limit: 30 calls / 60 seconds
-  const rateWindow = new Date(Date.now() - API_RATE_WINDOW_S * 1000).toISOString();
-  const { count: recentCalls } = await supabase
+  // Repeated form submits: 10 / 2 hours
+  const formWindow = new Date(Date.now() - FORM_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { count: recentForms } = await supabase
     .from("access_logs")
     .select("id", { count: "exact", head: true })
     .eq("device_uuid", device_uuid)
-    .gt("created_at", rateWindow);
+    .eq("event_type", "form_submit")
+    .gt("created_at", formWindow)
+    .single();
 
-  if ((recentCalls ?? 0) > API_RATE_LIMIT) {
+  if ((recentForms ?? 0) > FORM_LIMIT) {
     await supabase.from("breach_flags").insert({
       device_uuid,
       ip,
-      reason: "api_rate_limit",
-      blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      reason: "repeated_form_submit",
+      blocked_until: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
     return {
-      message: "We're just catching our breath — please give it a moment and try again.",
+      message: "It looks like you've visited a few times already — please check back in a little while. We can't wait to celebrate with you! 🌸",
       status: 429,
     };
   }
