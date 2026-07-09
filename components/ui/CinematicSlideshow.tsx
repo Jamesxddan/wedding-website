@@ -109,6 +109,12 @@ export default function CinematicSlideshow({ photos, onPhotoChange, lightBackdro
       <SlideLayer src={list[slot0Photo]?.heroUrl} opacity={op0} zIndex={z0} />
       <SlideLayer src={list[slot1Photo]?.heroUrl} opacity={op1} zIndex={z1} />
 
+      {/* Side vignettes — hide letterbox fill on portrait photos */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "linear-gradient(to right, rgba(5,2,10,0.82) 0%, transparent 18%, transparent 82%, rgba(5,2,10,0.82) 100%)",
+        zIndex: 9,
+      }} />
+
       {/* Dark overlay — fades out when backdrop is light so the photo shows through */}
       <div
         className="absolute inset-0"
