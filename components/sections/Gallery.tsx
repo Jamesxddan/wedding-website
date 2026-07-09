@@ -240,128 +240,404 @@ function LoadMoreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-// ─── Page-turn lightbox ───────────────────────────────────────────────────────
-
-type TurnDir = "next" | "prev" | null;
+// ─── Interactive page-turn lightbox ──────────────────────────────────────────
 
 function PageTurnLightbox({
-  photos, index, turning, onClose, onNext, onPrev,
+  photos, index, onClose, onIndexChange,
 }: {
   photos: DrivePhoto[];
   index: number;
-  turning: TurnDir;
   onClose: () => void;
-  onNext: () => void;
-  onPrev: () => void;
+  onIndexChange: (i: number) => void;
 }) {
-  const current = photos[index];
-  const underPhoto = turning === "next" ? photos[index + 1] : turning === "prev" ? photos[index - 1] : null;
-  const isFirst = index === 0;
-  const isLast = index === photos.length - 1;
+  // progress: 0 = no fold, 1 = fully turned
+  const [progress, setProgress]   = useState(0);
+  const [dir, setDir]             = useState<"next" | "prev">("next");
+  const [busy, setBusy]           = useState(false);
+
+  const sceneRef      = useRef<HTMLDivElement>(null);
+  const progressRef   = useRef(0);
+  const rafRef        = useRef<number>(0);
+  const dragRef       = useRef<{ active: boolean; startX: number; dir: "next" | "prev" } | null>(null);
+
+  const current   = photos[index];
+  const photoNext = photos[index + 1] ?? null;
+  const photoPrev = photos[index - 1] ?? null;
+  const underPhoto = dir === "next" ? photoNext : photoPrev;
+
+  // Keep ref in sync so closures see latest value
+  useEffect(() => { progressRef.current = progress; }, [progress]);
+
+  // Eased animation toward a target progress value
+  const animateTo = useCallback((target: number, onDone?: () => void) => {
+    cancelAnimationFrame(rafRef.current);
+    const DURATION = 420; // ms
+    const start    = performance.now();
+    const from     = progressRef.current;
+
+    function tick(now: number) {
+      const t = Math.min(1, (now - start) / DURATION);
+      // Cubic ease-in-out
+      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const val = from + (target - from) * e;
+      setProgress(val);
+      progressRef.current = val;
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        setProgress(target);
+        progressRef.current = target;
+        onDone?.();
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const completeTurn = useCallback((d: "next" | "prev", fromP = 0) => {
+    if (d === "next" && !photoNext) return;
+    if (d === "prev" && !photoPrev) return;
+    setBusy(true);
+    setDir(d);
+    progressRef.current = fromP;
+    setProgress(fromP);
+    animateTo(1, () => {
+      setProgress(0);
+      progressRef.current = 0;
+      setBusy(false);
+      onIndexChange(d === "next" ? index + 1 : index - 1);
+    });
+  }, [animateTo, index, onIndexChange, photoNext, photoPrev]);
+
+  const goNext = useCallback(() => {
+    if (busy || !photoNext) return;
+    completeTurn("next");
+  }, [busy, photoNext, completeTurn]);
+
+  const goPrev = useCallback(() => {
+    if (busy || !photoPrev) return;
+    completeTurn("prev");
+  }, [busy, photoPrev, completeTurn]);
+
+  // Keyboard
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape")      onClose();
+      if (e.key === "ArrowRight")  goNext();
+      if (e.key === "ArrowLeft")   goPrev();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, goNext, goPrev]);
+
+  // Drag start — determine direction from which half of the image is touched
+  const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (busy) return;
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const rect = sceneRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const relX = clientX - rect.left;
+    const d: "next" | "prev" = relX >= rect.width * 0.45 ? "next" : "prev";
+    if (d === "next" && !photoNext) return;
+    if (d === "prev" && !photoPrev) return;
+    dragRef.current = { active: true, startX: clientX, dir: d };
+    setDir(d);
+    setProgress(0);
+    progressRef.current = 0;
+  }, [busy, photoNext, photoPrev]);
+
+  // Global move handler
+  const onMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!dragRef.current?.active || busy) return;
+    if (e.cancelable) e.preventDefault();
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const rect = sceneRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const delta = dragRef.current.dir === "next"
+      ? dragRef.current.startX - clientX    // drag left → next
+      : clientX - dragRef.current.startX;   // drag right → prev
+    const p = Math.max(0, Math.min(0.96, delta / (rect.width * 0.62)));
+    setProgress(p);
+    progressRef.current = p;
+  }, [busy]);
+
+  // Global up / cancel handler
+  const onUp = useCallback(() => {
+    if (!dragRef.current?.active) return;
+    const d = dragRef.current.dir;
+    dragRef.current.active = false;
+    const p = progressRef.current;
+    if (p > 0.28) {
+      completeTurn(d, p);
+    } else {
+      setBusy(true);
+      animateTo(0, () => setBusy(false));
+    }
+  }, [completeTurn, animateTo]);
+
+  useEffect(() => {
+    window.addEventListener("mousemove",  onMove);
+    window.addEventListener("touchmove",  onMove, { passive: false });
+    window.addEventListener("mouseup",    onUp);
+    window.addEventListener("touchend",   onUp);
+    window.addEventListener("touchcancel", onUp);
+    return () => {
+      window.removeEventListener("mousemove",  onMove);
+      window.removeEventListener("touchmove",  onMove);
+      window.removeEventListener("mouseup",    onUp);
+      window.removeEventListener("touchend",   onUp);
+      window.removeEventListener("touchcancel", onUp);
+    };
+  }, [onMove, onUp]);
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  // ── Geometry ──────────────────────────────────────────────────────────────
+  // p       : fold progress 0→1
+  // foldFrac: fold-line position as fraction of container width
+  //   next  : starts at right (1.0), moves left → (1-p)
+  //   prev  : starts at left  (0.0), moves right → p
+  const p        = progress;
+  const showFold = p > 0.002;
+  const foldFrac = dir === "next" ? 1 - p : p;  // position of fold line [0,1]
+  const angle    = p * 180;                      // rotation angle 0→180°
+
+  // Width of the turning leaf as % of container
+  const leafPct  = p * 100;
+
+  // Inside the leaf, the full image is projected onto a space = (1/p) * leaf width.
+  // We position the image so the correct half shows through overflow:hidden.
+  //   next : right portion → image right-aligned inside leaf
+  //   prev : left  portion → image left-aligned  inside leaf
+  const imgWidthInLeafPct = p > 0.002 ? (100 / p) : 100; // % relative to leaf
 
   if (!current) return null;
 
   return (
-    <>
-      <style>{`
-        @keyframes lb-page-next {
-          0%   { transform: rotateY(0deg);    box-shadow:  20px 0 60px rgba(0,0,0,0.45); }
-          45%  { transform: rotateY(-90deg);  box-shadow:   0px 0 30px rgba(0,0,0,0.25); }
-          100% { transform: rotateY(-180deg); box-shadow: none; }
-        }
-        @keyframes lb-page-prev {
-          0%   { transform: rotateY(0deg);   box-shadow: -20px 0 60px rgba(0,0,0,0.45); }
-          45%  { transform: rotateY(90deg);  box-shadow:   0px 0 30px rgba(0,0,0,0.25); }
-          100% { transform: rotateY(180deg); box-shadow: none; }
-        }
-      `}</style>
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/92 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Counter */}
+      <p className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[11px] tracking-widest text-white/50 z-20 pointer-events-none select-none">
+        {index + 1} / {photos.length}
+      </p>
 
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      {/* Close */}
+      <button
         onClick={onClose}
+        aria-label="Close"
+        className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xl transition-colors z-20"
+      >×</button>
+
+      {/* ── Scene ── */}
+      <div
+        ref={sceneRef}
+        className="relative rounded-2xl overflow-hidden shadow-2xl select-none"
+        style={{
+          width:  "min(82vw, 1100px)",
+          height: "min(85vh,  800px)",
+          perspective: "1800px",
+          cursor: busy ? "grabbing" : "grab",
+          touchAction: "none",
+        }}
+        onMouseDown={onDragStart}
+        onTouchStart={onDragStart}
       >
-        {/* Close */}
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xl transition-colors z-10"
-        >×</button>
+        {/* Layer 0 — destination photo (always behind) */}
+        {underPhoto && showFold && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={underPhoto.fullUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ objectFit: "contain" }}
+            draggable={false}
+          />
+        )}
 
-        {/* Counter */}
-        <p className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[11px] tracking-widest text-white/50 z-10 select-none">
-          {index + 1} / {photos.length}
-        </p>
-
-        {/* Scene */}
+        {/* Layer 1 — stationary portion of current photo (left of fold line) */}
         <div
-          className="relative flex items-center justify-center"
-          style={{ perspective: "1400px" }}
-          onClick={e => e.stopPropagation()}
+          className="absolute inset-0"
+          style={{
+            clipPath: showFold
+              ? dir === "next"
+                ? `inset(0 ${p * 100}% 0 0)`
+                : `inset(0 0 0 ${p * 100}%)`
+              : undefined,
+          }}
         >
-          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-            {/* Under photo revealed as page turns */}
-            {underPhoto && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={underPhoto.fullUrl}
-                alt=""
-                className="rounded-2xl shadow-2xl"
-                style={{ position: "absolute", maxHeight: "85vh", maxWidth: "80vw", objectFit: "contain" }}
-              />
-            )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={current.fullUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ objectFit: "contain" }}
+            draggable={false}
+          />
 
-            {/* Current photo — flips away */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={current.fullUrl}
-              alt=""
-              className="rounded-2xl shadow-2xl"
+          {/* Shadow cast by turning page onto the stationary half */}
+          {showFold && (
+            <div
+              className="absolute top-0 bottom-0 pointer-events-none"
               style={{
-                maxHeight: "85vh",
-                maxWidth: "80vw",
-                objectFit: "contain",
-                position: "relative",
-                zIndex: 1,
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden" as React.CSSProperties["WebkitBackfaceVisibility"],
-                transformOrigin: turning === "next" ? "left center" : turning === "prev" ? "right center" : undefined,
-                animation: turning ? `lb-page-${turning} 0.52s cubic-bezier(0.4,0,0.2,1) forwards` : undefined,
+                [dir === "next" ? "right" : "left"]: 0,
+                width: "100px",
+                background:
+                  dir === "next"
+                    ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.5, p * 0.6)}))`
+                    : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.5, p * 0.6)}))`,
               }}
             />
-          </div>
+          )}
         </div>
 
-        {/* Prev */}
-        {!isFirst && (
-          <button
-            onClick={e => { e.stopPropagation(); onPrev(); }}
-            aria-label="Previous photo"
-            disabled={!!turning}
-            className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10 disabled:opacity-30"
+        {/* Layer 2 — turning leaf (the page that's folding) */}
+        {showFold && (
+          <div
+            className="absolute top-0 bottom-0 overflow-hidden"
+            style={{
+              [dir === "next" ? "left" : "right"]: `${foldFrac * 100}%`,
+              width:           `${leafPct}%`,
+              transformOrigin: dir === "next" ? "left center" : "right center",
+              transform:       `perspective(1400px) rotateY(${dir === "next" ? -angle : angle}deg)`,
+              transformStyle:  "preserve-3d",
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+            {/* Front face — shows the turning portion of the current image */}
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{
+                backfaceVisibility:       "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={current.fullUrl}
+                alt=""
+                style={{
+                  position:    "absolute",
+                  top:         0,
+                  bottom:      0,
+                  // Align image to whichever edge is the fold origin,
+                  // then expand it to full-container width so the correct half shows.
+                  [dir === "next" ? "right" : "left"]: 0,
+                  width:          `${imgWidthInLeafPct}%`,
+                  objectFit:      "contain",
+                  objectPosition: dir === "next" ? "right center" : "left center",
+                }}
+                draggable={false}
+              />
+
+              {/* Shading — darkens toward the fold edge to give depth */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    dir === "next"
+                      ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.55, p * 0.75)}), rgba(0,0,0,0.04) 55%, transparent)`
+                      : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.55, p * 0.75)}), rgba(0,0,0,0.04) 55%, transparent)`,
+                }}
+              />
+
+              {/* Specular glint at the fold — thin bright strip */}
+              {p > 0.05 && p < 0.92 && (
+                <div
+                  className="absolute top-0 bottom-0 pointer-events-none"
+                  style={{
+                    [dir === "next" ? "left" : "right"]: 0,
+                    width: "18px",
+                    background:
+                      dir === "next"
+                        ? `linear-gradient(to right, rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`
+                        : `linear-gradient(to left,  rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`,
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Back face — warm paper visible once angle > 90° */}
+            <div
+              className="absolute inset-0"
+              style={{
+                transform:                "rotateY(180deg)",
+                backfaceVisibility:       "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                // Warm parchment gradient
+                background: "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
+              }}
+            >
+              {/* Inner shadow toward the fold spine */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    dir === "next"
+                      ? "linear-gradient(to right, rgba(0,0,0,0.22), transparent 60%)"
+                      : "linear-gradient(to left,  rgba(0,0,0,0.22), transparent 60%)",
+                }}
+              />
+              {/* Subtle paper texture highlight */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    dir === "next"
+                      ? "linear-gradient(to left, rgba(255,255,255,0.14), transparent 40%)"
+                      : "linear-gradient(to right, rgba(255,255,255,0.14), transparent 40%)",
+                }}
+              />
+            </div>
+          </div>
         )}
 
-        {/* Next */}
-        {!isLast && (
-          <button
-            onClick={e => { e.stopPropagation(); onNext(); }}
-            aria-label="Next photo"
-            disabled={!!turning}
-            className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10 disabled:opacity-30"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+        {/* Drag hint labels — only at rest */}
+        {!showFold && !busy && (
+          <>
+            {photoPrev && (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/18 text-[10px] font-body tracking-widest select-none pointer-events-none">
+                ← drag
+              </div>
+            )}
+            {photoNext && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/18 text-[10px] font-body tracking-widest select-none pointer-events-none">
+                drag →
+              </div>
+            )}
+          </>
         )}
       </div>
-    </>
+
+      {/* Prev arrow */}
+      {photoPrev && (
+        <button
+          onClick={goPrev}
+          aria-label="Previous photo"
+          disabled={busy}
+          className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+
+      {/* Next arrow */}
+      {photoNext && (
+        <button
+          onClick={goNext}
+          aria-label="Next photo"
+          disabled={busy}
+          className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -378,21 +654,16 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [openAlbum, setOpenAlbum] = useState<DriveAlbum | null>(null);
   const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [turning, setTurning] = useState<TurnDir>(null);
-  const turnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
 
-    // Gallery always uses the general engagement folder (no device param).
-    // Device-specific folders are only for the CountdownHero slideshow.
     const url = `/api/drive-photos?folder=${folder}&view=albums`;
 
     fetch(url, { headers })
       .then((r) => r.json())
       .then((data) => {
-        // Sort engagement albums by name priority, then flatten into one ordered list
         const sortedPhotos =
           folder === "engagement"
             ? (data.albums ?? [])
@@ -415,57 +686,25 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const lightboxPhotos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
 
   const openLightbox = useCallback((photo: DrivePhoto) => {
-    const idx = (folder === "engagement" ? state.photos : (openAlbum?.photos ?? []))
-      .findIndex(p => p.id === photo.id);
+    const photos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
+    const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
   }, [folder, state.photos, openAlbum]);
 
-  const closeLightbox = useCallback(() => {
-    if (turnTimer.current) clearTimeout(turnTimer.current);
-    setLightboxIndex(null);
-    setTurning(null);
-  }, []);
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
 
-  const goNext = useCallback(() => {
-    setLightboxIndex(i => {
-      if (i === null || i >= lightboxPhotos.length - 1 || turning) return i;
-      setTurning("next");
-      if (turnTimer.current) clearTimeout(turnTimer.current);
-      turnTimer.current = setTimeout(() => {
-        setLightboxIndex(prev => (prev !== null ? prev + 1 : null));
-        setTurning(null);
-      }, 520);
-      return i;
-    });
-  }, [lightboxPhotos.length, turning]);
+  const handleIndexChange = useCallback((i: number) => setLightboxIndex(i), []);
 
-  const goPrev = useCallback(() => {
-    setLightboxIndex(i => {
-      if (i === null || i <= 0 || turning) return i;
-      setTurning("prev");
-      if (turnTimer.current) clearTimeout(turnTimer.current);
-      turnTimer.current = setTimeout(() => {
-        setLightboxIndex(prev => (prev !== null ? prev - 1 : null));
-        setTurning(null);
-      }, 520);
-      return i;
-    });
-  }, [turning]);
-
+  // Escape key — close album when lightbox is closed
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        if (lightboxIndex !== null) closeLightbox();
-        else if (openAlbum) setOpenAlbum(null);
-      }
-      if (lightboxIndex !== null) {
-        if (e.key === "ArrowRight") goNext();
-        if (e.key === "ArrowLeft") goPrev();
+      if (e.key === "Escape" && lightboxIndex === null && openAlbum) {
+        setOpenAlbum(null);
       }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [lightboxIndex, openAlbum, closeLightbox, goNext, goPrev]);
+  }, [lightboxIndex, openAlbum]);
 
   const spotlightVisible = state.photos.slice(0, page * PAGE_SIZE);
   const spotlightHasMore = folder === "engagement" && state.photos.length > page * PAGE_SIZE;
@@ -504,7 +743,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
         </div>
       )}
 
-      {/* Engagement: Spotlight mosaic (main → sub → sub1 → sub2 priority) */}
+      {/* Engagement: Spotlight mosaic */}
       {folder === "engagement" && !state.loading && state.configured && !state.error && spotlightVisible.length > 0 && (
         <Reveal delay={150}>
           <SpotlightGrid photos={spotlightVisible} onPhotoClick={openLightbox} />
@@ -556,10 +795,8 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
         <PageTurnLightbox
           photos={lightboxPhotos}
           index={lightboxIndex}
-          turning={turning}
           onClose={closeLightbox}
-          onNext={goNext}
-          onPrev={goPrev}
+          onIndexChange={handleIndexChange}
         />
       )}
     </section>
