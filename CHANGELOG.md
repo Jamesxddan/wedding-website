@@ -12,13 +12,17 @@ Entries are grouped by deployment target. **Staging** = deployed to the `staging
 > 8 commits ahead of production (`dfc3326`…`57d2028`). Deployed to staging. Pending prod sign-off.
 
 ### Added
-- **Lightbox page-turn navigation** (`57d2028`)
-  - Prev/Next arrow buttons inside the photo lightbox
-  - CSS 3D `rotateY` animation mimics turning a page in a photo album (left-edge origin going forward, right-edge going back)
-  - Photo counter (`3 / 24`) shown at top of lightbox
-  - Keyboard navigation: ← / → to navigate, Escape to close
-  - Buttons disabled during animation to prevent double-fires
-  - Works for both engagement spotlight photos and open wedding album photos
+- **Realistic corner-fold page-turn lightbox** (`c939dc4`, `c8a1f46`)
+  - GSAP Observer replaces manual touch/mouse handlers: velocity-aware drag, `lockAxis`, flick-to-complete (>420 px/s threshold)
+  - GSAP tweens replace RAF animation loop: `power3.inOut` easing
+  - Diagonal fold line: starts as a triangle from the bottom-right corner (or bottom-left for ←) and sweeps diagonally across the image
+  - Corner peel triangle: parchment-coloured triangle lifts visually from the corner as drag begins, fades into the main 3D fold leaf
+  - Corner hint triangles shown at rest as a subtle peel affordance
+  - Parchment paper back face visible during mid-flip (>90°)
+  - Prev/Next arrow buttons, keyboard (← →), Escape to close, photo counter
+
+- **Lightbox page-turn (prior vertical-fold version)** (`57d2028`, `93191dd`)
+  - Superseded by the corner-fold implementation above
 
 - **Adaptive countdown text colours** (`6e106a2`)
   - Client-side canvas luminance analysis (ITU-R BT.709) of each slideshow backdrop
