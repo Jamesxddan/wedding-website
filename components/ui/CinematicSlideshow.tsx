@@ -98,7 +98,7 @@ export default function CinematicSlideshow({ photos, onPhotoChange, lightBackdro
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
           style={{
-            filter: "blur(40px) brightness(0.35) saturate(0.5)",
+            filter: "blur(40px) brightness(0.55) saturate(0.8)",
             transform: "scale(1.2)",
             zIndex: 0,
           }}

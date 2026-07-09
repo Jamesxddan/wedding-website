@@ -35,7 +35,7 @@ export default function Nav() {
       }`}
     >
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-        <span className="font-heading text-deep-rose text-lg tracking-wide">
+        <span className={`font-heading text-lg tracking-wide transition-colors duration-300 ${scrolled || open ? "text-deep-rose" : "text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"}`}>
           J &amp; S
         </span>
 
@@ -45,7 +45,7 @@ export default function Nav() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="font-body text-sm text-deep-rose/80 hover:text-deep-rose tracking-widest uppercase transition-colors"
+                className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${scrolled || open ? "text-deep-rose/80 hover:text-deep-rose" : "text-white/90 hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"}`}
               >
                 {link.label}
               </a>
@@ -60,9 +60,9 @@ export default function Nav() {
           onClick={() => setOpen((o) => !o)}
           className="md:hidden flex flex-col gap-1.5 p-2 -mr-2"
         >
-          <span className={`block w-6 h-0.5 bg-deep-rose transition-all duration-300 ${open ? "rotate-45 translate-y-2" : ""}`} />
-          <span className={`block w-6 h-0.5 bg-deep-rose transition-all duration-300 ${open ? "opacity-0" : ""}`} />
-          <span className={`block w-6 h-0.5 bg-deep-rose transition-all duration-300 ${open ? "-rotate-45 -translate-y-2" : ""}`} />
+          <span className={`block w-6 h-0.5 transition-all duration-300 ${scrolled || open ? "bg-deep-rose" : "bg-white"} ${open ? "rotate-45 translate-y-2" : ""}`} />
+          <span className={`block w-6 h-0.5 transition-all duration-300 ${scrolled || open ? "bg-deep-rose" : "bg-white"} ${open ? "opacity-0" : ""}`} />
+          <span className={`block w-6 h-0.5 transition-all duration-300 ${scrolled || open ? "bg-deep-rose" : "bg-white"} ${open ? "-rotate-45 -translate-y-2" : ""}`} />
         </button>
       </div>
 
