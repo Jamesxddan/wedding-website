@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { DrivePhoto, DriveAlbum } from "@/lib/drive";
 import Reveal from "@/components/ui/Reveal";
 import { albumPriority } from "@/lib/album-priority";
@@ -240,6 +240,131 @@ function LoadMoreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+// ─── Page-turn lightbox ───────────────────────────────────────────────────────
+
+type TurnDir = "next" | "prev" | null;
+
+function PageTurnLightbox({
+  photos, index, turning, onClose, onNext, onPrev,
+}: {
+  photos: DrivePhoto[];
+  index: number;
+  turning: TurnDir;
+  onClose: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+}) {
+  const current = photos[index];
+  const underPhoto = turning === "next" ? photos[index + 1] : turning === "prev" ? photos[index - 1] : null;
+  const isFirst = index === 0;
+  const isLast = index === photos.length - 1;
+
+  if (!current) return null;
+
+  return (
+    <>
+      <style>{`
+        @keyframes lb-page-next {
+          0%   { transform: rotateY(0deg);    box-shadow:  20px 0 60px rgba(0,0,0,0.45); }
+          45%  { transform: rotateY(-90deg);  box-shadow:   0px 0 30px rgba(0,0,0,0.25); }
+          100% { transform: rotateY(-180deg); box-shadow: none; }
+        }
+        @keyframes lb-page-prev {
+          0%   { transform: rotateY(0deg);   box-shadow: -20px 0 60px rgba(0,0,0,0.45); }
+          45%  { transform: rotateY(90deg);  box-shadow:   0px 0 30px rgba(0,0,0,0.25); }
+          100% { transform: rotateY(180deg); box-shadow: none; }
+        }
+      `}</style>
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xl transition-colors z-10"
+        >×</button>
+
+        {/* Counter */}
+        <p className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[11px] tracking-widest text-white/50 z-10 select-none">
+          {index + 1} / {photos.length}
+        </p>
+
+        {/* Scene */}
+        <div
+          className="relative flex items-center justify-center"
+          style={{ perspective: "1400px" }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            {/* Under photo revealed as page turns */}
+            {underPhoto && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={underPhoto.fullUrl}
+                alt=""
+                className="rounded-2xl shadow-2xl"
+                style={{ position: "absolute", maxHeight: "85vh", maxWidth: "80vw", objectFit: "contain" }}
+              />
+            )}
+
+            {/* Current photo — flips away */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={current.fullUrl}
+              alt=""
+              className="rounded-2xl shadow-2xl"
+              style={{
+                maxHeight: "85vh",
+                maxWidth: "80vw",
+                objectFit: "contain",
+                position: "relative",
+                zIndex: 1,
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden" as React.CSSProperties["WebkitBackfaceVisibility"],
+                transformOrigin: turning === "next" ? "left center" : turning === "prev" ? "right center" : undefined,
+                animation: turning ? `lb-page-${turning} 0.52s cubic-bezier(0.4,0,0.2,1) forwards` : undefined,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Prev */}
+        {!isFirst && (
+          <button
+            onClick={e => { e.stopPropagation(); onPrev(); }}
+            aria-label="Previous photo"
+            disabled={!!turning}
+            className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10 disabled:opacity-30"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+
+        {/* Next */}
+        {!isLast && (
+          <button
+            onClick={e => { e.stopPropagation(); onNext(); }}
+            aria-label="Next photo"
+            disabled={!!turning}
+            className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-10 disabled:opacity-30"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Gallery({ folder, title = "Gallery" }: Props) {
@@ -252,7 +377,9 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   });
   const [openAlbum, setOpenAlbum] = useState<DriveAlbum | null>(null);
   const [page, setPage] = useState(1);
-  const [lightbox, setLightbox] = useState<DrivePhoto | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [turning, setTurning] = useState<TurnDir>(null);
+  const turnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
@@ -285,18 +412,60 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
 
   useEffect(() => { setPage(1); }, [openAlbum]);
 
-  const closeLightbox = useCallback(() => setLightbox(null), []);
+  const lightboxPhotos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
+
+  const openLightbox = useCallback((photo: DrivePhoto) => {
+    const idx = (folder === "engagement" ? state.photos : (openAlbum?.photos ?? []))
+      .findIndex(p => p.id === photo.id);
+    setLightboxIndex(idx !== -1 ? idx : 0);
+  }, [folder, state.photos, openAlbum]);
+
+  const closeLightbox = useCallback(() => {
+    if (turnTimer.current) clearTimeout(turnTimer.current);
+    setLightboxIndex(null);
+    setTurning(null);
+  }, []);
+
+  const goNext = useCallback(() => {
+    setLightboxIndex(i => {
+      if (i === null || i >= lightboxPhotos.length - 1 || turning) return i;
+      setTurning("next");
+      if (turnTimer.current) clearTimeout(turnTimer.current);
+      turnTimer.current = setTimeout(() => {
+        setLightboxIndex(prev => (prev !== null ? prev + 1 : null));
+        setTurning(null);
+      }, 520);
+      return i;
+    });
+  }, [lightboxPhotos.length, turning]);
+
+  const goPrev = useCallback(() => {
+    setLightboxIndex(i => {
+      if (i === null || i <= 0 || turning) return i;
+      setTurning("prev");
+      if (turnTimer.current) clearTimeout(turnTimer.current);
+      turnTimer.current = setTimeout(() => {
+        setLightboxIndex(prev => (prev !== null ? prev - 1 : null));
+        setTurning(null);
+      }, 520);
+      return i;
+    });
+  }, [turning]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (lightbox) closeLightbox();
+        if (lightboxIndex !== null) closeLightbox();
         else if (openAlbum) setOpenAlbum(null);
+      }
+      if (lightboxIndex !== null) {
+        if (e.key === "ArrowRight") goNext();
+        if (e.key === "ArrowLeft") goPrev();
       }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [lightbox, openAlbum, closeLightbox]);
+  }, [lightboxIndex, openAlbum, closeLightbox, goNext, goPrev]);
 
   const spotlightVisible = state.photos.slice(0, page * PAGE_SIZE);
   const spotlightHasMore = folder === "engagement" && state.photos.length > page * PAGE_SIZE;
@@ -338,7 +507,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
       {/* Engagement: Spotlight mosaic (main → sub → sub1 → sub2 priority) */}
       {folder === "engagement" && !state.loading && state.configured && !state.error && spotlightVisible.length > 0 && (
         <Reveal delay={150}>
-          <SpotlightGrid photos={spotlightVisible} onPhotoClick={setLightbox} />
+          <SpotlightGrid photos={spotlightVisible} onPhotoClick={openLightbox} />
           {spotlightHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </Reveal>
       )}
@@ -377,32 +546,21 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
               {openAlbum.photos.length} photos
             </span>
           </div>
-          <MasonryGrid photos={albumPhotosVisible} onPhotoClick={setLightbox} />
+          <MasonryGrid photos={albumPhotosVisible} onPhotoClick={openLightbox} />
           {albumHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </div>
       )}
 
       {/* Lightbox */}
-      {lightbox && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
-          onClick={closeLightbox}
-        >
-          <button
-            onClick={closeLightbox}
-            aria-label="Close"
-            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-colors"
-          >×</button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox.fullUrl}
-            alt=""
-            className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+      {lightboxIndex !== null && (
+        <PageTurnLightbox
+          photos={lightboxPhotos}
+          index={lightboxIndex}
+          turning={turning}
+          onClose={closeLightbox}
+          onNext={goNext}
+          onPrev={goPrev}
+        />
       )}
     </section>
   );
