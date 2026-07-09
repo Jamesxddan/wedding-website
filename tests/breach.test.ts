@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/supabase", () => ({
@@ -67,5 +68,63 @@ describe("logEvent", () => {
     } as unknown as ReturnType<typeof supabase.from>);
     const { logEvent } = await import("@/lib/breach");
     await expect(logEvent("uuid-1", "photo_api", { folder: "engagement" }, "1.2.3.4", "guest-1")).resolves.toBeUndefined();
+  });
+
+  it("inserts a new phase_view log if none exists", async () => {
+    const mockInsert = vi.fn().mockResolvedValue({ error: null });
+    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "access_logs") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: mockMaybeSingle,
+          insert: mockInsert,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+      return {} as unknown as ReturnType<typeof supabase.from>;
+    });
+
+    const { logEvent } = await import("@/lib/breach");
+    await logEvent("uuid-1", "phase_view", { home: "time-1" }, "1.2.3.4", "guest-1");
+
+    expect(mockMaybeSingle).toHaveBeenCalled();
+    expect(mockInsert).toHaveBeenCalledWith({
+      device_uuid: "uuid-1",
+      guest_id: "guest-1",
+      event_type: "phase_view",
+      event_data: { home: "time-1" },
+      ip: "1.2.3.4",
+    });
+  });
+
+  it("updates and merges an existing phase_view log if found", async () => {
+    const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+    const mockMaybeSingle = vi.fn().mockResolvedValue({
+      data: { id: "log-123", event_data: { home: "time-1" }, guest_id: null },
+      error: null,
+    });
+
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === "access_logs") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: mockMaybeSingle,
+          update: mockUpdate,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+      return {} as unknown as ReturnType<typeof supabase.from>;
+    });
+
+    const { logEvent } = await import("@/lib/breach");
+    await logEvent("uuid-1", "phase_view", { preview: "time-2" }, "1.2.3.4", "guest-1");
+
+    expect(mockMaybeSingle).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      event_data: { home: "time-1", preview: "time-2" },
+      guest_id: "guest-1",
+    }));
   });
 });

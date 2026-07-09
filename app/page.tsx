@@ -20,11 +20,14 @@ import Footer from "@/components/ui/Footer";
 import Marquee from "@/components/ui/Marquee";
 import Reveal from "@/components/ui/Reveal";
 import BackgroundMusic from "@/components/ui/BackgroundMusic";
+import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
 export default function Home() {
   const { phase, guestName, isLoading, refresh, sessionRestored } = usePhase();
   const [showInvitation, setShowInvitation] = useState(false);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
+
+  useTrackPageVisit(isLoading ? null : phase);
 
   if (isLoading) {
     return (

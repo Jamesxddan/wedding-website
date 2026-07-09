@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
 type Tab = "guests" | "logs" | "flags";
 
@@ -34,6 +35,7 @@ interface Flag {
 }
 
 export default function AdminPage() {
+  useTrackPageVisit("admin");
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
