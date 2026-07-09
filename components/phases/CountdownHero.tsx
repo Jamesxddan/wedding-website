@@ -241,13 +241,13 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
   const cSecondary     = isLight ? "rgba(18,12,8,0.85)"   : "rgba(255,255,255,0.90)";
   const cMuted         = isLight ? "rgba(18,12,8,0.68)"   : "rgba(255,255,255,0.72)";
   const cScript        = isLight ? "rgba(140,50,70,0.95)" : "rgba(244,194,194,0.9)";
-  // Text-shadow halo ensures text pops against any photo regardless of colour
-  const cHalo          = isLight
-    ? "0 1px 8px rgba(255,255,255,0.95), 0 2px 24px rgba(255,255,255,0.7)"   // white halo behind dark text
-    : "0 1px 8px rgba(0,0,0,0.85),       0 2px 24px rgba(0,0,0,0.55)";        // dark halo behind white text
-  const cHeadShadow    = isLight
-    ? "0 2px 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5)"
-    : "0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
+  // Outline + halo: 4-direction pixel offsets give a crisp edge; glow adds depth
+  const cHalo = isLight
+    ? "-1px -1px 0 rgba(255,255,255,0.75), 1px -1px 0 rgba(255,255,255,0.75), -1px 1px 0 rgba(255,255,255,0.75), 1px 1px 0 rgba(255,255,255,0.75), 0 1px 10px rgba(255,255,255,0.95), 0 2px 28px rgba(255,255,255,0.7)"
+    : "-1px -1px 0 rgba(0,0,0,0.65),       1px -1px 0 rgba(0,0,0,0.65),       -1px 1px 0 rgba(0,0,0,0.65),       1px 1px 0 rgba(0,0,0,0.65),       0 1px 10px rgba(0,0,0,0.90), 0 2px 28px rgba(0,0,0,0.6)";
+  const cHeadShadow = isLight
+    ? "-1px -1px 0 rgba(255,255,255,0.55), 1px -1px 0 rgba(255,255,255,0.55), -1px 1px 0 rgba(255,255,255,0.55), 1px 1px 0 rgba(255,255,255,0.55), 0 2px 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5)"
+    : "-1px -1px 0 rgba(0,0,0,0.45),       1px -1px 0 rgba(0,0,0,0.45),       -1px 1px 0 rgba(0,0,0,0.45),       1px 1px 0 rgba(0,0,0,0.45),       0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
   const cPillBg        = isLight ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.06)";
   const cPillBorder    = isLight ? "rgba(18,12,8,0.20)"     : "rgba(255,255,255,0.20)";
   const cBoxBg         = isLight ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.08)";
@@ -313,7 +313,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
         >
           {/* Eyebrow */}
           <p
-            className={`font-body text-xs tracking-[0.4em] uppercase ${fadeIn(0)}`}
+            className={`font-body text-[13px] font-semibold tracking-[0.4em] uppercase ${fadeIn(0)}`}
             style={{
               transitionDelay: "0ms",
               color: cSecondary,
@@ -382,7 +382,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
             }}
           >
             <p
-              className="font-heading tracking-widest text-sm uppercase"
+              className="font-heading tracking-widest text-[15px] font-semibold uppercase"
               style={{ color: cSecondary, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
             >
               October 8 th &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Chennai
@@ -427,7 +427,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
                   </span>
                 </div>
                 <span
-                  className="font-body text-[10px] md:text-xs tracking-widest uppercase"
+                  className="font-body text-[12px] md:text-[13px] font-semibold tracking-widest uppercase"
                   style={{ color: cMuted, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
                 >
                   {label}
@@ -441,7 +441,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
             className={`font-script italic ${fadeIn(4)}`}
             style={{
               transitionDelay: "800ms",
-              fontSize: "clamp(1rem, 2vw, 1.3rem)",
+              fontSize: "clamp(1.1rem, 2vw, 1.45rem)",
               color: cSecondary,
               textShadow: cHalo,
               transition: `color ${CT}, text-shadow ${CT}`,
@@ -476,7 +476,7 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
           style={{ transitionDelay: "1200ms" }}
         >
           <span
-            className="font-body text-[10px] tracking-widest uppercase"
+            className="font-body text-[11px] font-medium tracking-widest uppercase"
             style={{ color: cMuted, textShadow: cHalo, transition: `color ${CT}, text-shadow ${CT}` }}
           >
             Scroll
