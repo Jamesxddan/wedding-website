@@ -384,30 +384,75 @@ function PageTurnLightbox({
   const busy     = tweenRef.current?.isActive() ?? false;
   const angle    = p * 180; // 0° → 180°
 
-  // Stationary clip: vertical split at the fold line.
-  // "next" keeps the LEFT  (1-p) fraction of the scene.
-  // "prev" keeps the RIGHT (1-p) fraction of the scene.
-  const stationaryClip = showFold
-    ? (dir === "next"
-      ? `inset(0 ${p * 100}% 0 0)`
-      : `inset(0 0 0 ${p * 100}%)`)
-    : undefined;
+  // Diagonal fold geometry.
+  // "next": fold sweeps from bottom-right corner across the diagonal.
+  // "prev": fold sweeps from bottom-left corner across the diagonal.
+  // Phase 1 (p ≤ 0.5): fold line expands from corner toward opposite edges.
+  // Phase 2 (p > 0.5): fold line shrinks toward the opposite corner.
+  const phase1 = p <= 0.5;
+  let foldAx: number, foldAy: number, foldBx: number, foldBy: number;
 
-  // 2D page-turn simulation via scaleX.
-  // Avoids CSS 3D entirely — overflow:hidden + preserve-3d conflict causes
-  // backfaceVisibility to silently fail in all browsers, making both faces
-  // render at once and the under-photo bleed through.
-  //
-  // Front face (current photo) squishes 1→0 as angle 0°→90°.
-  // Back face  (parchment)    grows   0→1 as angle 90°→180°.
+  if (dir === "next") {
+    if (phase1) {
+      foldAx = 100;             foldAy = (1 - 2 * p) * 100;
+      foldBx = (1 - 2 * p) * 100; foldBy = 100;
+    } else {
+      foldAx = (2 - 2 * p) * 100; foldAy = 0;
+      foldBx = 0;               foldBy = (2 - 2 * p) * 100;
+    }
+  } else {
+    if (phase1) {
+      foldAx = 0;            foldAy = (1 - 2 * p) * 100;
+      foldBx = 2 * p * 100;  foldBy = 100;
+    } else {
+      foldAx = (2 * p - 1) * 100; foldAy = 0;
+      foldBx = 100;               foldBy = (2 - 2 * p) * 100;
+    }
+  }
+
+  // Stationary clip: the part of the current photo that hasn't been turned yet.
+  // Leaf clip: the triangular/pentagonal turning region (complement of stationary).
+  let stationaryClip: string | undefined;
+  let leafClip: string | undefined;
+
+  if (showFold) {
+    if (dir === "next") {
+      if (phase1) {
+        stationaryClip = `polygon(0% 0%, 100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`;
+        leafClip       = `polygon(${foldAx}% ${foldAy}%, 100% 100%, ${foldBx}% ${foldBy}%)`;
+      } else {
+        stationaryClip = `polygon(0% 0%, ${foldAx}% 0%, 0% ${foldBy}%)`;
+        leafClip       = `polygon(${foldAx}% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${foldBy}%)`;
+      }
+    } else {
+      if (phase1) {
+        stationaryClip = `polygon(0% 0%, 100% 0%, 100% 100%, ${foldBx}% ${foldBy}%, ${foldAx}% ${foldAy}%)`;
+        leafClip       = `polygon(${foldAx}% ${foldAy}%, 0% 100%, ${foldBx}% ${foldBy}%)`;
+      } else {
+        stationaryClip = `polygon(${foldAx}% 0%, 100% 0%, ${foldBx}% ${foldBy}%)`;
+        leafClip       = `polygon(0% 0%, ${foldAx}% 0%, ${foldBx}% ${foldBy}%, 100% 100%, 0% 100%)`;
+      }
+    }
+  }
+
+  // 2D squish perpendicular to diagonal fold line.
+  // Front face (photo) squishes 1→0 as angle 0°→90°.
+  // Back face (parchment) grows 0→1 as angle 90°→180°.
   const showFrontFace = angle <= 90;
   const showBackFace  = angle > 90;
   const frontScaleX   = Math.max(0, Math.cos(angle * Math.PI / 180));
   const backScaleX    = Math.max(0, Math.cos((180 - angle) * Math.PI / 180));
 
-  // Leaf image: must be (1/p)× wider than the leaf so it fills the full scene
-  // and the correct left/right portion is visible through the leaf window.
-  const imgWidthInLeafPct = p > 0.01 ? (1 / p) * 100 : 100;
+  // Fold midpoint: always at ((1-p)*100%, (1-p)*100%) for "next",
+  // (p*100%, (1-p)*100%) for "prev" — verified for both phases.
+  const foldMidX = dir === "next" ? (1 - p) * 100 : p * 100;
+  const foldMidY = (1 - p) * 100;
+
+  // rotate(±45deg) scaleX(s) rotate(∓45deg) squishes along 45° direction
+  // (perpendicular to the ∓45° fold line).
+  const foldRotDeg = dir === "next" ? 45 : -45;
+  const squishFront = `rotate(${foldRotDeg}deg) scaleX(${frontScaleX}) rotate(${-foldRotDeg}deg)`;
+  const squishBack  = `rotate(${foldRotDeg}deg) scaleX(${backScaleX}) rotate(${-foldRotDeg}deg)`;
 
   // Corner peel: flat parchment triangle lifting from the near bottom corner.
   const cornerPeelVisible = showFold && p < 0.5;
@@ -473,19 +518,13 @@ function PageTurnLightbox({
             style={{ objectFit: "contain" }}
             draggable={false}
           />
-          {/* Cast shadow: sits just inside the stationary edge, at the fold line */}
+          {/* Cast shadow from turning leaf onto stationary region */}
           {showFold && (
-            <div
-              className="absolute top-0 bottom-0 pointer-events-none"
-              style={{
-                // Positioned at the clip edge (fold line), not the container edge
-                [dir === "next" ? "right" : "left"]: `${p * 100}%`,
-                width: "70px",
-                background: dir === "next"
-                  ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.4, p * 0.55)}))`
-                  : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.4, p * 0.55)}))`,
-              }}
-            />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: dir === "next"
+                ? `linear-gradient(135deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`
+                : `linear-gradient(225deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`,
+            }} />
           )}
         </div>
 
@@ -505,81 +544,65 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 3 — turning leaf: 2D scaleX simulation (no CSS 3D).
-             Leaf sits at the vertical fold line (z:1); stationary layer (z:2)
-             sits above it covering the non-turning region. */}
-        {showFold && (
+        {/* Layer 3 — turning leaf: diagonal clip + 2D perpendicular squish.
+             Parent clips to the turning region; child squishes full-scene image.
+             clipPath on parent is in scene coords (unaffected by child transform). */}
+        {showFold && leafClip && (
           <div
-            className="absolute top-0 bottom-0"
-            style={{
-              [dir === "next" ? "left"  : "right"]: `${(1 - p) * 100}%`,
-              [dir === "next" ? "right" : "left"]:  0,
-              zIndex: 1,
-            }}
+            className="absolute inset-0 pointer-events-none"
+            style={{ clipPath: leafClip, zIndex: 1 }}
           >
-            {/* Front face — current photo squishing toward the fold (angle 0→90°) */}
-            {showFrontFace && (
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{
-                  transformOrigin: dir === "next" ? "left center" : "right center",
-                  transform:       `scaleX(${frontScaleX})`,
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={current.fullUrl}
-                  alt=""
-                  className="absolute top-0 bottom-0 pointer-events-none"
-                  style={{
-                    [dir === "next" ? "right" : "left"]: 0,
-                    width:     `${imgWidthInLeafPct}%`,
-                    height:    "100%",
-                    objectFit: "contain",
-                  }}
-                  draggable={false}
-                />
-                {/* Depth shading: darkens at crease as page folds */}
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  background: dir === "next"
-                    ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.55, p * 0.8)}), transparent 70%)`
-                    : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.55, p * 0.8)}), transparent 70%)`,
-                }} />
-                {/* Specular crease highlight */}
-                {p > 0.04 && p < 0.9 && (
-                  <div className="absolute top-0 bottom-0 pointer-events-none" style={{
-                    [dir === "next" ? "left" : "right"]: 0,
-                    width: "18px",
+            <div
+              className="absolute inset-0"
+              style={{
+                transformOrigin: `${foldMidX}% ${foldMidY}%`,
+                transform: showFrontFace ? squishFront : squishBack,
+              }}
+            >
+              {showFrontFace && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={current.fullUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ objectFit: "contain" }}
+                    draggable={false}
+                  />
+                  {/* Depth shading near fold diagonal */}
+                  <div className="absolute inset-0 pointer-events-none" style={{
                     background: dir === "next"
-                      ? `linear-gradient(to right, rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`
-                      : `linear-gradient(to left,  rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`,
+                      ? `linear-gradient(135deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`
+                      : `linear-gradient(225deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`,
                   }} />
-                )}
-              </div>
-            )}
-
-            {/* Back face — warm parchment, expands from crease (angle 90→180°) */}
-            {showBackFace && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  transformOrigin: dir === "next" ? "left center" : "right center",
-                  transform:       `scaleX(${backScaleX})`,
-                  background:      "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
-                }}
-              >
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  background: dir === "next"
-                    ? "linear-gradient(to right, rgba(0,0,0,0.22), transparent 60%)"
-                    : "linear-gradient(to left,  rgba(0,0,0,0.22), transparent 60%)",
-                }} />
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  background: dir === "next"
-                    ? "linear-gradient(to left, rgba(255,255,255,0.1), transparent 40%)"
-                    : "linear-gradient(to right, rgba(255,255,255,0.1), transparent 40%)",
-                }} />
-              </div>
-            )}
+                  {/* Specular highlight at crease */}
+                  {p > 0.04 && p < 0.9 && (
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      background: dir === "next"
+                        ? `linear-gradient(135deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`
+                        : `linear-gradient(225deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`,
+                    }} />
+                  )}
+                </>
+              )}
+              {showBackFace && (
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "linear-gradient(135deg, #f5eddc 0%, #ecdfc9 50%, #e0d3b8 100%)" }}
+                >
+                  <div className="absolute inset-0 pointer-events-none" style={{
+                    background: dir === "next"
+                      ? "linear-gradient(135deg, rgba(0,0,0,0.22) 0%, transparent 55%)"
+                      : "linear-gradient(225deg, rgba(0,0,0,0.22) 0%, transparent 55%)",
+                  }} />
+                  <div className="absolute inset-0 pointer-events-none" style={{
+                    background: dir === "next"
+                      ? "linear-gradient(315deg, rgba(255,255,255,0.12) 0%, transparent 40%)"
+                      : "linear-gradient(45deg, rgba(255,255,255,0.12) 0%, transparent 40%)",
+                  }} />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
