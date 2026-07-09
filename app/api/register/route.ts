@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (guestError || !guest) {
+    console.error("[register] guest insert error:", guestError);
     return NextResponse.json({ error: "failed to create guest" }, { status: 500 });
   }
 
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (fpError || !fp) {
+    console.error("[register] fingerprint insert error:", fpError);
     return NextResponse.json({ error: "failed to create device" }, { status: 500 });
   }
 
