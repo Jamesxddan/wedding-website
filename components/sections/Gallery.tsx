@@ -382,77 +382,37 @@ function PageTurnLightbox({
   const p        = progress;
   const showFold = p > 0.003;
   const busy     = tweenRef.current?.isActive() ?? false;
+  const angle    = p * 180; // 0° → 180°
 
-  // Diagonal fold line: sweeps from the bottom-right (or bottom-left for prev)
-  // corner across the image. Two phases:
-  //   phase1 (p ≤ 0.5): fold line endpoint A on right/left edge, B on bottom edge
-  //   phase2 (p > 0.5): fold line endpoint A on top edge, B on left/right edge
-  const phase1 = p <= 0.5;
+  // Stationary clip: vertical split at the fold line.
+  // "next" keeps the LEFT  (1-p) fraction of the scene.
+  // "prev" keeps the RIGHT (1-p) fraction of the scene.
+  const stationaryClip = showFold
+    ? (dir === "next"
+      ? `inset(0 ${p * 100}% 0 0)`
+      : `inset(0 0 0 ${p * 100}%)`)
+    : undefined;
 
-  let foldAx: number, foldAy: number, foldBx: number, foldBy: number;
-  if (dir === "next") {
-    if (phase1) {
-      foldAx = 100;              // right edge
-      foldAy = (1 - 2 * p) * 100; // descends from H to 0 as p→0.5
-      foldBx = (1 - 2 * p) * 100; // moves left from W to 0
-      foldBy = 100;              // bottom edge
-    } else {
-      foldAx = (2 - 2 * p) * 100; // top edge, moves right→left
-      foldAy = 0;
-      foldBx = 0;                // left edge
-      foldBy = (2 - 2 * p) * 100; // moves up from H to 0
-    }
-  } else {
-    if (phase1) {
-      foldAx = 0;                // left edge
-      foldAy = (1 - 2 * p) * 100;
-      foldBx = 2 * p * 100;     // bottom edge moves right
-      foldBy = 100;
-    } else {
-      foldAx = (2 * p - 1) * 100; // top edge moves left→right
-      foldAy = 0;
-      foldBx = 100;              // right edge
-      foldBy = (2 - 2 * p) * 100;
-    }
-  }
-
-  // Clip-path for stationary layer (current photo, everything on the "keep" side)
-  let stationaryClip: string | undefined;
-  if (showFold) {
-    if (dir === "next") {
-      stationaryClip = phase1
-        ? `polygon(0% 0%, 100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`
-        : `polygon(0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
-    } else {
-      stationaryClip = phase1
-        ? `polygon(100% 0%, 0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 100% 100%)`
-        : `polygon(100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
-    }
-  }
-
-  const angle = p * 180;
-
-  // Turning leaf: positioned at the leftmost visible point of the fold line,
-  // NO clip-path (clip-path breaks preserve-3d / backfaceVisibility).
-  // The stationary layer sits at a higher z-index so it covers the leaf in the
-  // non-turning region — the diagonal clip on the stationary layer reveals the
-  // leaf only in the correct turning region.
+  // 2D page-turn simulation via scaleX.
+  // Avoids CSS 3D entirely — overflow:hidden + preserve-3d conflict causes
+  // backfaceVisibility to silently fail in all browsers, making both faces
+  // render at once and the under-photo bleed through.
   //
-  // "next" phase1: leaf starts at foldBx% = (1-2p)*100
-  // "next" phase2: leaf starts at 0 (full width)
-  // "prev" mirrors horizontally (uses right edge instead)
-  const leafEdgePct = phase1 ? (1 - 2 * p) * 100 : 0;  // distance from near edge
+  // Front face (current photo) squishes 1→0 as angle 0°→90°.
+  // Back face  (parchment)    grows   0→1 as angle 90°→180°.
+  const showFrontFace = angle <= 90;
+  const showBackFace  = angle > 90;
+  const frontScaleX   = Math.max(0, Math.cos(angle * Math.PI / 180));
+  const backScaleX    = Math.max(0, Math.cos((180 - angle) * Math.PI / 180));
 
-  // Image must project full scene width onto the leaf so the correct half shows.
-  // leafWidth is the fraction of scene width the leaf covers (0–1).
-  const leafWidthFrac = 1 - leafEdgePct / 100;
-  const imgWidthInLeafPct = leafWidthFrac > 0.005 ? (1 / leafWidthFrac) * 100 : 100;
+  // Leaf image: must be (1/p)× wider than the leaf so it fills the full scene
+  // and the correct left/right portion is visible through the leaf window.
+  const imgWidthInLeafPct = p > 0.01 ? (1 / p) * 100 : 100;
 
-  // Corner peel element: flat parchment triangle lifting from the corner.
-  // Fades out as the main 3D leaf takes over.
+  // Corner peel: flat parchment triangle lifting from the near bottom corner.
   const cornerPeelVisible = showFold && p < 0.5;
-  const cornerTopY  = Math.max(0, (1 - 2 * p) * 100);
-  const cornerSideX = Math.max(0, (1 - 2 * p) * 100);
+  const cornerTopY        = Math.max(0, (1 - 2 * p) * 100);
+  const cornerSideX       = Math.max(0, (1 - 2 * p) * 100);
   const cornerPeelOpacity = Math.max(0, 1 - p / 0.38);
   const cornerPeelClip = dir === "next"
     ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
@@ -484,7 +444,6 @@ function PageTurnLightbox({
         style={{
           width:       "min(82vw, 1100px)",
           height:      "min(85vh, 800px)",
-          perspective: "1800px",
           cursor:      busy ? "grabbing" : "grab",
           touchAction: "none",
         }}
@@ -514,16 +473,17 @@ function PageTurnLightbox({
             style={{ objectFit: "contain" }}
             draggable={false}
           />
-          {/* Shadow cast by turning leaf onto the stationary side */}
+          {/* Cast shadow: sits just inside the stationary edge, at the fold line */}
           {showFold && (
             <div
               className="absolute top-0 bottom-0 pointer-events-none"
               style={{
-                [dir === "next" ? "right" : "left"]: 0,
-                width: "90px",
+                // Positioned at the clip edge (fold line), not the container edge
+                [dir === "next" ? "right" : "left"]: `${p * 100}%`,
+                width: "70px",
                 background: dir === "next"
-                  ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`
-                  : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`,
+                  ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.4, p * 0.55)}))`
+                  : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.4, p * 0.55)}))`,
               }}
             />
           )}
@@ -545,91 +505,81 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 3 — 3D turning leaf: NO clip-path (clip-path breaks preserve-3d).
-             Positioned at the fold edge; stationary layer (z-index 2) covers it
-             in the non-turning region, revealing it only in the turning triangle. */}
+        {/* Layer 3 — turning leaf: 2D scaleX simulation (no CSS 3D).
+             Leaf sits at the vertical fold line (z:1); stationary layer (z:2)
+             sits above it covering the non-turning region. */}
         {showFold && (
           <div
             className="absolute top-0 bottom-0"
             style={{
-              // "next": leaf starts at foldBx from the left; "prev": from the right
-              [dir === "next" ? "left" : "right"]: `${leafEdgePct}%`,
-              [dir === "next" ? "right" : "left"]: 0,
-              transformOrigin: dir === "next" ? "left center" : "right center",
-              transform:       `perspective(1600px) rotateY(${dir === "next" ? -angle : angle}deg)`,
-              transformStyle:  "preserve-3d",
+              [dir === "next" ? "left"  : "right"]: `${(1 - p) * 100}%`,
+              [dir === "next" ? "right" : "left"]:  0,
               zIndex: 1,
             }}
           >
-            {/* Front face — image wider than leaf so the correct portion shows through */}
-            <div
-              className="absolute inset-0 overflow-hidden"
-              style={{
-                backfaceVisibility:       "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={current.fullUrl}
-                alt=""
-                className="absolute top-0 bottom-0 pointer-events-none"
-                style={{
-                  // img is always 100% of scene wide, anchored so its right/left
-                  // edge matches the scene edge — identical render position to the
-                  // stationary layer, so the two images tile without misalignment.
-                  [dir === "next" ? "right" : "left"]: 0,
-                  width:     `${imgWidthInLeafPct}%`,
-                  height:    "100%",
-                  objectFit: "contain",
-                }}
-                draggable={false}
-              />
-              {/* Depth shading: darkens toward the fold edge */}
+            {/* Front face — current photo squishing toward the fold (angle 0→90°) */}
+            {showFrontFace && (
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 overflow-hidden"
                 style={{
-                  background: dir === "next"
-                    ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`
-                    : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`,
+                  transformOrigin: dir === "next" ? "left center" : "right center",
+                  transform:       `scaleX(${frontScaleX})`,
                 }}
-              />
-              {/* Specular highlight at the crease */}
-              {p > 0.04 && p < 0.93 && (
-                <div
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={current.fullUrl}
+                  alt=""
                   className="absolute top-0 bottom-0 pointer-events-none"
                   style={{
-                    [dir === "next" ? "left" : "right"]: 0,
-                    width: "20px",
-                    background: dir === "next"
-                      ? `linear-gradient(to right, rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`
-                      : `linear-gradient(to left,  rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`,
+                    [dir === "next" ? "right" : "left"]: 0,
+                    width:     `${imgWidthInLeafPct}%`,
+                    height:    "100%",
+                    objectFit: "contain",
                   }}
+                  draggable={false}
                 />
-              )}
-            </div>
+                {/* Depth shading: darkens at crease as page folds */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: dir === "next"
+                    ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.55, p * 0.8)}), transparent 70%)`
+                    : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.55, p * 0.8)}), transparent 70%)`,
+                }} />
+                {/* Specular crease highlight */}
+                {p > 0.04 && p < 0.9 && (
+                  <div className="absolute top-0 bottom-0 pointer-events-none" style={{
+                    [dir === "next" ? "left" : "right"]: 0,
+                    width: "18px",
+                    background: dir === "next"
+                      ? `linear-gradient(to right, rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`
+                      : `linear-gradient(to left,  rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`,
+                  }} />
+                )}
+              </div>
+            )}
 
-            {/* Back face — warm parchment paper, visible after 90° rotation */}
-            <div
-              className="absolute inset-0"
-              style={{
-                transform:                "rotateY(180deg)",
-                backfaceVisibility:       "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                background: "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
-              }}
-            >
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: dir === "next"
-                  ? "linear-gradient(to right, rgba(0,0,0,0.2), transparent 65%)"
-                  : "linear-gradient(to left,  rgba(0,0,0,0.2), transparent 65%)",
-              }} />
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: dir === "next"
-                  ? "linear-gradient(to left, rgba(255,255,255,0.12), transparent 45%)"
-                  : "linear-gradient(to right, rgba(255,255,255,0.12), transparent 45%)",
-              }} />
-            </div>
+            {/* Back face — warm parchment, expands from crease (angle 90→180°) */}
+            {showBackFace && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  transformOrigin: dir === "next" ? "left center" : "right center",
+                  transform:       `scaleX(${backScaleX})`,
+                  background:      "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
+                }}
+              >
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: dir === "next"
+                    ? "linear-gradient(to right, rgba(0,0,0,0.22), transparent 60%)"
+                    : "linear-gradient(to left,  rgba(0,0,0,0.22), transparent 60%)",
+                }} />
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: dir === "next"
+                    ? "linear-gradient(to left, rgba(255,255,255,0.1), transparent 40%)"
+                    : "linear-gradient(to right, rgba(255,255,255,0.1), transparent 40%)",
+                }} />
+              </div>
+            )}
           </div>
         )}
 
