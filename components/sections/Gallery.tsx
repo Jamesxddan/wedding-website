@@ -432,26 +432,28 @@ function PageTurnLightbox({
 
   const angle = p * 180;
 
-  // Turning leaf: FULL-WIDTH element clipped to exactly the non-stationary region.
-  // clip-path is the complement of stationaryClip so the two layers tile perfectly.
-  let leafClip: string | undefined;
-  if (showFold) {
-    if (dir === "next") {
-      leafClip = phase1
-        ? `polygon(${foldAx}% ${foldAy}%, 100% 100%, ${foldBx}% ${foldBy}%)`
-        : `polygon(${foldAx}% ${foldAy}%, 100% 0%, 100% 100%, 0% 100%, ${foldBx}% ${foldBy}%)`;
-    } else {
-      leafClip = phase1
-        ? `polygon(${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`
-        : `polygon(${foldAx}% ${foldAy}%, 0% 0%, 0% 100%, 100% 100%, ${foldBx}% ${foldBy}%)`;
-    }
-  }
+  // Turning leaf: positioned at the leftmost visible point of the fold line,
+  // NO clip-path (clip-path breaks preserve-3d / backfaceVisibility).
+  // The stationary layer sits at a higher z-index so it covers the leaf in the
+  // non-turning region — the diagonal clip on the stationary layer reveals the
+  // leaf only in the correct turning region.
+  //
+  // "next" phase1: leaf starts at foldBx% = (1-2p)*100
+  // "next" phase2: leaf starts at 0 (full width)
+  // "prev" mirrors horizontally (uses right edge instead)
+  const leafEdgePct = phase1 ? (1 - 2 * p) * 100 : 0;  // distance from near edge
 
-  // Corner peel element: flat parchment triangle lifting from corner (visible early in drag)
-  const cornerPeelVisible = showFold && p < 0.55;
+  // Image must project full scene width onto the leaf so the correct half shows.
+  // leafWidth is the fraction of scene width the leaf covers (0–1).
+  const leafWidthFrac = 1 - leafEdgePct / 100;
+  const imgWidthInLeafPct = leafWidthFrac > 0.005 ? (1 / leafWidthFrac) * 100 : 100;
+
+  // Corner peel element: flat parchment triangle lifting from the corner.
+  // Fades out as the main 3D leaf takes over.
+  const cornerPeelVisible = showFold && p < 0.5;
   const cornerTopY  = Math.max(0, (1 - 2 * p) * 100);
   const cornerSideX = Math.max(0, (1 - 2 * p) * 100);
-  const cornerPeelOpacity = Math.max(0, 1 - p / 0.45);
+  const cornerPeelOpacity = Math.max(0, 1 - p / 0.38);
   const cornerPeelClip = dir === "next"
     ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
     : `polygon(0% 100%, 0% ${cornerTopY}%, ${100 - cornerSideX}% 100%)`;
@@ -499,10 +501,10 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 1 — stationary current photo, diagonally clipped */}
+        {/* Layer 1 — stationary current photo, diagonally clipped (sits ABOVE the turning leaf) */}
         <div
           className="absolute inset-0"
-          style={{ clipPath: stationaryClip }}
+          style={{ clipPath: stationaryClip, zIndex: 2 }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -543,18 +545,23 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 3 — 3D turning leaf: full-width, clipped to the turning region */}
+        {/* Layer 3 — 3D turning leaf: NO clip-path (clip-path breaks preserve-3d).
+             Positioned at the fold edge; stationary layer (z-index 2) covers it
+             in the non-turning region, revealing it only in the turning triangle. */}
         {showFold && (
           <div
-            className="absolute inset-0"
+            className="absolute top-0 bottom-0"
             style={{
-              clipPath:        leafClip,
+              // "next": leaf starts at foldBx from the left; "prev": from the right
+              [dir === "next" ? "left" : "right"]: `${leafEdgePct}%`,
+              [dir === "next" ? "right" : "left"]: 0,
               transformOrigin: dir === "next" ? "left center" : "right center",
               transform:       `perspective(1600px) rotateY(${dir === "next" ? -angle : angle}deg)`,
               transformStyle:  "preserve-3d",
+              zIndex: 1,
             }}
           >
-            {/* Front face — full current image (clip on parent shows correct portion) */}
+            {/* Front face — image wider than leaf so the correct portion shows through */}
             <div
               className="absolute inset-0 overflow-hidden"
               style={{
@@ -566,8 +573,16 @@ function PageTurnLightbox({
               <img
                 src={current.fullUrl}
                 alt=""
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ objectFit: "contain" }}
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{
+                  // img is always 100% of scene wide, anchored so its right/left
+                  // edge matches the scene edge — identical render position to the
+                  // stationary layer, so the two images tile without misalignment.
+                  [dir === "next" ? "right" : "left"]: 0,
+                  width:     `${imgWidthInLeafPct}%`,
+                  height:    "100%",
+                  objectFit: "contain",
+                }}
                 draggable={false}
               />
               {/* Depth shading: darkens toward the fold edge */}
