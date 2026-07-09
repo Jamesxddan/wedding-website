@@ -430,25 +430,27 @@ function PageTurnLightbox({
     }
   }
 
-  // Vertical fold leaf — 3D page turn strip
-  // Positioned at the leftmost/rightmost x-point of the diagonal fold line
-  // so the 3D rotation starts where the fold visually begins
-  const leafFoldX  = dir === "next"
-    ? (phase1 ? foldBx : 0)          // x of bottommost fold point for next
-    : (phase1 ? 0 : 100 - foldBx);   // mirrored for prev
-  const leafLeft   = dir === "next" ? leafFoldX : undefined;
-  const leafRight  = dir === "prev" ? leafFoldX : undefined;
-  const leafWidth  = dir === "next" ? (100 - leafFoldX) : (100 - leafFoldX);
-  const angle      = p * 180;
+  const angle = p * 180;
 
-  // Image inside the front face: full scene width projected onto the leaf
-  const imgWidthInLeaf = leafWidth > 0.5 ? (100 / leafWidth) * 100 : 100;
+  // Turning leaf: FULL-WIDTH element clipped to exactly the non-stationary region.
+  // clip-path is the complement of stationaryClip so the two layers tile perfectly.
+  let leafClip: string | undefined;
+  if (showFold) {
+    if (dir === "next") {
+      leafClip = phase1
+        ? `polygon(${foldAx}% ${foldAy}%, 100% 100%, ${foldBx}% ${foldBy}%)`
+        : `polygon(${foldAx}% ${foldAy}%, 100% 0%, 100% 100%, 0% 100%, ${foldBx}% ${foldBy}%)`;
+    } else {
+      leafClip = phase1
+        ? `polygon(${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`
+        : `polygon(${foldAx}% ${foldAy}%, 0% 0%, 0% 100%, 100% 100%, ${foldBx}% ${foldBy}%)`;
+    }
+  }
 
-  // Corner peel element: parchment triangle in the corner (visible early in drag)
-  // Fades into the main fold leaf as p grows
+  // Corner peel element: flat parchment triangle lifting from corner (visible early in drag)
   const cornerPeelVisible = showFold && p < 0.55;
-  const cornerTopY  = Math.max(0, (1 - 2 * p) * 100); // % from top
-  const cornerSideX = Math.max(0, (1 - 2 * p) * 100); // % from side
+  const cornerTopY  = Math.max(0, (1 - 2 * p) * 100);
+  const cornerSideX = Math.max(0, (1 - 2 * p) * 100);
   const cornerPeelOpacity = Math.max(0, 1 - p / 0.45);
   const cornerPeelClip = dir === "next"
     ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
@@ -541,20 +543,18 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 3 — 3D turning leaf: the page rotating in 3D around the fold axis */}
+        {/* Layer 3 — 3D turning leaf: full-width, clipped to the turning region */}
         {showFold && (
           <div
-            className="absolute top-0 bottom-0 overflow-hidden"
+            className="absolute inset-0"
             style={{
-              left:            leafLeft !== undefined ? `${leafLeft}%` : undefined,
-              right:           leafRight !== undefined ? `${leafRight}%` : undefined,
-              width:           `${leafWidth}%`,
+              clipPath:        leafClip,
               transformOrigin: dir === "next" ? "left center" : "right center",
               transform:       `perspective(1600px) rotateY(${dir === "next" ? -angle : angle}deg)`,
               transformStyle:  "preserve-3d",
             }}
           >
-            {/* Front face — shows the turning portion of the current image */}
+            {/* Front face — full current image (clip on parent shows correct portion) */}
             <div
               className="absolute inset-0 overflow-hidden"
               style={{
@@ -566,15 +566,8 @@ function PageTurnLightbox({
               <img
                 src={current.fullUrl}
                 alt=""
-                style={{
-                  position:       "absolute",
-                  top:            0,
-                  bottom:         0,
-                  [dir === "next" ? "right" : "left"]: 0,
-                  width:          `${imgWidthInLeaf}%`,
-                  objectFit:      "contain",
-                  objectPosition: dir === "next" ? "right center" : "left center",
-                }}
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ objectFit: "contain" }}
                 draggable={false}
               />
               {/* Depth shading: darkens toward the fold edge */}
