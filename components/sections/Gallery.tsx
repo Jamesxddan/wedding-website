@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import type { DrivePhoto, DriveAlbum } from "@/lib/drive";
 import Reveal from "@/components/ui/Reveal";
 import { albumPriority } from "@/lib/album-priority";
+import { gsap } from "gsap";
+import { Observer } from "gsap/Observer";
+
+gsap.registerPlugin(Observer);
 
 interface Props {
   folder: "engagement" | "wedding";
@@ -250,167 +254,205 @@ function PageTurnLightbox({
   onClose: () => void;
   onIndexChange: (i: number) => void;
 }) {
-  // progress: 0 = no fold, 1 = fully turned
-  const [progress, setProgress]   = useState(0);
-  const [dir, setDir]             = useState<"next" | "prev">("next");
-  const [busy, setBusy]           = useState(false);
+  const [progress, setProgress] = useState(0); // 0 = rest, 1 = fully turned
+  const [dir, setDir]           = useState<"next" | "prev">("next");
 
-  const sceneRef      = useRef<HTMLDivElement>(null);
-  const progressRef   = useRef(0);
-  const rafRef        = useRef<number>(0);
-  const dragRef       = useRef<{ active: boolean; startX: number; dir: "next" | "prev" } | null>(null);
+  const sceneRef  = useRef<HTMLDivElement>(null);
+  const proxy     = useRef({ value: 0 });
+  const tweenRef  = useRef<gsap.core.Tween | null>(null);
+  const dirRef    = useRef<"next" | "prev">("next");
 
-  const current   = photos[index];
-  const photoNext = photos[index + 1] ?? null;
-  const photoPrev = photos[index - 1] ?? null;
+  const current    = photos[index];
+  const photoNext  = photos[index + 1] ?? null;
+  const photoPrev  = photos[index - 1] ?? null;
   const underPhoto = dir === "next" ? photoNext : photoPrev;
 
-  // Keep ref in sync so closures see latest value
-  useEffect(() => { progressRef.current = progress; }, [progress]);
-
-  // Eased animation toward a target progress value
-  const animateTo = useCallback((target: number, onDone?: () => void) => {
-    cancelAnimationFrame(rafRef.current);
-    const DURATION = 420; // ms
-    const start    = performance.now();
-    const from     = progressRef.current;
-
-    function tick(now: number) {
-      const t = Math.min(1, (now - start) / DURATION);
-      // Cubic ease-in-out
-      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      const val = from + (target - from) * e;
-      setProgress(val);
-      progressRef.current = val;
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        setProgress(target);
-        progressRef.current = target;
-        onDone?.();
-      }
-    }
-    rafRef.current = requestAnimationFrame(tick);
+  // GSAP-powered progress animation
+  const animateTo = useCallback((target: number, onComplete?: () => void) => {
+    tweenRef.current?.kill();
+    tweenRef.current = gsap.to(proxy.current, {
+      value: target,
+      duration: 0.52,
+      ease: "power3.inOut",
+      onUpdate: () => setProgress(proxy.current.value),
+      onComplete,
+    });
   }, []);
 
   const completeTurn = useCallback((d: "next" | "prev", fromP = 0) => {
     if (d === "next" && !photoNext) return;
     if (d === "prev" && !photoPrev) return;
-    setBusy(true);
+    dirRef.current = d;
     setDir(d);
-    progressRef.current = fromP;
+    proxy.current.value = fromP;
     setProgress(fromP);
     animateTo(1, () => {
+      proxy.current.value = 0;
       setProgress(0);
-      progressRef.current = 0;
-      setBusy(false);
       onIndexChange(d === "next" ? index + 1 : index - 1);
     });
   }, [animateTo, index, onIndexChange, photoNext, photoPrev]);
 
+  const snapBack = useCallback((fromP: number) => {
+    proxy.current.value = fromP;
+    animateTo(0);
+  }, [animateTo]);
+
   const goNext = useCallback(() => {
-    if (busy || !photoNext) return;
+    if (tweenRef.current?.isActive() || !photoNext) return;
     completeTurn("next");
-  }, [busy, photoNext, completeTurn]);
+  }, [photoNext, completeTurn]);
 
   const goPrev = useCallback(() => {
-    if (busy || !photoPrev) return;
+    if (tweenRef.current?.isActive() || !photoPrev) return;
     completeTurn("prev");
-  }, [busy, photoPrev, completeTurn]);
+  }, [photoPrev, completeTurn]);
 
-  // Keyboard
+  // GSAP Observer — velocity-aware drag, handles both mouse and touch
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    let dragging = false;
+    let dragStartX = 0;
+    let localDir: "next" | "prev" = "next";
+
+    const obs = Observer.create({
+      target: sceneRef.current,
+      type: "touch,pointer",
+      lockAxis: true,
+      dragMinimum: 6,
+      onPress(self) {
+        if (tweenRef.current?.isActive()) return;
+        tweenRef.current?.kill();
+        const rect = sceneRef.current!.getBoundingClientRect();
+        const relX = self.x - rect.left;
+        localDir = relX >= rect.width * 0.45 ? "next" : "prev";
+        if (localDir === "next" && !photoNext) return;
+        if (localDir === "prev" && !photoPrev) return;
+        dragging = true;
+        dragStartX = self.startX;
+        dirRef.current = localDir;
+        setDir(localDir);
+        proxy.current.value = 0;
+        setProgress(0);
+      },
+      onDrag(self) {
+        if (!dragging) return;
+        tweenRef.current?.kill();
+        const rect = sceneRef.current!.getBoundingClientRect();
+        const delta = dirRef.current === "next"
+          ? dragStartX - self.x   // drag left = next
+          : self.x - dragStartX;  // drag right = prev
+        const newP = Math.max(0, Math.min(0.97, delta / (rect.width * 0.65)));
+        proxy.current.value = newP;
+        setProgress(newP);
+      },
+      onDragEnd(self) {
+        if (!dragging) return;
+        dragging = false;
+        const p = proxy.current.value;
+        // Velocity in px/s; positive = in the turn direction
+        const vel = dirRef.current === "next" ? -self.velocityX : self.velocityX;
+        if (p > 0.28 || vel > 420) {
+          completeTurn(dirRef.current, p);
+        } else {
+          snapBack(p);
+        }
+      },
+    });
+
+    return () => { obs.kill(); };
+  }, [photoNext, photoPrev, completeTurn, snapBack]);
+
+  // Keyboard navigation
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape")      onClose();
-      if (e.key === "ArrowRight")  goNext();
-      if (e.key === "ArrowLeft")   goPrev();
+      if (e.key === "Escape")     onClose();
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft")  goPrev();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose, goNext, goPrev]);
 
-  // Drag start — determine direction from which half of the image is touched
-  const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (busy) return;
-    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const rect = sceneRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const relX = clientX - rect.left;
-    const d: "next" | "prev" = relX >= rect.width * 0.45 ? "next" : "prev";
-    if (d === "next" && !photoNext) return;
-    if (d === "prev" && !photoPrev) return;
-    dragRef.current = { active: true, startX: clientX, dir: d };
-    setDir(d);
-    setProgress(0);
-    progressRef.current = 0;
-  }, [busy, photoNext, photoPrev]);
-
-  // Global move handler
-  const onMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!dragRef.current?.active || busy) return;
-    if (e.cancelable) e.preventDefault();
-    const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const rect = sceneRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const delta = dragRef.current.dir === "next"
-      ? dragRef.current.startX - clientX    // drag left → next
-      : clientX - dragRef.current.startX;   // drag right → prev
-    const p = Math.max(0, Math.min(0.96, delta / (rect.width * 0.62)));
-    setProgress(p);
-    progressRef.current = p;
-  }, [busy]);
-
-  // Global up / cancel handler
-  const onUp = useCallback(() => {
-    if (!dragRef.current?.active) return;
-    const d = dragRef.current.dir;
-    dragRef.current.active = false;
-    const p = progressRef.current;
-    if (p > 0.28) {
-      completeTurn(d, p);
-    } else {
-      setBusy(true);
-      animateTo(0, () => setBusy(false));
-    }
-  }, [completeTurn, animateTo]);
-
-  useEffect(() => {
-    window.addEventListener("mousemove",  onMove);
-    window.addEventListener("touchmove",  onMove, { passive: false });
-    window.addEventListener("mouseup",    onUp);
-    window.addEventListener("touchend",   onUp);
-    window.addEventListener("touchcancel", onUp);
-    return () => {
-      window.removeEventListener("mousemove",  onMove);
-      window.removeEventListener("touchmove",  onMove);
-      window.removeEventListener("mouseup",    onUp);
-      window.removeEventListener("touchend",   onUp);
-      window.removeEventListener("touchcancel", onUp);
-    };
-  }, [onMove, onUp]);
-
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
-
-  // ── Geometry ──────────────────────────────────────────────────────────────
-  // p       : fold progress 0→1
-  // foldFrac: fold-line position as fraction of container width
-  //   next  : starts at right (1.0), moves left → (1-p)
-  //   prev  : starts at left  (0.0), moves right → p
-  const p        = progress;
-  const showFold = p > 0.002;
-  const foldFrac = dir === "next" ? 1 - p : p;  // position of fold line [0,1]
-  const angle    = p * 180;                      // rotation angle 0→180°
-
-  // Width of the turning leaf as % of container
-  const leafPct  = p * 100;
-
-  // Inside the leaf, the full image is projected onto a space = (1/p) * leaf width.
-  // We position the image so the correct half shows through overflow:hidden.
-  //   next : right portion → image right-aligned inside leaf
-  //   prev : left  portion → image left-aligned  inside leaf
-  const imgWidthInLeafPct = p > 0.002 ? (100 / p) : 100; // % relative to leaf
+  useEffect(() => () => { tweenRef.current?.kill(); }, []);
 
   if (!current) return null;
+
+  // ── Geometry ──────────────────────────────────────────────────────────────
+  const p        = progress;
+  const showFold = p > 0.003;
+  const busy     = tweenRef.current?.isActive() ?? false;
+
+  // Diagonal fold line: sweeps from the bottom-right (or bottom-left for prev)
+  // corner across the image. Two phases:
+  //   phase1 (p ≤ 0.5): fold line endpoint A on right/left edge, B on bottom edge
+  //   phase2 (p > 0.5): fold line endpoint A on top edge, B on left/right edge
+  const phase1 = p <= 0.5;
+
+  let foldAx: number, foldAy: number, foldBx: number, foldBy: number;
+  if (dir === "next") {
+    if (phase1) {
+      foldAx = 100;              // right edge
+      foldAy = (1 - 2 * p) * 100; // descends from H to 0 as p→0.5
+      foldBx = (1 - 2 * p) * 100; // moves left from W to 0
+      foldBy = 100;              // bottom edge
+    } else {
+      foldAx = (2 - 2 * p) * 100; // top edge, moves right→left
+      foldAy = 0;
+      foldBx = 0;                // left edge
+      foldBy = (2 - 2 * p) * 100; // moves up from H to 0
+    }
+  } else {
+    if (phase1) {
+      foldAx = 0;                // left edge
+      foldAy = (1 - 2 * p) * 100;
+      foldBx = 2 * p * 100;     // bottom edge moves right
+      foldBy = 100;
+    } else {
+      foldAx = (2 * p - 1) * 100; // top edge moves left→right
+      foldAy = 0;
+      foldBx = 100;              // right edge
+      foldBy = (2 - 2 * p) * 100;
+    }
+  }
+
+  // Clip-path for stationary layer (current photo, everything on the "keep" side)
+  let stationaryClip: string | undefined;
+  if (showFold) {
+    if (dir === "next") {
+      stationaryClip = phase1
+        ? `polygon(0% 0%, 100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`
+        : `polygon(0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
+    } else {
+      stationaryClip = phase1
+        ? `polygon(100% 0%, 0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 100% 100%)`
+        : `polygon(100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
+    }
+  }
+
+  // Vertical fold leaf — 3D page turn strip
+  // Positioned at the leftmost/rightmost x-point of the diagonal fold line
+  // so the 3D rotation starts where the fold visually begins
+  const leafFoldX  = dir === "next"
+    ? (phase1 ? foldBx : 0)          // x of bottommost fold point for next
+    : (phase1 ? 0 : 100 - foldBx);   // mirrored for prev
+  const leafLeft   = dir === "next" ? leafFoldX : undefined;
+  const leafRight  = dir === "prev" ? leafFoldX : undefined;
+  const leafWidth  = dir === "next" ? (100 - leafFoldX) : (100 - leafFoldX);
+  const angle      = p * 180;
+
+  // Image inside the front face: full scene width projected onto the leaf
+  const imgWidthInLeaf = leafWidth > 0.5 ? (100 / leafWidth) * 100 : 100;
+
+  // Corner peel element: parchment triangle in the corner (visible early in drag)
+  // Fades into the main fold leaf as p grows
+  const cornerPeelVisible = showFold && p < 0.55;
+  const cornerTopY  = Math.max(0, (1 - 2 * p) * 100); // % from top
+  const cornerSideX = Math.max(0, (1 - 2 * p) * 100); // % from side
+  const cornerPeelOpacity = Math.max(0, 1 - p / 0.45);
+  const cornerPeelClip = dir === "next"
+    ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
+    : `polygon(0% 100%, 0% ${cornerTopY}%, ${100 - cornerSideX}% 100%)`;
 
   return (
     <div
@@ -436,14 +478,12 @@ function PageTurnLightbox({
         ref={sceneRef}
         className="relative rounded-2xl overflow-hidden shadow-2xl select-none"
         style={{
-          width:  "min(82vw, 1100px)",
-          height: "min(85vh,  800px)",
+          width:       "min(82vw, 1100px)",
+          height:      "min(85vh, 800px)",
           perspective: "1800px",
-          cursor: busy ? "grabbing" : "grab",
+          cursor:      busy ? "grabbing" : "grab",
           touchAction: "none",
         }}
-        onMouseDown={onDragStart}
-        onTouchStart={onDragStart}
       >
         {/* Layer 0 — destination photo (always behind) */}
         {underPhoto && showFold && (
@@ -457,16 +497,10 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 1 — stationary portion of current photo (left of fold line) */}
+        {/* Layer 1 — stationary current photo, diagonally clipped */}
         <div
           className="absolute inset-0"
-          style={{
-            clipPath: showFold
-              ? dir === "next"
-                ? `inset(0 ${p * 100}% 0 0)`
-                : `inset(0 0 0 ${p * 100}%)`
-              : undefined,
-          }}
+          style={{ clipPath: stationaryClip }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -476,32 +510,47 @@ function PageTurnLightbox({
             style={{ objectFit: "contain" }}
             draggable={false}
           />
-
-          {/* Shadow cast by turning page onto the stationary half */}
+          {/* Shadow cast by turning leaf onto the stationary side */}
           {showFold && (
             <div
               className="absolute top-0 bottom-0 pointer-events-none"
               style={{
                 [dir === "next" ? "right" : "left"]: 0,
-                width: "100px",
-                background:
-                  dir === "next"
-                    ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.5, p * 0.6)}))`
-                    : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.5, p * 0.6)}))`,
+                width: "90px",
+                background: dir === "next"
+                  ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`
+                  : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`,
               }}
             />
           )}
         </div>
 
-        {/* Layer 2 — turning leaf (the page that's folding) */}
+        {/* Layer 2 — corner peel: flat parchment triangle lifting from corner */}
+        {cornerPeelVisible && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              clipPath: cornerPeelClip,
+              opacity:  cornerPeelOpacity,
+              background: "linear-gradient(135deg, #f0e8d5 0%, #e2d5b8 50%, #d8c9a3 100%)",
+              // Slight shadow line at the fold edge
+              boxShadow: dir === "next"
+                ? "inset 3px 0 8px rgba(0,0,0,0.18)"
+                : "inset -3px 0 8px rgba(0,0,0,0.18)",
+            }}
+          />
+        )}
+
+        {/* Layer 3 — 3D turning leaf: the page rotating in 3D around the fold axis */}
         {showFold && (
           <div
             className="absolute top-0 bottom-0 overflow-hidden"
             style={{
-              [dir === "next" ? "left" : "right"]: `${foldFrac * 100}%`,
-              width:           `${leafPct}%`,
+              left:            leafLeft !== undefined ? `${leafLeft}%` : undefined,
+              right:           leafRight !== undefined ? `${leafRight}%` : undefined,
+              width:           `${leafWidth}%`,
               transformOrigin: dir === "next" ? "left center" : "right center",
-              transform:       `perspective(1400px) rotateY(${dir === "next" ? -angle : angle}deg)`,
+              transform:       `perspective(1600px) rotateY(${dir === "next" ? -angle : angle}deg)`,
               transformStyle:  "preserve-3d",
             }}
           >
@@ -518,93 +567,92 @@ function PageTurnLightbox({
                 src={current.fullUrl}
                 alt=""
                 style={{
-                  position:    "absolute",
-                  top:         0,
-                  bottom:      0,
-                  // Align image to whichever edge is the fold origin,
-                  // then expand it to full-container width so the correct half shows.
+                  position:       "absolute",
+                  top:            0,
+                  bottom:         0,
                   [dir === "next" ? "right" : "left"]: 0,
-                  width:          `${imgWidthInLeafPct}%`,
+                  width:          `${imgWidthInLeaf}%`,
                   objectFit:      "contain",
                   objectPosition: dir === "next" ? "right center" : "left center",
                 }}
                 draggable={false}
               />
-
-              {/* Shading — darkens toward the fold edge to give depth */}
+              {/* Depth shading: darkens toward the fold edge */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  background:
-                    dir === "next"
-                      ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.55, p * 0.75)}), rgba(0,0,0,0.04) 55%, transparent)`
-                      : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.55, p * 0.75)}), rgba(0,0,0,0.04) 55%, transparent)`,
+                  background: dir === "next"
+                    ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`
+                    : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`,
                 }}
               />
-
-              {/* Specular glint at the fold — thin bright strip */}
-              {p > 0.05 && p < 0.92 && (
+              {/* Specular highlight at the crease */}
+              {p > 0.04 && p < 0.93 && (
                 <div
                   className="absolute top-0 bottom-0 pointer-events-none"
                   style={{
                     [dir === "next" ? "left" : "right"]: 0,
-                    width: "18px",
-                    background:
-                      dir === "next"
-                        ? `linear-gradient(to right, rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`
-                        : `linear-gradient(to left,  rgba(255,255,255,${0.18 * Math.sin(p * Math.PI)}), transparent)`,
+                    width: "20px",
+                    background: dir === "next"
+                      ? `linear-gradient(to right, rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`
+                      : `linear-gradient(to left,  rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`,
                   }}
                 />
               )}
             </div>
 
-            {/* Back face — warm paper visible once angle > 90° */}
+            {/* Back face — warm parchment paper, visible after 90° rotation */}
             <div
               className="absolute inset-0"
               style={{
                 transform:                "rotateY(180deg)",
                 backfaceVisibility:       "hidden",
                 WebkitBackfaceVisibility: "hidden",
-                // Warm parchment gradient
                 background: "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
               }}
             >
-              {/* Inner shadow toward the fold spine */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    dir === "next"
-                      ? "linear-gradient(to right, rgba(0,0,0,0.22), transparent 60%)"
-                      : "linear-gradient(to left,  rgba(0,0,0,0.22), transparent 60%)",
-                }}
-              />
-              {/* Subtle paper texture highlight */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    dir === "next"
-                      ? "linear-gradient(to left, rgba(255,255,255,0.14), transparent 40%)"
-                      : "linear-gradient(to right, rgba(255,255,255,0.14), transparent 40%)",
-                }}
-              />
+              <div className="absolute inset-0 pointer-events-none" style={{
+                background: dir === "next"
+                  ? "linear-gradient(to right, rgba(0,0,0,0.2), transparent 65%)"
+                  : "linear-gradient(to left,  rgba(0,0,0,0.2), transparent 65%)",
+              }} />
+              <div className="absolute inset-0 pointer-events-none" style={{
+                background: dir === "next"
+                  ? "linear-gradient(to left, rgba(255,255,255,0.12), transparent 45%)"
+                  : "linear-gradient(to right, rgba(255,255,255,0.12), transparent 45%)",
+              }} />
             </div>
           </div>
         )}
 
-        {/* Drag hint labels — only at rest */}
-        {!showFold && !busy && (
+        {/* Corner hint — very subtle peel affordance at rest */}
+        {!showFold && (photoNext || photoPrev) && (
           <>
-            {photoPrev && (
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/18 text-[10px] font-body tracking-widest select-none pointer-events-none">
-                ← drag
-              </div>
-            )}
             {photoNext && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/18 text-[10px] font-body tracking-widest select-none pointer-events-none">
-                drag →
-              </div>
+              <div
+                className="absolute bottom-0 right-0 pointer-events-none"
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  clipPath: "polygon(100% 100%, 100% 0%, 0% 100%)",
+                  background: "linear-gradient(135deg, #f0e8d5, #ddd0b5)",
+                  opacity: 0.55,
+                  boxShadow: "-1px -1px 5px rgba(0,0,0,0.22)",
+                }}
+              />
+            )}
+            {photoPrev && (
+              <div
+                className="absolute bottom-0 left-0 pointer-events-none"
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  clipPath: "polygon(0% 100%, 0% 0%, 100% 100%)",
+                  background: "linear-gradient(225deg, #f0e8d5, #ddd0b5)",
+                  opacity: 0.55,
+                  boxShadow: "1px -1px 5px rgba(0,0,0,0.22)",
+                }}
+              />
             )}
           </>
         )}
