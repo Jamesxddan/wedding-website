@@ -256,6 +256,8 @@ function PageTurnLightbox({
 }) {
   const [progress, setProgress] = useState(0); // 0 = rest, 1 = fully turned
   const [dir, setDir]           = useState<"next" | "prev">("next");
+  const [sceneSize, setSceneSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const [imgAspect, setImgAspect] = useState<number | null>(null);
 
   const sceneRef  = useRef<HTMLDivElement>(null);
   const proxy     = useRef({ value: 0 });
@@ -378,6 +380,20 @@ function PageTurnLightbox({
 
   useEffect(() => () => { tweenRef.current?.kill(); }, []);
 
+  // Track scene dimensions so we can compute where the photo renders within it
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      const e = entries[0];
+      if (e) setSceneSize({ w: e.contentRect.width, h: e.contentRect.height });
+    });
+    ro.observe(sceneRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // Reset AR when photo changes so we don't flash stale bounds
+  useEffect(() => { setImgAspect(null); }, [index]);
+
   if (!current) return null;
 
   // ── Geometry ──────────────────────────────────────────────────────────────
@@ -456,6 +472,23 @@ function PageTurnLightbox({
   const squishFront = `rotate(${foldRotDeg}deg) scaleX(${frontScaleX}) rotate(${-foldRotDeg}deg)`;
   const squishBack  = `rotate(${foldRotDeg}deg) scaleX(${backScaleX}) rotate(${-foldRotDeg}deg)`;
 
+  // Photo rect within scene — confines fold to actual photo bounds.
+  // Computed from image natural AR + scene dimensions (both tracked reactively).
+  // Falls back to inset:0 (scene bounds) until both are known.
+  const photoWrapStyle = (() => {
+    if (!imgAspect || sceneSize.w === 0 || sceneSize.h === 0) return { inset: 0 };
+    const sceneAR = sceneSize.w / sceneSize.h;
+    if (imgAspect >= sceneAR) {
+      // Landscape photo: fills width, letterboxed top/bottom
+      const tb = `${(1 - sceneAR / imgAspect) / 2 * 100}%`;
+      return { top: tb, bottom: tb, left: 0, right: 0 };
+    } else {
+      // Portrait photo: fills height, pillarboxed left/right
+      const lr = `${(1 - imgAspect / sceneAR) / 2 * 100}%`;
+      return { top: 0, bottom: 0, left: lr, right: lr };
+    }
+  })();
+
   // Corner peel: flat parchment triangle lifting from the near bottom corner.
   const cornerPeelVisible = showFold && p < 0.5;
   const cornerTopY        = Math.max(0, (1 - 2 * p) * 100);
@@ -495,7 +528,7 @@ function PageTurnLightbox({
           touchAction: "none",
         }}
       >
-        {/* Layer 0 — destination photo (always behind) */}
+        {/* Layer 0 — destination photo: full scene, behind everything */}
         {underPhoto && showFold && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -507,138 +540,143 @@ function PageTurnLightbox({
           />
         )}
 
-        {/* Layer 1 — stationary current photo, diagonally clipped (sits ABOVE the turning leaf) */}
+        {/* photoWrap — clamps all fold layers to the current photo's rendered bounds.
+             For portrait photos this eliminates the pillarbox overflow; for landscape
+             it clips the letterbox. Percentages inside are relative to the photo rect. */}
         <div
-          className="absolute inset-0"
-          style={{ clipPath: stationaryClip, zIndex: 2 }}
+          className="absolute overflow-hidden"
+          style={{ ...photoWrapStyle }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={current.fullUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ objectFit: "contain" }}
-            draggable={false}
-          />
-          {/* Cast shadow from turning leaf onto stationary region */}
-          {showFold && (
-            <div className="absolute inset-0 pointer-events-none" style={{
-              background: dir === "next"
-                ? `linear-gradient(135deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`
-                : `linear-gradient(225deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`,
-            }} />
-          )}
-        </div>
-
-        {/* Layer 2 — corner peel: flat parchment triangle lifting from corner */}
-        {cornerPeelVisible && (
+          {/* Stationary layer: diagonally clipped, sits above the turning leaf (z:2) */}
           <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              clipPath: cornerPeelClip,
-              opacity:  cornerPeelOpacity,
-              background: "linear-gradient(135deg, #f0e8d5 0%, #e2d5b8 50%, #d8c9a3 100%)",
-              // Slight shadow line at the fold edge
-              boxShadow: dir === "next"
-                ? "inset 3px 0 8px rgba(0,0,0,0.18)"
-                : "inset -3px 0 8px rgba(0,0,0,0.18)",
-            }}
-          />
-        )}
-
-        {/* Layer 3 — turning leaf: diagonal clip + 2D perpendicular squish.
-             Parent clips to the turning region; child squishes full-scene image.
-             clipPath on parent is in scene coords (unaffected by child transform). */}
-        {showFold && leafClip && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ clipPath: leafClip, zIndex: 1 }}
+            className="absolute inset-0"
+            style={{ clipPath: stationaryClip, zIndex: 2 }}
           >
-            <div
-              className="absolute inset-0"
-              style={{
-                transformOrigin: `${foldMidX}% ${foldMidY}%`,
-                transform: showFrontFace ? squishFront : squishBack,
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={current.fullUrl}
+              alt=""
+              onLoad={(e) => {
+                const img = e.target as HTMLImageElement;
+                setImgAspect(img.naturalWidth / img.naturalHeight);
               }}
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ objectFit: "cover" }}
+              draggable={false}
+            />
+            {showFold && (
+              <div className="absolute inset-0 pointer-events-none" style={{
+                background: dir === "next"
+                  ? `linear-gradient(135deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`
+                  : `linear-gradient(225deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`,
+              }} />
+            )}
+          </div>
+
+          {/* Corner peel: small parchment triangle lifting from corner (z:3) */}
+          {cornerPeelVisible && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                clipPath:   cornerPeelClip,
+                opacity:    cornerPeelOpacity,
+                background: "linear-gradient(135deg, #f0e8d5 0%, #e2d5b8 50%, #d8c9a3 100%)",
+                zIndex: 3,
+              }}
+            />
+          )}
+
+          {/* Turning leaf: diagonal clip + 2D perpendicular squish (z:1).
+               Parent clips to turning region in photo coords; child squishes. */}
+          {showFold && leafClip && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ clipPath: leafClip, zIndex: 1 }}
             >
-              {showFrontFace && (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={current.fullUrl}
-                    alt=""
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ objectFit: "contain" }}
-                    draggable={false}
-                  />
-                  {/* Depth shading near fold diagonal */}
-                  <div className="absolute inset-0 pointer-events-none" style={{
-                    background: dir === "next"
-                      ? `linear-gradient(135deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`
-                      : `linear-gradient(225deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`,
-                  }} />
-                  {/* Specular highlight at crease */}
-                  {p > 0.04 && p < 0.9 && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  transformOrigin: `${foldMidX}% ${foldMidY}%`,
+                  transform: showFrontFace ? squishFront : squishBack,
+                }}
+              >
+                {showFrontFace && (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={current.fullUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      style={{ objectFit: "cover" }}
+                      draggable={false}
+                    />
                     <div className="absolute inset-0 pointer-events-none" style={{
                       background: dir === "next"
-                        ? `linear-gradient(135deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`
-                        : `linear-gradient(225deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`,
+                        ? `linear-gradient(135deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`
+                        : `linear-gradient(225deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`,
                     }} />
-                  )}
-                </>
-              )}
-              {showBackFace && (
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(135deg, #f5eddc 0%, #ecdfc9 50%, #e0d3b8 100%)" }}
-                >
-                  <div className="absolute inset-0 pointer-events-none" style={{
-                    background: dir === "next"
-                      ? "linear-gradient(135deg, rgba(0,0,0,0.22) 0%, transparent 55%)"
-                      : "linear-gradient(225deg, rgba(0,0,0,0.22) 0%, transparent 55%)",
-                  }} />
-                  <div className="absolute inset-0 pointer-events-none" style={{
-                    background: dir === "next"
-                      ? "linear-gradient(315deg, rgba(255,255,255,0.12) 0%, transparent 40%)"
-                      : "linear-gradient(45deg, rgba(255,255,255,0.12) 0%, transparent 40%)",
-                  }} />
-                </div>
-              )}
+                    {p > 0.04 && p < 0.9 && (
+                      <div className="absolute inset-0 pointer-events-none" style={{
+                        background: dir === "next"
+                          ? `linear-gradient(135deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`
+                          : `linear-gradient(225deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`,
+                      }} />
+                    )}
+                  </>
+                )}
+                {showBackFace && (
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(135deg, #f5eddc 0%, #ecdfc9 50%, #e0d3b8 100%)" }}
+                  >
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      background: dir === "next"
+                        ? "linear-gradient(135deg, rgba(0,0,0,0.22) 0%, transparent 55%)"
+                        : "linear-gradient(225deg, rgba(0,0,0,0.22) 0%, transparent 55%)",
+                    }} />
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                      background: dir === "next"
+                        ? "linear-gradient(315deg, rgba(255,255,255,0.12) 0%, transparent 40%)"
+                        : "linear-gradient(45deg, rgba(255,255,255,0.12) 0%, transparent 40%)",
+                    }} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Corner hint — very subtle peel affordance at rest */}
-        {!showFold && (photoNext || photoPrev) && (
-          <>
-            {photoNext && (
-              <div
-                className="absolute bottom-0 right-0 pointer-events-none"
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  clipPath: "polygon(100% 100%, 100% 0%, 0% 100%)",
-                  background: "linear-gradient(135deg, #f0e8d5, #ddd0b5)",
-                  opacity: 0.55,
-                  boxShadow: "-1px -1px 5px rgba(0,0,0,0.22)",
-                }}
-              />
-            )}
-            {photoPrev && (
-              <div
-                className="absolute bottom-0 left-0 pointer-events-none"
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  clipPath: "polygon(0% 100%, 0% 0%, 100% 100%)",
-                  background: "linear-gradient(225deg, #f0e8d5, #ddd0b5)",
-                  opacity: 0.55,
-                  boxShadow: "1px -1px 5px rgba(0,0,0,0.22)",
-                }}
-              />
-            )}
-          </>
-        )}
+          {/* Corner hints at rest — anchored to photo corners */}
+          {!showFold && (photoNext || photoPrev) && (
+            <>
+              {photoNext && (
+                <div
+                  className="absolute bottom-0 right-0 pointer-events-none"
+                  style={{
+                    width: "52px", height: "52px",
+                    clipPath: "polygon(100% 100%, 100% 0%, 0% 100%)",
+                    background: "linear-gradient(135deg, #f0e8d5, #ddd0b5)",
+                    opacity: 0.55,
+                    boxShadow: "-1px -1px 5px rgba(0,0,0,0.22)",
+                    zIndex: 4,
+                  }}
+                />
+              )}
+              {photoPrev && (
+                <div
+                  className="absolute bottom-0 left-0 pointer-events-none"
+                  style={{
+                    width: "52px", height: "52px",
+                    clipPath: "polygon(0% 100%, 0% 0%, 100% 100%)",
+                    background: "linear-gradient(225deg, #f0e8d5, #ddd0b5)",
+                    opacity: 0.55,
+                    boxShadow: "1px -1px 5px rgba(0,0,0,0.22)",
+                    zIndex: 4,
+                  }}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Prev arrow */}
