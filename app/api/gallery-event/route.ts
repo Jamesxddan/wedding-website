@@ -16,12 +16,16 @@ export async function POST(req: NextRequest) {
 
   if (session instanceof NextResponse) return session;
 
-  await supabase.from("gallery_events").insert({
+  const { error: insertError } = await supabase.from("gallery_events").insert({
     guest_id:    session.guest_id,
     device_uuid: session.device_uuid,
     event_type:  body.type,
     metadata:    body.metadata ?? null,
   });
+  if (insertError) {
+    console.error("[gallery-event] insert failed:", insertError);
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
 
   // Also surface gallery_open in the main phase_view event_data so it appears
   // alongside FIRST_VISIT / RETURN_VISIT in the access_logs row for this device.
