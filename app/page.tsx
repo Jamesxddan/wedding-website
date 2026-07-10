@@ -27,7 +27,11 @@ export default function Home() {
   const [showInvitation, setShowInvitation] = useState(false);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
 
-  useTrackPageVisit(isLoading ? null : phase);
+  // Track the phase the user actually sees — when the invitation card is shown
+  // after first registration, phase is still FIRST_VISIT until refresh() fires,
+  // so we override to INVITATION so the tracker captures that the card was shown.
+  // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
+  useTrackPageVisit(isLoading ? null : (showInvitation ? Phase.INVITATION : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase)));
 
   if (isLoading) {
     return (

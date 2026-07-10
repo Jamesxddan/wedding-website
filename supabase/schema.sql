@@ -56,3 +56,17 @@ create table if not exists breach_flags (
 
 create index if not exists breach_flags_device_uuid_idx on breach_flags(device_uuid);
 create index if not exists breach_flags_blocked_until_idx on breach_flags(blocked_until);
+
+-- Gallery events (screenshot / print logging)
+create table if not exists gallery_events (
+  id          uuid primary key default gen_random_uuid(),
+  guest_id    uuid references guests(id) on delete set null,
+  device_uuid text,
+  event_type  text not null,
+  metadata    jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists gallery_events_guest_id_idx   on gallery_events(guest_id);
+create index if not exists gallery_events_event_type_idx on gallery_events(event_type);
+create index if not exists gallery_events_created_at_idx on gallery_events(created_at desc);

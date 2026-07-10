@@ -244,9 +244,151 @@ function LoadMoreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-// ─── Interactive page-turn lightbox ──────────────────────────────────────────
+// ─── Album Book ──────────────────────────────────────────────────────────────
 
-function PageTurnLightbox({
+const PAGE_BG = "#f7f3ec";
+
+function RotateDevicePrompt({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/96 flex flex-col items-center justify-center gap-8 px-8">
+      <div style={{ fontSize: "4rem", animation: "rotateHint 2.2s ease-in-out infinite" }}>📱</div>
+      <div className="text-center">
+        <p className="font-body text-white text-lg mb-2">Rotate your device</p>
+        <p className="font-body text-white/50 text-sm">The album looks best in landscape</p>
+      </div>
+      <button onClick={onDismiss} className="font-body text-white/30 text-xs tracking-widest underline underline-offset-2">
+        view anyway
+      </button>
+      <style>{`@keyframes rotateHint { 0%,100%{transform:rotate(0deg)} 40%,60%{transform:rotate(90deg)} }`}</style>
+    </div>
+  );
+}
+
+function BookPage({
+  photo,
+  isLeft,
+  pageNum,
+}: {
+  photo: DrivePhoto | null;
+  isLeft: boolean;
+  pageNum?: number;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative h-full flex-shrink-0" style={{ width: "50%", background: PAGE_BG }}>
+      {photo && (
+        <>
+          {!loaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full border-2 border-amber-300/40 border-t-amber-600/70 animate-spin" />
+            </div>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.fullUrl}
+            alt=""
+            draggable={false}
+            onLoad={() => setLoaded(true)}
+            className="absolute pointer-events-none"
+            style={{
+              inset: "7%",
+              width: "86%",
+              height: "86%",
+              objectFit: "contain",
+              background: PAGE_BG,
+              opacity: loaded ? 1 : 0,
+              transition: "opacity 0.35s",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.09), 0 3px 12px rgba(0,0,0,0.06)",
+            }}
+          />
+        </>
+      )}
+      {pageNum !== undefined && (
+        <p
+          className="absolute bottom-2 font-body text-[9px] tracking-widest pointer-events-none select-none"
+          style={{ [isLeft ? "left" : "right"]: "8%", color: "rgba(0,0,0,0.2)" }}
+        >
+          {pageNum}
+        </p>
+      )}
+      {/* Inner shadow toward spine */}
+      <div
+        className="absolute inset-y-0 pointer-events-none"
+        style={{
+          [isLeft ? "right" : "left"]: 0,
+          width: 28,
+          background: isLeft
+            ? "linear-gradient(to left, rgba(0,0,0,0.07), transparent)"
+            : "linear-gradient(to right, rgba(0,0,0,0.07), transparent)",
+        }}
+      />
+    </div>
+  );
+}
+
+function BookSpread({
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum,
+}: {
+  leftPhoto: DrivePhoto | null;
+  rightPhoto: DrivePhoto | null;
+  leftPageNum?: number;
+  rightPageNum?: number;
+}) {
+  return (
+    <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} />
+      {/* Spine shadow */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
+        width: 32, zIndex: 5,
+        background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)",
+      }} />
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
+        width: 2, zIndex: 6,
+        background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
+      }} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} />
+    </div>
+  );
+}
+
+function BookCover() {
+  return (
+    <div className="absolute inset-0 flex">
+      {/* Left: inside front cover */}
+      <div className="relative h-full" style={{ width: "50%", background: "#f2ece0" }}>
+        <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
+          <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
+            "God&apos;s will was on<br/>our marriage"
+          </p>
+        </div>
+        <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />
+      </div>
+      {/* Spine */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 5, background: "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 6, background: "linear-gradient(to bottom, #c9a84c80, #8b691480, #c9a84c80)" }} />
+      {/* Right: cover face */}
+      <div className="relative h-full flex flex-col items-center justify-center overflow-hidden" style={{ width: "50%", background: "linear-gradient(160deg, #2c1810 0%, #4a2c15 40%, #3d2310 70%, #1e1008 100%)" }}>
+        <div className="absolute pointer-events-none" style={{ inset: "5%", border: "1.5px solid rgba(201,168,76,0.45)" }} />
+        <div className="absolute pointer-events-none" style={{ inset: "7.5%", border: "0.5px solid rgba(201,168,76,0.2)" }} />
+        <div className="relative z-10 text-center px-[12%]">
+          <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
+            AN ENGAGEMENT ALBUM
+          </p>
+          <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
+          <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
+          <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
+          <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
+          <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
+            OCTOBER 8, 2026 · CHENNAI
+          </p>
+        </div>
+        <div className="absolute left-0 inset-y-0 pointer-events-none" style={{ width: 20, background: "linear-gradient(to right, rgba(0,0,0,0.45), transparent)" }} />
+      </div>
+    </div>
+  );
+}
+
+function AlbumBook({
   photos, index, onClose, onIndexChange,
 }: {
   photos: DrivePhoto[];
@@ -254,63 +396,163 @@ function PageTurnLightbox({
   onClose: () => void;
   onIndexChange: (i: number) => void;
 }) {
-  const [progress, setProgress] = useState(0); // 0 = rest, 1 = fully turned
-  const [dir, setDir]           = useState<"next" | "prev">("next");
-  const [sceneSize, setSceneSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
-  const [imgAspect, setImgAspect] = useState<number | null>(null);
+  // Spread 0 = cover; spread k≥1 has photos[(k-1)*2] and photos[(k-1)*2+1]
+  const totalSpreads = 1 + Math.ceil(photos.length / 2);
+
+  const [spreadIndex, setSpreadIndex] = useState(() =>
+    Math.min(Math.floor(index / 2) + 1, totalSpreads - 1)
+  );
+  const [progress, setProgress]         = useState(0);
+  const [dir, setDir]                   = useState<"next" | "prev">("next");
+  const [busy, setBusy]                 = useState(false);
+  const [isAnimating, setIsAnimating]   = useState(false);
+  const [isMobile, setIsMobile]         = useState(false);
+  const [isPortrait, setIsPortrait]     = useState(false);
+  const [dismissedRotate, setDismissedRotate] = useState(false);
 
   const sceneRef  = useRef<HTMLDivElement>(null);
   const proxy     = useRef({ value: 0 });
   const tweenRef  = useRef<gsap.core.Tween | null>(null);
   const dirRef    = useRef<"next" | "prev">("next");
+  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const current    = photos[index];
-  const photoNext  = photos[index + 1] ?? null;
-  const photoPrev  = photos[index - 1] ?? null;
-  const underPhoto = dir === "next" ? photoNext : photoPrev;
-
-  // GSAP-powered progress animation
-  const animateTo = useCallback((target: number, onComplete?: () => void) => {
-    tweenRef.current?.kill();
-    tweenRef.current = gsap.to(proxy.current, {
-      value: target,
-      duration: 0.52,
-      ease: "power3.inOut",
-      onUpdate: () => setProgress(proxy.current.value),
-      onComplete,
-    });
+  // Detect mobile / orientation
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
   }, []);
 
-  const completeTurn = useCallback((d: "next" | "prev", fromP = 0) => {
-    if (d === "next" && !photoNext) return;
-    if (d === "prev" && !photoPrev) return;
-    dirRef.current = d;
-    setDir(d);
-    proxy.current.value = fromP;
-    setProgress(fromP);
-    animateTo(1, () => {
-      proxy.current.value = 0;
-      setProgress(0);
-      onIndexChange(d === "next" ? index + 1 : index - 1);
-    });
-  }, [animateTo, index, onIndexChange, photoNext, photoPrev]);
+  // Screenshot / print logging
+  useEffect(() => {
+    const token = localStorage.getItem("session_token");
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { "x-session-token": token } : {}),
+    };
+    const log = (type: string) =>
+      fetch("/api/gallery-event", { method: "POST", headers, body: JSON.stringify({ type }) }).catch(() => {});
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen") log("screenshot_printscreen");
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3","4","5","s"].includes(e.key)) log("screenshot_macos");
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); log("print_attempt"); }
+    };
+    const onVis = () => { if (document.hidden) log("visibility_hide"); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  const getSpreadPhotos = (si: number): [DrivePhoto | null, DrivePhoto | null] => {
+    if (si <= 0) return [null, null];
+    const base = (si - 1) * 2;
+    return [photos[base] ?? null, photos[base + 1] ?? null];
+  };
+
+  const renderSpread = (si: number) => {
+    if (si <= 0) return <BookCover />;
+    const [l, r] = getSpreadPhotos(si);
+    const ln = (si - 1) * 2 + 1;
+    const rn = (si - 1) * 2 + 2;
+    return (
+      <BookSpread
+        leftPhoto={l}
+        rightPhoto={r}
+        leftPageNum={ln <= photos.length ? ln : undefined}
+        rightPageNum={rn <= photos.length ? rn : undefined}
+      />
+    );
+  };
+
+  const hasPrev = spreadIndex > 0;
+  const hasNext = spreadIndex < totalSpreads - 1;
+
+  // Preload next 2 spreads
+  useEffect(() => {
+    for (let offset = 1; offset <= 2; offset++) {
+      const [l, r] = getSpreadPhotos(spreadIndex + offset);
+      [l, r].forEach(ph => { if (ph) { const img = new Image(); img.src = ph.fullUrl; } });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spreadIndex]);
+
+  // CSS-transition-based animation: rAF is throttled in background tabs but
+  // CSS transitions run on the compositor regardless. We drive the state to the
+  // target in a microtask so React has one render at the "from" value before
+  // we commit the "to" value, giving the browser time to set up the transition.
+  const animateTo = useCallback((onComplete: () => void) => {
+    tweenRef.current?.kill();
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    proxy.current.value = 0;
+    setProgress(0);
+    setIsAnimating(true);
+    // one tick so React paints the "from" state with transition enabled
+    timerRef.current = setTimeout(() => {
+      setProgress(1);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        onComplete();
+      }, 660);
+    }, 16);
+  }, []);
 
   const snapBack = useCallback((fromP: number) => {
+    tweenRef.current?.kill();
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
     proxy.current.value = fromP;
-    animateTo(0);
-  }, [animateTo]);
+    setIsAnimating(true);
+    setProgress(0);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setIsAnimating(false);
+      setBusy(false);
+    }, 320);
+  }, []);
 
   const goNext = useCallback(() => {
-    if (tweenRef.current?.isActive() || !photoNext) return;
-    completeTurn("next");
-  }, [photoNext, completeTurn]);
+    if (busy || !hasNext) return;
+    setBusy(true);
+    setDir("next");
+    dirRef.current = "next";
+    animateTo(() => {
+      setSpreadIndex(s => {
+        const n = s + 1;
+        onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2));
+        return n;
+      });
+      setProgress(0);
+      setIsAnimating(false);
+      setBusy(false);
+    });
+  }, [busy, hasNext, animateTo, onIndexChange]);
 
   const goPrev = useCallback(() => {
-    if (tweenRef.current?.isActive() || !photoPrev) return;
-    completeTurn("prev");
-  }, [photoPrev, completeTurn]);
+    if (busy || !hasPrev) return;
+    setBusy(true);
+    setDir("prev");
+    dirRef.current = "prev";
+    animateTo(() => {
+      setSpreadIndex(s => {
+        const n = s - 1;
+        onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2));
+        return n;
+      });
+      setProgress(0);
+      setIsAnimating(false);
+      setBusy(false);
+    });
+  }, [busy, hasPrev, animateTo, onIndexChange]);
 
-  // GSAP Observer — velocity-aware drag, handles both mouse and touch
+  // Drag / swipe via GSAP Observer
   useEffect(() => {
     if (!sceneRef.current) return;
     let dragging = false;
@@ -321,392 +563,189 @@ function PageTurnLightbox({
       target: sceneRef.current,
       type: "touch,pointer",
       lockAxis: true,
-      dragMinimum: 6,
+      dragMinimum: 8,
       onPress(self) {
         if (tweenRef.current?.isActive()) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
-        const selfX = self.x ?? 0;
-        const relX = selfX - rect.left;
-        localDir = relX >= rect.width * 0.45 ? "next" : "prev";
-        if (localDir === "next" && !photoNext) return;
-        if (localDir === "prev" && !photoPrev) return;
+        localDir = (self.x ?? 0) - rect.left >= rect.width * 0.5 ? "next" : "prev";
+        if (localDir === "next" && !hasNext) return;
+        if (localDir === "prev" && !hasPrev) return;
         dragging = true;
         dragStartX = self.startX ?? 0;
         dirRef.current = localDir;
         setDir(localDir);
         proxy.current.value = 0;
         setProgress(0);
+        setBusy(true);
       },
       onDrag(self) {
         if (!dragging) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
-        const selfX = self.x ?? 0;
-        const delta = dirRef.current === "next"
-          ? dragStartX - selfX   // drag left = next
-          : selfX - dragStartX;  // drag right = prev
-        const newP = Math.max(0, Math.min(0.97, delta / (rect.width * 0.65)));
-        proxy.current.value = newP;
-        setProgress(newP);
+        const delta = localDir === "next"
+          ? dragStartX - (self.x ?? 0)
+          : (self.x ?? 0) - dragStartX;
+        proxy.current.value = Math.max(0, Math.min(0.97, delta / (rect.width * 0.7)));
+        setProgress(proxy.current.value);
       },
       onDragEnd(self) {
         if (!dragging) return;
         dragging = false;
         const p = proxy.current.value;
-        // Velocity in px/s; positive = in the turn direction
-        const vel = dirRef.current === "next" ? -self.velocityX : self.velocityX;
-        if (p > 0.28 || vel > 420) {
-          completeTurn(dirRef.current, p);
+        const vel = localDir === "next" ? -(self.velocityX ?? 0) : (self.velocityX ?? 0);
+        if (p > 0.3 || vel > 400) {
+          if (localDir === "next" && hasNext) {
+            animateTo(() => {
+              setSpreadIndex(s => { const n = s + 1; onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)); return n; });
+              setProgress(0); setIsAnimating(false); setBusy(false);
+            });
+          } else if (localDir === "prev" && hasPrev) {
+            animateTo(() => {
+              setSpreadIndex(s => { const n = s - 1; onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)); return n; });
+              setProgress(0); setIsAnimating(false); setBusy(false);
+            });
+          } else {
+            snapBack(p);
+          }
         } else {
           snapBack(p);
         }
       },
     });
+    return () => obs.kill();
+  }, [hasNext, hasPrev, animateTo, snapBack, onIndexChange]);
 
-    return () => { obs.kill(); };
-  }, [photoNext, photoPrev, completeTurn, snapBack]);
-
-  // Keyboard navigation
+  // Keyboard
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape")     onClose();
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft")  goPrev();
-    }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose, goNext, goPrev]);
 
-  useEffect(() => () => { tweenRef.current?.kill(); }, []);
-
-  // Track scene dimensions so we can compute where the photo renders within it
-  useEffect(() => {
-    if (!sceneRef.current) return;
-    const ro = new ResizeObserver(entries => {
-      const e = entries[0];
-      if (e) setSceneSize({ w: e.contentRect.width, h: e.contentRect.height });
-    });
-    ro.observe(sceneRef.current);
-    return () => ro.disconnect();
+  useEffect(() => () => {
+    tweenRef.current?.kill();
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
   }, []);
 
-  // Reset AR when photo changes so we don't flash stale bounds
-  useEffect(() => { setImgAspect(null); }, [index]);
+  // Fold geometry: horizontal wipe with shadow crease.
+  // currentClip is always defined so CSS transition can interpolate between states.
+  const p = progress;
+  const showFold = p > 0.003 || isAnimating;
+  const foldX = dir === "next" ? (1 - p) * 100 : p * 100;
+  const currentClip = dir === "next"
+    ? `polygon(0% 0%, ${foldX}% 0%, ${foldX}% 100%, 0% 100%)`
+    : `polygon(${foldX}% 0%, 100% 0%, 100% 100%, ${foldX}% 100%)`;
 
-  if (!current) return null;
+  const adjacentSpreadIndex = dir === "next" ? spreadIndex + 1 : spreadIndex - 1;
 
-  // ── Geometry ──────────────────────────────────────────────────────────────
-  const p        = progress;
-  const showFold = p > 0.003;
-  const busy     = tweenRef.current?.isActive() ?? false;
-  const angle    = p * 180; // 0° → 180°
+  const leftNum  = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 1;
+  const rightNum = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 2;
+  const spreadLabel = spreadIndex === 0
+    ? "Cover"
+    : `${leftNum}–${Math.min(rightNum ?? 0, photos.length)} of ${photos.length}`;
 
-  // Diagonal fold geometry.
-  // "next": fold sweeps from bottom-right corner across the diagonal.
-  // "prev": fold sweeps from bottom-left corner across the diagonal.
-  // Phase 1 (p ≤ 0.5): fold line expands from corner toward opposite edges.
-  // Phase 2 (p > 0.5): fold line shrinks toward the opposite corner.
-  const phase1 = p <= 0.5;
-  let foldAx: number, foldAy: number, foldBx: number, foldBy: number;
-
-  if (dir === "next") {
-    if (phase1) {
-      foldAx = 100;             foldAy = (1 - 2 * p) * 100;
-      foldBx = (1 - 2 * p) * 100; foldBy = 100;
-    } else {
-      foldAx = (2 - 2 * p) * 100; foldAy = 0;
-      foldBx = 0;               foldBy = (2 - 2 * p) * 100;
-    }
-  } else {
-    if (phase1) {
-      foldAx = 0;            foldAy = (1 - 2 * p) * 100;
-      foldBx = 2 * p * 100;  foldBy = 100;
-    } else {
-      foldAx = (2 * p - 1) * 100; foldAy = 0;
-      foldBx = 100;               foldBy = (2 - 2 * p) * 100;
-    }
-  }
-
-  // Stationary clip: the part of the current photo that hasn't been turned yet.
-  // Leaf clip: the triangular/pentagonal turning region (complement of stationary).
-  let stationaryClip: string | undefined;
-  let leafClip: string | undefined;
-
-  if (showFold) {
-    if (dir === "next") {
-      if (phase1) {
-        stationaryClip = `polygon(0% 0%, 100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`;
-        leafClip       = `polygon(${foldAx}% ${foldAy}%, 100% 100%, ${foldBx}% ${foldBy}%)`;
-      } else {
-        stationaryClip = `polygon(0% 0%, ${foldAx}% 0%, 0% ${foldBy}%)`;
-        leafClip       = `polygon(${foldAx}% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${foldBy}%)`;
-      }
-    } else {
-      if (phase1) {
-        stationaryClip = `polygon(0% 0%, 100% 0%, 100% 100%, ${foldBx}% ${foldBy}%, ${foldAx}% ${foldAy}%)`;
-        leafClip       = `polygon(${foldAx}% ${foldAy}%, 0% 100%, ${foldBx}% ${foldBy}%)`;
-      } else {
-        stationaryClip = `polygon(${foldAx}% 0%, 100% 0%, ${foldBx}% ${foldBy}%)`;
-        leafClip       = `polygon(0% 0%, ${foldAx}% 0%, ${foldBx}% ${foldBy}%, 100% 100%, 0% 100%)`;
-      }
-    }
-  }
-
-  // 2D squish perpendicular to diagonal fold line.
-  // Front face (photo) squishes 1→0 as angle 0°→90°.
-  // Back face (parchment) grows 0→1 as angle 90°→180°.
-  const showFrontFace = angle <= 90;
-  const showBackFace  = angle > 90;
-  const frontScaleX   = Math.max(0, Math.cos(angle * Math.PI / 180));
-  const backScaleX    = Math.max(0, Math.cos((180 - angle) * Math.PI / 180));
-
-  // Fold midpoint: always at ((1-p)*100%, (1-p)*100%) for "next",
-  // (p*100%, (1-p)*100%) for "prev" — verified for both phases.
-  const foldMidX = dir === "next" ? (1 - p) * 100 : p * 100;
-  const foldMidY = (1 - p) * 100;
-
-  // rotate(±45deg) scaleX(s) rotate(∓45deg) squishes along 45° direction
-  // (perpendicular to the ∓45° fold line).
-  const foldRotDeg = dir === "next" ? 45 : -45;
-  const squishFront = `rotate(${foldRotDeg}deg) scaleX(${frontScaleX}) rotate(${-foldRotDeg}deg)`;
-  const squishBack  = `rotate(${foldRotDeg}deg) scaleX(${backScaleX}) rotate(${-foldRotDeg}deg)`;
-
-  // Photo rect within scene — confines fold to actual photo bounds.
-  // Computed from image natural AR + scene dimensions (both tracked reactively).
-  // Falls back to inset:0 (scene bounds) until both are known.
-  const photoWrapStyle = (() => {
-    if (!imgAspect || sceneSize.w === 0 || sceneSize.h === 0) return { inset: 0 };
-    const sceneAR = sceneSize.w / sceneSize.h;
-    if (imgAspect >= sceneAR) {
-      // Landscape photo: fills width, letterboxed top/bottom
-      const tb = `${(1 - sceneAR / imgAspect) / 2 * 100}%`;
-      return { top: tb, bottom: tb, left: 0, right: 0 };
-    } else {
-      // Portrait photo: fills height, pillarboxed left/right
-      const lr = `${(1 - imgAspect / sceneAR) / 2 * 100}%`;
-      return { top: 0, bottom: 0, left: lr, right: lr };
-    }
-  })();
-
-  // Corner peel: flat parchment triangle lifting from the near bottom corner.
-  const cornerPeelVisible = showFold && p < 0.5;
-  const cornerTopY        = Math.max(0, (1 - 2 * p) * 100);
-  const cornerSideX       = Math.max(0, (1 - 2 * p) * 100);
-  const cornerPeelOpacity = Math.max(0, 1 - p / 0.38);
-  const cornerPeelClip = dir === "next"
-    ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
-    : `polygon(0% 100%, 0% ${cornerTopY}%, ${100 - cornerSideX}% 100%)`;
+  const showRotate = isMobile && isPortrait && !dismissedRotate;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/92 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      {/* Counter */}
-      <p className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[11px] tracking-widest text-white/50 z-20 pointer-events-none select-none">
-        {index + 1} / {photos.length}
-      </p>
+    <>
+      {showRotate && <RotateDevicePrompt onDismiss={() => setDismissedRotate(true)} />}
 
-      {/* Close */}
-      <button
-        onClick={onClose}
-        aria-label="Close"
-        className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xl transition-colors z-20"
-      >×</button>
-
-      {/* ── Scene ── */}
       <div
-        ref={sceneRef}
-        className="relative rounded-2xl overflow-hidden shadow-2xl select-none"
-        style={{
-          width:       "min(82vw, 1100px)",
-          height:      "min(85vh, 800px)",
-          cursor:      busy ? "grabbing" : "grab",
-          touchAction: "none",
-        }}
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: "rgba(8,4,2,0.96)" }}
+        onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       >
-        {/* Layer 0 — destination photo: full scene, behind everything */}
-        {underPhoto && showFold && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={underPhoto.fullUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ objectFit: "contain" }}
-            draggable={false}
-          />
-        )}
+        {/* Top bar */}
+        <p className="absolute top-4 left-1/2 -translate-x-1/2 font-body text-[10px] tracking-widest text-white/35 z-20 pointer-events-none select-none">
+          {spreadLabel}
+        </p>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors z-20"
+        >×</button>
 
-        {/* photoWrap — clamps all fold layers to the current photo's rendered bounds.
-             For portrait photos this eliminates the pillarbox overflow; for landscape
-             it clips the letterbox. Percentages inside are relative to the photo rect. */}
+        {/* Book spread */}
         <div
-          className="absolute overflow-hidden"
-          style={{ ...photoWrapStyle }}
+          ref={sceneRef}
+          className="relative select-none overflow-hidden"
+          style={{
+            width: "min(94vw, calc(88vh * 1.5))",
+            aspectRatio: "3/2",
+            borderRadius: "3px",
+            boxShadow: "0 30px 90px rgba(0,0,0,0.75), 0 8px 30px rgba(0,0,0,0.5)",
+            cursor: busy ? "grabbing" : "grab",
+            touchAction: "none",
+          }}
+          onContextMenu={e => e.preventDefault()}
         >
-          {/* Stationary layer: diagonally clipped, sits above the turning leaf (z:2) */}
+          {/* Layer 1: adjacent spread (bottom, fully visible during animation) */}
+          {showFold && (
+            <div className="absolute inset-0">{renderSpread(adjacentSpreadIndex)}</div>
+          )}
+
+          {/* Layer 2: current spread, clipped during fold */}
           <div
             className="absolute inset-0"
-            style={{ clipPath: stationaryClip, zIndex: 2 }}
+            style={{
+              clipPath: currentClip,
+              transition: isAnimating ? "clip-path 0.65s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
+            }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={current.fullUrl}
-              alt=""
-              onLoad={(e) => {
-                const img = e.target as HTMLImageElement;
-                setImgAspect(img.naturalWidth / img.naturalHeight);
-              }}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ objectFit: "cover" }}
-              draggable={false}
-            />
-            {showFold && (
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: dir === "next"
-                  ? `linear-gradient(135deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`
-                  : `linear-gradient(225deg, transparent 40%, rgba(0,0,0,${Math.min(0.28, p * 0.4)}) 100%)`,
-              }} />
-            )}
+            {renderSpread(spreadIndex)}
           </div>
 
-          {/* Corner peel: small parchment triangle lifting from corner (z:3) */}
-          {cornerPeelVisible && (
+          {/* Layer 3: crease shadow at fold line */}
+          {showFold && (
             <div
-              className="absolute inset-0 pointer-events-none"
+              className="absolute inset-y-0 pointer-events-none"
               style={{
-                clipPath:   cornerPeelClip,
-                opacity:    cornerPeelOpacity,
-                background: "linear-gradient(135deg, #f0e8d5 0%, #e2d5b8 50%, #d8c9a3 100%)",
-                zIndex: 3,
+                left: `calc(${foldX}% - 24px)`,
+                width: 48,
+                zIndex: 20,
+                transition: isAnimating ? "left 0.65s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
+                background: dir === "next"
+                  ? "linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 40%, rgba(255,255,255,0.04) 70%, transparent 100%)"
+                  : "linear-gradient(to left, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 40%, rgba(255,255,255,0.04) 70%, transparent 100%)",
               }}
             />
           )}
-
-          {/* Turning leaf: diagonal clip + 2D perpendicular squish (z:1).
-               Parent clips to turning region in photo coords; child squishes. */}
-          {showFold && leafClip && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ clipPath: leafClip, zIndex: 1 }}
-            >
-              <div
-                className="absolute inset-0"
-                style={{
-                  transformOrigin: `${foldMidX}% ${foldMidY}%`,
-                  transform: showFrontFace ? squishFront : squishBack,
-                }}
-              >
-                {showFrontFace && (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={current.fullUrl}
-                      alt=""
-                      className="absolute inset-0 w-full h-full pointer-events-none"
-                      style={{ objectFit: "cover" }}
-                      draggable={false}
-                    />
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      background: dir === "next"
-                        ? `linear-gradient(135deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`
-                        : `linear-gradient(225deg, rgba(0,0,0,${Math.min(0.55, p * 0.9)}) 0%, transparent 55%)`,
-                    }} />
-                    {p > 0.04 && p < 0.9 && (
-                      <div className="absolute inset-0 pointer-events-none" style={{
-                        background: dir === "next"
-                          ? `linear-gradient(135deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`
-                          : `linear-gradient(225deg, rgba(255,255,255,${0.15 * Math.sin(p * Math.PI)}) 0%, transparent 30%)`,
-                      }} />
-                    )}
-                  </>
-                )}
-                {showBackFace && (
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(135deg, #f5eddc 0%, #ecdfc9 50%, #e0d3b8 100%)" }}
-                  >
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      background: dir === "next"
-                        ? "linear-gradient(135deg, rgba(0,0,0,0.22) 0%, transparent 55%)"
-                        : "linear-gradient(225deg, rgba(0,0,0,0.22) 0%, transparent 55%)",
-                    }} />
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                      background: dir === "next"
-                        ? "linear-gradient(315deg, rgba(255,255,255,0.12) 0%, transparent 40%)"
-                        : "linear-gradient(45deg, rgba(255,255,255,0.12) 0%, transparent 40%)",
-                    }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Corner hints at rest — anchored to photo corners */}
-          {!showFold && (photoNext || photoPrev) && (
-            <>
-              {photoNext && (
-                <div
-                  className="absolute bottom-0 right-0 pointer-events-none"
-                  style={{
-                    width: "52px", height: "52px",
-                    clipPath: "polygon(100% 100%, 100% 0%, 0% 100%)",
-                    background: "linear-gradient(135deg, #f0e8d5, #ddd0b5)",
-                    opacity: 0.55,
-                    boxShadow: "-1px -1px 5px rgba(0,0,0,0.22)",
-                    zIndex: 4,
-                  }}
-                />
-              )}
-              {photoPrev && (
-                <div
-                  className="absolute bottom-0 left-0 pointer-events-none"
-                  style={{
-                    width: "52px", height: "52px",
-                    clipPath: "polygon(0% 100%, 0% 0%, 100% 100%)",
-                    background: "linear-gradient(225deg, #f0e8d5, #ddd0b5)",
-                    opacity: 0.55,
-                    boxShadow: "1px -1px 5px rgba(0,0,0,0.22)",
-                    zIndex: 4,
-                  }}
-                />
-              )}
-            </>
-          )}
         </div>
+
+        {/* Nav arrows */}
+        {hasPrev && (
+          <button
+            onClick={goPrev}
+            aria-label="Previous spread"
+            disabled={busy}
+            className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-20 transition-colors disabled:opacity-20"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+        {hasNext && (
+          <button
+            onClick={goNext}
+            aria-label="Next spread"
+            disabled={busy}
+            className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-20 transition-colors disabled:opacity-20"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
-
-      {/* Prev arrow */}
-      {photoPrev && (
-        <button
-          onClick={goPrev}
-          aria-label="Previous photo"
-          disabled={busy}
-          className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      )}
-
-      {/* Next arrow */}
-      {photoNext && (
-        <button
-          onClick={goNext}
-          aria-label="Next photo"
-          disabled={busy}
-          className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -758,6 +797,13 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const photos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
     const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
+    // Track gallery open in the phase_view event_data row
+    const token = localStorage.getItem("session_token");
+    fetch("/api/gallery-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
+      body: JSON.stringify({ type: "gallery_open" }),
+    }).catch(() => {});
   }, [folder, state.photos, openAlbum]);
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
@@ -861,7 +907,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
 
       {/* Lightbox */}
       {lightboxIndex !== null && (
-        <PageTurnLightbox
+        <AlbumBook
           photos={lightboxPhotos}
           index={lightboxIndex}
           onClose={closeLightbox}

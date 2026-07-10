@@ -16,6 +16,19 @@ export interface DriveAlbum {
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 
+// In-memory cache for Drive API responses — avoids hammering the quota when
+// multiple components (hero + gallery) fetch simultaneously on the same server process.
+const driveCache = new Map<string, { data: unknown; expiresAt: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = driveCache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.data as T;
+  const data = await fn();
+  driveCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  return data;
+}
+
 type DriveFile = {
   id: string;
   name: string;
@@ -70,13 +83,14 @@ export async function fetchDrivePhotos(
   folderId: string,
   apiKey: string
 ): Promise<DrivePhoto[]> {
-  const photos = await collectAllImages(folderId, apiKey, "");
-  // Put landscape photos first, then portrait, then unknown
-  return [
-    ...photos.filter((p) => p.landscape === true),
-    ...photos.filter((p) => p.landscape === false),
-    ...photos.filter((p) => p.landscape === undefined),
-  ];
+  return withCache(`photos:${folderId}`, async () => {
+    const photos = await collectAllImages(folderId, apiKey, "");
+    return [
+      ...photos.filter((p) => p.landscape === true),
+      ...photos.filter((p) => p.landscape === false),
+      ...photos.filter((p) => p.landscape === undefined),
+    ];
+  });
 }
 
 // Recursively collect all images within a folder (for album contents)
@@ -105,26 +119,28 @@ export async function fetchDriveAlbums(
   folderId: string,
   apiKey: string
 ): Promise<{ albums: DriveAlbum[]; flat: DrivePhoto[] }> {
-  const files = await listFolderContents(folderId, apiKey);
+  return withCache(`albums:${folderId}`, async () => {
+    const files = await listFolderContents(folderId, apiKey);
 
-  const albums: DriveAlbum[] = [];
-  const topLevelPhotos: DrivePhoto[] = [];
+    const albums: DriveAlbum[] = [];
+    const topLevelPhotos: DrivePhoto[] = [];
 
-  for (const f of files) {
-    if (f.mimeType === "application/vnd.google-apps.folder") {
-      const photos = await collectAllImages(f.id, apiKey, f.name);
-      if (photos.length > 0) {
-        albums.push({ id: f.id, name: f.name, photos });
+    for (const f of files) {
+      if (f.mimeType === "application/vnd.google-apps.folder") {
+        const photos = await collectAllImages(f.id, apiKey, f.name);
+        if (photos.length > 0) {
+          albums.push({ id: f.id, name: f.name, photos });
+        }
+      } else if (f.mimeType?.startsWith("image/")) {
+        topLevelPhotos.push(toPhoto(f));
       }
-    } else if (f.mimeType?.startsWith("image/")) {
-      topLevelPhotos.push(toPhoto(f));
     }
-  }
 
-  if (topLevelPhotos.length > 0) {
-    albums.unshift({ id: folderId, name: "All", photos: topLevelPhotos });
-  }
+    if (topLevelPhotos.length > 0) {
+      albums.unshift({ id: folderId, name: "All", photos: topLevelPhotos });
+    }
 
-  const flat = albums.flatMap((a) => a.photos);
-  return { albums, flat };
+    const flat = albums.flatMap((a) => a.photos);
+    return { albums, flat };
+  });
 }
