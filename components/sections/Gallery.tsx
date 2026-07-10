@@ -324,12 +324,13 @@ function PageTurnLightbox({
         if (tweenRef.current?.isActive()) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
-        const relX = self.x - rect.left;
+        const selfX = self.x ?? 0;
+        const relX = selfX - rect.left;
         localDir = relX >= rect.width * 0.45 ? "next" : "prev";
         if (localDir === "next" && !photoNext) return;
         if (localDir === "prev" && !photoPrev) return;
         dragging = true;
-        dragStartX = self.startX;
+        dragStartX = self.startX ?? 0;
         dirRef.current = localDir;
         setDir(localDir);
         proxy.current.value = 0;
@@ -339,9 +340,10 @@ function PageTurnLightbox({
         if (!dragging) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
+        const selfX = self.x ?? 0;
         const delta = dirRef.current === "next"
-          ? dragStartX - self.x   // drag left = next
-          : self.x - dragStartX;  // drag right = prev
+          ? dragStartX - selfX   // drag left = next
+          : selfX - dragStartX;  // drag right = prev
         const newP = Math.max(0, Math.min(0.97, delta / (rect.width * 0.65)));
         proxy.current.value = newP;
         setProgress(newP);
