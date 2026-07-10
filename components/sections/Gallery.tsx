@@ -838,6 +838,15 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Set gallery_token cookie early so thumbnail img tags (which can't use custom
+  // headers) pass the drive-image auth check as soon as the section mounts.
+  useEffect(() => {
+    const token = localStorage.getItem("session_token");
+    if (token) {
+      document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
+    }
+  }, []);
+
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
