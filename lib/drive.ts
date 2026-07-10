@@ -1,3 +1,14 @@
+import { createHmac } from "crypto";
+
+// Encode Drive file ID as an opaque HMAC-signed token so raw IDs are never
+// sent to the browser. The drive-image route verifies the signature before fetching.
+function signFileId(fileId: string): string {
+  const secret = process.env.DRIVE_TOKEN_SECRET;
+  if (!secret) return fileId; // dev fallback: no secret set
+  const sig = createHmac("sha256", secret).update(fileId).digest("hex").slice(0, 24);
+  return Buffer.from(`${fileId}.${sig}`).toString("base64url");
+}
+
 export interface DrivePhoto {
   id: string;
   name: string;
@@ -67,12 +78,13 @@ async function listFolderContents(
 function toPhoto(f: DriveFile, album?: string): DrivePhoto {
   const w = f.imageMediaMetadata?.width ?? 0;
   const h = f.imageMediaMetadata?.height ?? 0;
+  const token = signFileId(f.id);
   return {
-    id: f.id,
+    id: token,
     name: f.name,
-    thumbnailUrl: `/api/drive-image?id=${f.id}&sz=600`,
-    heroUrl: `/api/drive-image?id=${f.id}&sz=1600`,
-    fullUrl: `/api/drive-image?id=${f.id}&sz=2400`,
+    thumbnailUrl: `/api/drive-image?id=${token}&sz=600`,
+    heroUrl: `/api/drive-image?id=${token}&sz=1600`,
+    fullUrl: `/api/drive-image?id=${token}&sz=2400`,
     album,
     landscape: w > 0 && h > 0 ? w >= h : undefined,
   };
