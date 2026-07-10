@@ -7,6 +7,7 @@ create table if not exists guests (
   name          text not null,
   city          text not null,
   email         text unique,
+  mobile        text unique,
   invitation_seen boolean not null default false,
   is_owner      boolean not null default false,
   created_at    timestamptz not null default now(),

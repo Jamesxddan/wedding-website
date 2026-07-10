@@ -3,10 +3,11 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, city, email, device_uuid, browser_signals_hash } = body as {
+  const { name, city, email, mobile, device_uuid, browser_signals_hash } = body as {
     name?: string;
     city?: string;
     email?: string;
+    mobile?: string;
     device_uuid?: string;
     browser_signals_hash?: string;
   };
@@ -27,51 +28,82 @@ export async function POST(req: NextRequest) {
   }
 
   let guestId: string;
+  const normalizedEmail = email?.trim().toLowerCase() || null;
+  const normalizedMobile = mobile?.trim() || null;
 
-  if (email) {
-    const { data: existingGuest, error: existingGuestError } = await supabase
+  let existingGuest: { id: string; name: string; city: string; email: string | null; mobile: string | null } | null = null;
+
+  // 1. Query by Mobile (Highest Precedence)
+  if (normalizedMobile) {
+    const { data, error } = await supabase
       .from("guests")
-      .select("id, name, city")
-      .eq("email", email.trim().toLowerCase())
+      .select("id, name, city, email, mobile")
+      .eq("mobile", normalizedMobile)
       .maybeSingle();
 
-    if (existingGuestError) {
-      console.error("[register] existing guest lookup error:", existingGuestError);
+    if (error) {
+      console.error("[register] existing guest mobile lookup error:", error);
       return NextResponse.json({ error: "failed to verify guest" }, { status: 500 });
     }
+    if (data) {
+      existingGuest = data;
+    }
+  }
 
-    if (existingGuest) {
-      guestId = existingGuest.id;
-      // If same email is put again with a different name or city, update that in the guest list
-      if (existingGuest.name !== name || existingGuest.city !== city) {
-        const { error: updateError } = await supabase
-          .from("guests")
-          .update({ name, city })
-          .eq("id", guestId);
+  // 2. Query by Email (Secondary Precedence, if not resolved by mobile yet)
+  if (!existingGuest && normalizedEmail) {
+    const { data, error } = await supabase
+      .from("guests")
+      .select("id, name, city, email, mobile")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
 
-        if (updateError) {
-          console.error("[register] existing guest update error:", updateError);
-        }
-      }
-    } else {
-      // Create new guest with email
-      const { data: guest, error: guestError } = await supabase
+    if (error) {
+      console.error("[register] existing guest email lookup error:", error);
+      return NextResponse.json({ error: "failed to verify guest" }, { status: 500 });
+    }
+    if (data) {
+      existingGuest = data;
+    }
+  }
+
+  // 3. Handle reuse & updates vs. insert new guest
+  if (existingGuest) {
+    guestId = existingGuest.id;
+
+    // Check what needs to be updated
+    const updates: Record<string, unknown> = {};
+    if (existingGuest.name !== name) updates.name = name;
+    if (existingGuest.city !== city) updates.city = city;
+
+    // Mobile Precedence updates Email
+    if (normalizedEmail && existingGuest.email !== normalizedEmail) {
+      updates.email = normalizedEmail;
+    }
+    // Email lookup adds/updates Mobile
+    if (normalizedMobile && existingGuest.mobile !== normalizedMobile) {
+      updates.mobile = normalizedMobile;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await supabase
         .from("guests")
-        .insert({ name, city, email: email.trim().toLowerCase() })
-        .select("id")
-        .single();
+        .update(updates)
+        .eq("id", guestId);
 
-      if (guestError || !guest) {
-        console.error("[register] guest insert error:", guestError);
-        return NextResponse.json({ error: "failed to create guest" }, { status: 500 });
+      if (updateError) {
+        console.error("[register] existing guest update error:", updateError);
       }
-      guestId = guest.id;
     }
   } else {
-    // Create new guest without email (legacy fallback)
+    // Create new guest
+    const insertObj: Record<string, unknown> = { name, city };
+    if (normalizedEmail) insertObj.email = normalizedEmail;
+    if (normalizedMobile) insertObj.mobile = normalizedMobile;
+
     const { data: guest, error: guestError } = await supabase
       .from("guests")
-      .insert({ name, city })
+      .insert(insertObj)
       .select("id")
       .single();
 
