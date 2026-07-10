@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   // On production, require a valid session token sent as the gallery_token cookie.
   // Dev/staging (non-production) skips this check so local development still works.
-  if (process.env.VERCEL_ENV === "production") {
+  if (process.env.VERCEL_ENV) { // enforce on both staging (preview) and production
     const cookieHeader = req.headers.get("cookie") ?? "";
     const galleryToken = cookieHeader
       .split(";")
