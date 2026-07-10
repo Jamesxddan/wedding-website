@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -64,5 +65,63 @@ describe("POST /api/register", () => {
     const { POST } = await import("@/app/api/register/route");
     const res = await POST(req({ name: "J", city: "Chennai", device_uuid: "u1", browser_signals_hash: "h1" }));
     expect(res.status).toBe(500);
+  });
+
+  it("creates a new guest with email if no existing guest matches email", async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValueOnce({ data: null, error: null }) // device_fingerprints check
+                                  .mockResolvedValueOnce({ data: null, error: null }); // guests check by email
+    const mockInsert = vi.fn().mockReturnThis();
+    const mockSingle = vi.fn().mockResolvedValueOnce({ data: { id: "guest-new" }, error: null }) // guest insert
+                              .mockResolvedValueOnce({ data: { session_token: "new-tok" }, error: null }); // device_fingerprints insert
+
+    vi.mocked(supabase.from).mockImplementation(() => {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        insert: mockInsert,
+        maybeSingle: mockMaybeSingle,
+        single: mockSingle,
+      } as unknown as ReturnType<typeof supabase.from>;
+    });
+
+    const { POST } = await import("@/app/api/register/route");
+    const res = await POST(req({ name: "J", city: "Chennai", email: "test@example.com", device_uuid: "u1", browser_signals_hash: "h1" }));
+    
+    expect(res.status).toBe(200);
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ email: "test@example.com" }));
+    expect((await res.json()).session_token).toBe("new-tok");
+  });
+
+  it("reuses existing guest and updates name if email matches but name is different", async () => {
+    const mockMaybeSingle = vi.fn().mockResolvedValueOnce({ data: null, error: null }) // device_fingerprints check
+                                  .mockResolvedValueOnce({ data: { id: "guest-old", name: "OldName", city: "Chennai" }, error: null }); // guests check by email
+    const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });
+    const mockInsert = vi.fn().mockReturnThis();
+    const mockSingle = vi.fn().mockResolvedValueOnce({ data: { session_token: "linked-tok" }, error: null }); // device_fingerprints insert
+
+    vi.mocked(supabase.from).mockImplementation(() => {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        update: mockUpdate,
+        insert: mockInsert,
+        maybeSingle: mockMaybeSingle,
+        single: mockSingle,
+      } as unknown as ReturnType<typeof supabase.from>;
+    });
+
+    const { POST } = await import("@/app/api/register/route");
+    const res = await POST(req({ name: "NewName", city: "Chennai", email: "test@example.com", device_uuid: "u1", browser_signals_hash: "h1" }));
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({ name: "NewName", city: "Chennai" });
+    expect(mockUpdateEq).toHaveBeenCalledWith("id", "guest-old");
+    expect(mockInsert).toHaveBeenCalledWith({
+      guest_id: "guest-old",
+      device_uuid: "u1",
+      browser_signals_hash: "h1",
+    });
+    expect((await res.json()).session_token).toBe("linked-tok");
   });
 });

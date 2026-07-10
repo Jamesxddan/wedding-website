@@ -10,6 +10,7 @@ interface Props {
 
 export default function FirstVisitForm({ onComplete }: Props) {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [suggestions, setSuggestions] = useState<City[]>([]);
@@ -52,7 +53,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !selectedCity || isSubmitting) return;
+    if (!name.trim() || !selectedCity || !email.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -68,6 +69,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         body: JSON.stringify({
           name: name.trim(),
           city: selectedCity.name,
+          email: email.trim().toLowerCase(),
           device_uuid,
           browser_signals_hash,
         }),
@@ -87,6 +89,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       startBackgroundMusic("/song.mp3");
       localStorage.setItem("guest_name", name.trim());
       localStorage.setItem("guest_city", selectedCity.name);
+      localStorage.setItem("guest_email", email.trim().toLowerCase());
       if (data.session_token) localStorage.setItem("session_token", data.session_token);
       onComplete(name.trim());
     } catch {
@@ -96,7 +99,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
     }
   }
 
-  const canSubmit = name.trim().length > 0 && selectedCity !== null && !isSubmitting;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = name.trim().length > 0 && selectedCity !== null && isEmailValid && !isSubmitting;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full max-w-md">
@@ -110,6 +114,21 @@ export default function FirstVisitForm({ onComplete }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
+          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="guest-email" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+          Your Email
+        </label>
+        <input
+          id="guest-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Your email address"
           className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
           autoComplete="off"
         />
