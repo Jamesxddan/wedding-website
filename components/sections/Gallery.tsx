@@ -304,20 +304,20 @@ function BookPage({
               boxShadow: "0 1px 6px rgba(0,0,0,0.09), 0 3px 12px rgba(0,0,0,0.06)",
             }}
           />
-          {/* Diagonal watermark — subtle at rest, visible in a screenshot */}
+          {/* Diagonal watermark — visible in screenshots, traceable to guest */}
           {watermarkText && loaded && (
             <div
               className="absolute pointer-events-none select-none"
               style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
             >
-              {[0, 1, 2].map((i) => (
+              {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
                   style={{
                     position: "absolute",
-                    left: "-20%",
-                    right: "-20%",
-                    top: `${20 + i * 30}%`,
+                    left: "-25%",
+                    right: "-25%",
+                    top: `${8 + i * 21}%`,
                     transform: "rotate(-28deg)",
                     textAlign: "center",
                     pointerEvents: "none",
@@ -326,9 +326,9 @@ function BookPage({
                 >
                   <span style={{
                     fontFamily: "Georgia, serif",
-                    fontSize: "clamp(0.45rem, 1.2vw, 0.75rem)",
-                    color: "rgba(44,24,16,0.13)",
-                    letterSpacing: "0.25em",
+                    fontSize: "clamp(0.55rem, 1.4vw, 0.85rem)",
+                    color: "rgba(44,24,16,0.19)",
+                    letterSpacing: "0.3em",
                     whiteSpace: "nowrap",
                   }}>
                     {watermarkText}
@@ -451,11 +451,13 @@ function AlbumBook({
   const [isPortrait, setIsPortrait]     = useState(false);
   const [dismissedRotate, setDismissedRotate] = useState(false);
 
-  const sceneRef  = useRef<HTMLDivElement>(null);
-  const proxy     = useRef({ value: 0 });
-  const tweenRef  = useRef<gsap.core.Tween | null>(null);
-  const dirRef    = useRef<"next" | "prev">("next");
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sceneRef      = useRef<HTMLDivElement>(null);
+  const proxy         = useRef({ value: 0 });
+  const tweenRef      = useRef<gsap.core.Tween | null>(null);
+  const dirRef        = useRef<"next" | "prev">("next");
+  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spreadIdxRef  = useRef(spreadIndex); // always reflects current spread for event handlers
+  useEffect(() => { spreadIdxRef.current = spreadIndex; }, [spreadIndex]);
 
   // Detect mobile / orientation
   useEffect(() => {
@@ -477,8 +479,29 @@ function AlbumBook({
       "Content-Type": "application/json",
       ...(token ? { "x-session-token": token } : {}),
     };
+
+    const currentSpreadMeta = () => {
+      const si = spreadIdxRef.current;
+      const base = (si - 1) * 2;
+      const left  = si > 0 ? photos[base]     : null;
+      const right = si > 0 ? photos[base + 1] : null;
+      return {
+        spread_index: si,
+        page_left:  si > 0 ? (si - 1) * 2 + 1 : null,
+        page_right: si > 0 && right ? (si - 1) * 2 + 2 : null,
+        photo_left:  left?.name  ?? null,
+        photo_right: right?.name ?? null,
+        total_photos: photos.length,
+      };
+    };
+
     const log = (type: string) =>
-      fetch("/api/gallery-event", { method: "POST", headers, body: JSON.stringify({ type }) }).catch(() => {});
+      fetch("/api/gallery-event", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ type, metadata: currentSpreadMeta() }),
+      }).catch(() => {});
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "PrintScreen") log("screenshot_printscreen");
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3","4","5","s"].includes(e.key)) log("screenshot_macos");
@@ -500,6 +523,7 @@ function AlbumBook({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onVis);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getSpreadPhotos = (si: number): [DrivePhoto | null, DrivePhoto | null] => {
