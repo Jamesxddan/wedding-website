@@ -268,12 +268,15 @@ function BookPage({
   photo,
   isLeft,
   pageNum,
+  guestName,
 }: {
   photo: DrivePhoto | null;
   isLeft: boolean;
   pageNum?: number;
+  guestName?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const watermarkText = guestName ? `James & Sharon  ·  ${guestName}` : null;
   return (
     <div className="relative h-full flex-shrink-0" style={{ width: "50%", background: PAGE_BG }}>
       {photo && (
@@ -301,6 +304,39 @@ function BookPage({
               boxShadow: "0 1px 6px rgba(0,0,0,0.09), 0 3px 12px rgba(0,0,0,0.06)",
             }}
           />
+          {/* Diagonal watermark — subtle at rest, visible in a screenshot */}
+          {watermarkText && loaded && (
+            <div
+              className="absolute pointer-events-none select-none"
+              style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
+            >
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    left: "-20%",
+                    right: "-20%",
+                    top: `${20 + i * 30}%`,
+                    transform: "rotate(-28deg)",
+                    textAlign: "center",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  <span style={{
+                    fontFamily: "Georgia, serif",
+                    fontSize: "clamp(0.45rem, 1.2vw, 0.75rem)",
+                    color: "rgba(44,24,16,0.13)",
+                    letterSpacing: "0.25em",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {watermarkText}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
       {pageNum !== undefined && (
@@ -327,16 +363,17 @@ function BookPage({
 }
 
 function BookSpread({
-  leftPhoto, rightPhoto, leftPageNum, rightPageNum,
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName,
 }: {
   leftPhoto: DrivePhoto | null;
   rightPhoto: DrivePhoto | null;
   leftPageNum?: number;
   rightPageNum?: number;
+  guestName?: string;
 }) {
   return (
     <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
-      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} />
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} />
       {/* Spine shadow */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
         width: 32, zIndex: 5,
@@ -346,7 +383,7 @@ function BookSpread({
         width: 2, zIndex: 6,
         background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
       }} />
-      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} />
     </div>
   );
 }
@@ -396,6 +433,10 @@ function AlbumBook({
   onClose: () => void;
   onIndexChange: (i: number) => void;
 }) {
+  const [guestName, setGuestName] = useState<string>("");
+  useEffect(() => {
+    setGuestName(localStorage.getItem("guest_name") ?? "");
+  }, []);
   // Spread 0 = cover; spread k≥1 has photos[(k-1)*2] and photos[(k-1)*2+1]
   const totalSpreads = 1 + Math.ceil(photos.length / 2);
 
@@ -443,7 +484,16 @@ function AlbumBook({
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3","4","5","s"].includes(e.key)) log("screenshot_macos");
       if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); log("print_attempt"); }
     };
-    const onVis = () => { if (document.hidden) log("visibility_hide"); };
+    const onVis = () => {
+      if (document.hidden) {
+        log("screenshot_attempt");
+        // Blur the book instantly — on many mobile browsers the page briefly hides
+        // during a screenshot capture; this makes the captured frame blurred.
+        if (sceneRef.current) sceneRef.current.style.filter = "blur(24px)";
+      } else {
+        if (sceneRef.current) sceneRef.current.style.filter = "";
+      }
+    };
     document.addEventListener("keydown", onKey);
     document.addEventListener("visibilitychange", onVis);
     return () => {
@@ -469,6 +519,7 @@ function AlbumBook({
         rightPhoto={r}
         leftPageNum={ln <= photos.length ? ln : undefined}
         rightPageNum={rn <= photos.length ? rn : undefined}
+        guestName={guestName || undefined}
       />
     );
   };
