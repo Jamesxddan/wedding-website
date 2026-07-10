@@ -848,8 +848,12 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const photos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
     const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
-    // Track gallery open in the phase_view event_data row
+    // Set a short-lived cookie so drive-image route can authenticate img tag requests
     const token = localStorage.getItem("session_token");
+    if (token) {
+      document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
+    }
+    // Track gallery open in the phase_view event_data row
     fetch("/api/gallery-event", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
@@ -857,7 +861,11 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     }).catch(() => {});
   }, [folder, state.photos, openAlbum]);
 
-  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+    // Revoke the gallery access cookie when the book is closed
+    document.cookie = "gallery_token=; path=/api/drive-image; SameSite=Strict; max-age=0";
+  }, []);
 
   const handleIndexChange = useCallback((i: number) => setLightboxIndex(i), []);
 
