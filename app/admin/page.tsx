@@ -296,6 +296,20 @@ export default function AdminPage() {
     await load("guests");
   }
 
+  async function freshStartAll() {
+    if (!confirm("Force fresh start for ALL guests?\n\n• All sessions will be deleted\n• Phase will be set to Invitation (registration form)\n\nEvery guest will need to re-register. This cannot be undone.")) return;
+    // 1. Delete all device fingerprints
+    const delRes = await fetch("/api/admin/guests", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
+    if (!delRes.ok) { alert("Failed to reset sessions"); return; }
+    // 2. Set phase override to Invitation
+    await savePhase("INVITATION");
+    await load("guests");
+  }
+
   async function clearGuestLogs(guest_id: string, name: string) {
     if (!confirm(`Clear all logs for ${name}? This cannot be undone.`)) return;
     const res = await fetch("/api/admin/logs", {
@@ -513,12 +527,18 @@ export default function AdminPage() {
       {tab === "guests" && (
         <>
           {isSuper && (
-            <div style={{ marginBottom: 14, display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ marginBottom: 14, display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
               <button
                 onClick={resetAllSessions}
                 style={{ fontSize: 12, padding: "6px 14px", borderRadius: 10, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer", fontWeight: 600 }}
               >
                 ⚠️ Reset ALL Sessions
+              </button>
+              <button
+                onClick={freshStartAll}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 10, border: "none", color: "#fff", background: "#c0392b", cursor: "pointer", fontWeight: 600 }}
+              >
+                🔄 Fresh Start (Reset + Open Form)
               </button>
             </div>
           )}
