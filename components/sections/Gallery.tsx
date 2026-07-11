@@ -269,6 +269,7 @@ function BookPage({
   isLeft,
   pageNum,
   guestName,
+  wmExtra,
   fullWidth,
   noSpineShadow,
 }: {
@@ -276,11 +277,13 @@ function BookPage({
   isLeft: boolean;
   pageNum?: number;
   guestName?: string;
+  wmExtra?: string;
   fullWidth?: boolean;
   noSpineShadow?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
-  const watermarkText = guestName ? `James & Sharon  ·  ${guestName}` : null;
+  const parts = ["James & Sharon", guestName, wmExtra].filter(Boolean);
+  const watermarkText = parts.length > 1 ? parts.join("  ·  ") : null;
   return (
     <div className="relative h-full flex-shrink-0" style={{ width: fullWidth ? "100%" : "50%", background: PAGE_BG }}>
       {photo && (
@@ -370,17 +373,18 @@ function BookPage({
 }
 
 function BookSpread({
-  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName,
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra,
 }: {
   leftPhoto: DrivePhoto | null;
   rightPhoto: DrivePhoto | null;
   leftPageNum?: number;
   rightPageNum?: number;
   guestName?: string;
+  wmExtra?: string;
 }) {
   return (
     <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
-      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} />
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} />
       {/* Spine shadow */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
         width: 32, zIndex: 5,
@@ -390,7 +394,7 @@ function BookSpread({
         width: 2, zIndex: 6,
         background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
       }} />
-      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} />
     </div>
   );
 }
@@ -408,21 +412,23 @@ function BookCoverLeft() {
   );
 }
 
-function BookCoverRight() {
+function BookCoverRight({ folder }: { folder: "engagement" | "wedding" }) {
+  const albumLabel = folder === "engagement" ? "AN ENGAGEMENT ALBUM" : "A WEDDING ALBUM";
+  const dateLabel  = folder === "engagement" ? "FEBRUARY 12, 2026 · CHENNAI" : "OCTOBER 8, 2026 · CHENNAI";
   return (
     <div className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden" style={{ background: "linear-gradient(160deg, #2c1810 0%, #4a2c15 40%, #3d2310 70%, #1e1008 100%)" }}>
       <div className="absolute pointer-events-none" style={{ inset: "5%", border: "1.5px solid rgba(201,168,76,0.45)" }} />
       <div className="absolute pointer-events-none" style={{ inset: "7.5%", border: "0.5px solid rgba(201,168,76,0.2)" }} />
       <div className="relative z-10 text-center px-[12%]">
         <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
-          AN ENGAGEMENT ALBUM
+          {albumLabel}
         </p>
         <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
         <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
         <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
         <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
         <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
-          OCTOBER 8, 2026 · CHENNAI
+          {dateLabel}
         </p>
       </div>
       <div className="absolute left-0 inset-y-0 pointer-events-none" style={{ width: 20, background: "linear-gradient(to right, rgba(0,0,0,0.45), transparent)" }} />
@@ -430,29 +436,41 @@ function BookCoverRight() {
   );
 }
 
-function BookCover() {
+function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
   return (
     <div className="absolute inset-0 flex">
       <div className="relative h-full" style={{ width: "50%" }}><BookCoverLeft /></div>
       {/* Spine */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 5, background: "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 6, background: "linear-gradient(to bottom, #c9a84c80, #8b691480, #c9a84c80)" }} />
-      <div className="relative h-full" style={{ width: "50%" }}><BookCoverRight /></div>
+      <div className="relative h-full" style={{ width: "50%" }}><BookCoverRight folder={folder} /></div>
     </div>
   );
 }
 
 function AlbumBook({
-  photos, index, onClose, onIndexChange,
+  photos, index, onClose, onIndexChange, folder,
 }: {
   photos: DrivePhoto[];
   index: number;
   onClose: () => void;
   onIndexChange: (i: number) => void;
+  folder: "engagement" | "wedding";
 }) {
   const [guestName, setGuestName] = useState<string>("");
+  const [guestCity, setGuestCity] = useState<string>("");
+  const openedAtRef = useRef<string>("");
   useEffect(() => {
     setGuestName(localStorage.getItem("guest_name") ?? "");
+    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    openedAtRef.current = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      day: "numeric",
+      month: "short",
+    }).format(new Date());
   }, []);
   // Spread 0 = cover; spread k≥1 has photos[(k-1)*2] and photos[(k-1)*2+1]
   const totalSpreads = 1 + Math.ceil(photos.length / 2);
@@ -561,8 +579,10 @@ function AlbumBook({
     return [photos[base] ?? null, photos[base + 1] ?? null];
   };
 
+  const wmExtra = [guestCity, openedAtRef.current].filter(Boolean).join("  ·  ") || undefined;
+
   const renderSpread = (si: number) => {
-    if (si <= 0) return <BookCover />;
+    if (si <= 0) return <BookCover folder={folder} />;
     const [l, r] = getSpreadPhotos(si);
     const ln = (si - 1) * 2 + 1;
     const rn = (si - 1) * 2 + 2;
@@ -573,13 +593,14 @@ function AlbumBook({
         leftPageNum={ln <= photos.length ? ln : undefined}
         rightPageNum={rn <= photos.length ? rn : undefined}
         guestName={guestName || undefined}
+        wmExtra={wmExtra}
       />
     );
   };
 
   const renderHalfPage = (si: number, side: "left" | "right") => {
     const isLeft = side === "left";
-    if (si <= 0) return isLeft ? <BookCoverLeft /> : <BookCoverRight />;
+    if (si <= 0) return isLeft ? <BookCoverLeft /> : <BookCoverRight folder={folder} />;
     const [l, r] = getSpreadPhotos(si);
     const photo = isLeft ? l : r;
     const pn = isLeft ? (si - 1) * 2 + 1 : (si - 1) * 2 + 2;
@@ -589,6 +610,7 @@ function AlbumBook({
         isLeft={isLeft}
         pageNum={photo && pn <= photos.length ? pn : undefined}
         guestName={guestName || undefined}
+        wmExtra={wmExtra}
         fullWidth
         noSpineShadow
       />
@@ -1133,6 +1155,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
           index={lightboxIndex}
           onClose={closeLightbox}
           onIndexChange={handleIndexChange}
+          folder={folder}
         />
       )}
     </section>
