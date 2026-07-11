@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabase";
-
-async function isAdmin(): Promise<boolean> {
-  const store = await cookies();
-  return store.get("admin_session")?.value === "1";
-}
+import { isAdmin } from "@/lib/admin-auth";
 
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview";
+type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins";
 
 interface Guest {
   id: string;
@@ -14,6 +14,7 @@ interface Guest {
   created_at: string;
   last_seen_at: string;
   device_count: number;
+  photo_downloads: number;
 }
 
 interface LogRow {
@@ -32,6 +33,14 @@ interface Flag {
   ip: string | null;
   reason: string;
   blocked_until: string;
+}
+
+interface Admin {
+  id: string;
+  email: string;
+  is_super: boolean;
+  added_by: string | null;
+  created_at: string;
 }
 
 type Settings = Record<string, string>;
@@ -58,36 +67,82 @@ function youtubeEmbedUrl(raw: string): string | null {
 export default function AdminPage() {
   useTrackPageVisit("admin");
   const [authed, setAuthed] = useState(false);
+  const [isSuper, setIsSuper] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [emailInput, setEmailInput] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [tab, setTab] = useState<Tab>("guests");
+
   const [guests, setGuests] = useState<Guest[]>([]);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [logFilter, setLogFilter] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+
   const [settings, setSettings] = useState<Settings>({});
-  const [ytInput, setYtInput] = useState("");
-  const [ytSaving, setYtSaving] = useState(false);
-  const [ytSaved, setYtSaved] = useState(false);
+  const [ytCeremonyInput, setYtCeremonyInput] = useState("");
+  const [ytCeremonySaving, setYtCeremonySaving] = useState(false);
+  const [ytCeremonySaved, setYtCeremonySaved] = useState(false);
+  const [ytReceptionInput, setYtReceptionInput] = useState("");
+  const [ytReceptionSaving, setYtReceptionSaving] = useState(false);
+  const [ytReceptionSaved, setYtReceptionSaved] = useState(false);
   const [annoInput, setAnnoInput] = useState("");
   const [annoSaving, setAnnoSaving] = useState(false);
   const [annoSaved, setAnnoSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
+
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newIsSuper, setNewIsSuper] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminError, setAdminError] = useState("");
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Check if already logged in on mount
+  useEffect(() => {
+    fetch("/api/admin/me").then(async (r) => {
+      if (r.ok) {
+        const { email, is_super } = await r.json();
+        setAdminEmail(email);
+        setIsSuper(is_super);
+        setTab(is_super ? "guests" : "live");
+        setAuthed(true);
+      }
+      setSessionChecked(true);
+    }).catch(() => setSessionChecked(true));
+  }, []);
 
   const loadSettings = useCallback(async () => {
     const res = await fetch("/api/admin/settings");
     if (!res.ok) return;
     const data: Settings = await res.json();
     setSettings(data);
-    setYtInput(data.youtube_live_url ?? "");
+    setYtCeremonyInput(data.youtube_ceremony_url ?? "");
+    setYtReceptionInput(data.youtube_reception_url ?? "");
     setAnnoInput(data.announcement ?? "");
+  }, []);
+
+  const loadAdmins = useCallback(async () => {
+    const res = await fetch("/api/admin/admins");
+    if (res.ok) setAdmins(await res.json());
   }, []);
 
   const load = useCallback(async (t: Tab) => {
     if (t === "live" || t === "control") { await loadSettings(); return; }
     if (t === "preview") return;
+    if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
     try {
       if (t === "guests") {
@@ -106,19 +161,39 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [logFilter, loadSettings]);
+  }, [logFilter, loadSettings, loadAdmins]);
 
   useEffect(() => { if (authed) load(tab); }, [authed, tab, load]);
 
   async function login(e: React.FormEvent) {
     e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
     const res = await fetch("/api/admin/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email: emailInput, password }),
     });
-    if (res.ok) { setAuthed(true); setAuthError(""); }
-    else setAuthError("Wrong password");
+    setAuthLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setAdminEmail(data.email);
+      setIsSuper(data.is_super);
+      setTab(data.is_super ? "guests" : "live");
+      setAuthed(true);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setAuthError(err.error ?? "Wrong email or password");
+    }
+  }
+
+  async function signOut() {
+    await fetch("/api/admin/auth", { method: "DELETE" });
+    setAuthed(false);
+    setIsSuper(false);
+    setAdminEmail("");
+    setEmailInput("");
+    setPassword("");
   }
 
   async function saveSetting(key: string, value: string) {
@@ -130,11 +205,18 @@ export default function AdminPage() {
     await loadSettings();
   }
 
-  async function saveYoutube() {
-    setYtSaving(true);
-    await saveSetting("youtube_live_url", ytInput.trim());
-    setYtSaving(false); setYtSaved(true);
-    setTimeout(() => setYtSaved(false), 2500);
+  async function saveCeremonyUrl() {
+    setYtCeremonySaving(true);
+    await saveSetting("youtube_ceremony_url", ytCeremonyInput.trim());
+    setYtCeremonySaving(false); setYtCeremonySaved(true);
+    setTimeout(() => setYtCeremonySaved(false), 2500);
+  }
+
+  async function saveReceptionUrl() {
+    setYtReceptionSaving(true);
+    await saveSetting("youtube_reception_url", ytReceptionInput.trim());
+    setYtReceptionSaving(false); setYtReceptionSaved(true);
+    setTimeout(() => setYtReceptionSaved(false), 2500);
   }
 
   async function saveAnnouncement() {
@@ -159,6 +241,21 @@ export default function AdminPage() {
     await load("guests");
   }
 
+  async function clearGuestSession(g: Guest) {
+    if (!confirm(`Clear session for ${g.name}? They'll be asked to register again. Their data and logs are kept.`)) return;
+    const res = await fetch("/api/admin/guests", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: g.id }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to clear session");
+      return;
+    }
+    await load("guests");
+  }
+
   async function unblock(f: Flag) {
     await fetch("/api/admin/flags", {
       method: "DELETE",
@@ -166,6 +263,53 @@ export default function AdminPage() {
       body: JSON.stringify({ id: f.id }),
     });
     load("flags");
+  }
+
+  async function addAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    setAdminSaving(true);
+    setAdminError("");
+    const res = await fetch("/api/admin/admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newEmail, password: newPassword, is_super: newIsSuper, added_by: adminEmail }),
+    });
+    setAdminSaving(false);
+    if (res.ok) {
+      setNewEmail(""); setNewPassword(""); setNewIsSuper(false);
+      await loadAdmins();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setAdminError(err.error ?? "Failed to add admin");
+    }
+  }
+
+  async function removeAdmin(id: string) {
+    const res = await fetch("/api/admin/admins", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to remove admin");
+      return;
+    }
+    await loadAdmins();
+  }
+
+  async function toggleSuper(a: Admin) {
+    const res = await fetch("/api/admin/admins", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: a.id, is_super: !a.is_super }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to update admin");
+      return;
+    }
+    await loadAdmins();
   }
 
   const th: React.CSSProperties = {
@@ -196,32 +340,67 @@ export default function AdminPage() {
     boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 16,
   };
 
+  if (!sessionChecked) return null;
+
   if (!authed) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f9f5f1" }}>
         <form onSubmit={login} style={{ display: "flex", flexDirection: "column", gap: 14, width: 300 }}>
           <h2 style={{ margin: 0, fontFamily: "Georgia, serif", color: "#8B4A6B", fontSize: 22 }}>Admin</h2>
           <input
+            type="email"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder="Email"
+            autoComplete="email"
+            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+          />
+          <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
+            autoComplete="current-password"
             style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
           />
           {authError && <p style={{ color: "#c0392b", margin: 0, fontSize: 13 }}>{authError}</p>}
-          <button type="submit" style={{ padding: "10px 14px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
-            Sign in
+          <button
+            type="submit"
+            disabled={authLoading}
+            style={{ padding: "10px 14px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, cursor: authLoading ? "default" : "pointer", fontSize: 14 }}
+          >
+            {authLoading ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </div>
     );
   }
 
-  const embedUrl = youtubeEmbedUrl(ytInput);
+  const superTabs: { key: Tab; label: string }[] = [
+    { key: "guests", label: "Guests" },
+    { key: "logs", label: "Logs" },
+    { key: "flags", label: "Flags" },
+    { key: "live", label: "🔴 Live Stream" },
+    { key: "control", label: "⚙️ Site Control" },
+    { key: "preview", label: "👁 Preview" },
+    { key: "admins", label: "🔑 Admins" },
+  ];
+
+  const regularTabs: { key: Tab; label: string }[] = [
+    { key: "live", label: "🔴 Live Stream" },
+    { key: "control", label: "⚙️ Site Control" },
+    { key: "preview", label: "👁 Preview" },
+  ];
+
+  const visibleTabs = isSuper ? superTabs : regularTabs;
+  const ceremonyEmbedUrl = youtubeEmbedUrl(ytCeremonyInput);
+  const receptionEmbedUrl = youtubeEmbedUrl(ytReceptionInput);
+
+  const p = isMobile ? "12px 14px 40px" : "28px 28px 48px";
 
   return (
     <div style={{
-      padding: tab === "preview" ? 0 : "28px 28px 48px",
+      padding: tab === "preview" ? 0 : p,
       maxWidth: tab === "preview" ? "100%" : 1100,
       margin: "0 auto", minHeight: "100vh",
       background: tab === "preview" ? "#0f0f1a" : "#f9f5f1",
@@ -229,31 +408,44 @@ export default function AdminPage() {
 
       {tab !== "preview" && (
         <>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-            <h1 style={{ margin: 0, fontFamily: "Georgia, serif", color: "#8B4A6B", fontSize: 22 }}>
-              James &amp; Sharon — Admin
-            </h1>
+          <div style={{
+            display: "flex",
+            alignItems: isMobile ? "flex-start" : "center",
+            flexDirection: isMobile ? "column" : "row",
+            justifyContent: "space-between",
+            gap: isMobile ? 6 : 0,
+            marginBottom: 18,
+          }}>
+            <div>
+              <h1 style={{ margin: 0, fontFamily: "Georgia, serif", color: "#8B4A6B", fontSize: isMobile ? 18 : 22 }}>
+                James &amp; Sharon — Admin
+              </h1>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#bbb" }}>
+                {adminEmail}{isSuper ? " · Super Admin" : ""}
+              </p>
+            </div>
             <button
-              onClick={() => { fetch("/api/admin/auth", { method: "DELETE" }); setAuthed(false); }}
-              style={{ fontSize: 12, color: "#bbb", background: "none", border: "none", cursor: "pointer" }}
+              onClick={signOut}
+              style={{ fontSize: 12, color: "#bbb", background: "none", border: "none", cursor: "pointer", padding: 0 }}
             >
               Sign out
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
-            {(["guests", "logs", "flags", "live", "control", "preview"] as Tab[]).map((t) => (
-              <button key={t} style={tabBtn(t)} onClick={() => setTab(t)}>
-                {t === "live" ? "🔴 Live Stream"
-                  : t === "control" ? "⚙️ Site Control"
-                  : t === "preview" ? "👁 Preview"
-                  : t.charAt(0).toUpperCase() + t.slice(1)}
+          <div style={{
+            display: "flex", gap: 8, marginBottom: 20, alignItems: "center",
+            overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"],
+            paddingBottom: 4,
+          }}>
+            {visibleTabs.map(({ key, label }) => (
+              <button key={key} style={tabBtn(key)} onClick={() => setTab(key)}>
+                {label}
               </button>
             ))}
             {(["guests", "logs", "flags"] as Tab[]).includes(tab) && (
               <button
                 onClick={() => load(tab)}
-                style={{ marginLeft: "auto", fontSize: 12, color: "#8B4A6B", background: "none", border: "none", cursor: "pointer" }}
+                style={{ marginLeft: "auto", fontSize: 12, color: "#8B4A6B", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}
               >
                 ↻ Refresh
               </button>
@@ -267,9 +459,10 @@ export default function AdminPage() {
         <>
           {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
           {!loading && (
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 640 }}>
               <thead>
-                <tr>{["Name", "City", "Devices", "First visit", "Last seen", "Inv. seen", "Owner"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+                <tr>{["Name", "City", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {guests.map((g) => (
@@ -280,6 +473,7 @@ export default function AdminPage() {
                     <td style={td}>{new Date(g.created_at).toLocaleDateString()}</td>
                     <td style={td}>{new Date(g.last_seen_at).toLocaleDateString()}</td>
                     <td style={td}>{g.invitation_seen ? "✓" : "—"}</td>
+                    <td style={td}>{g.photo_downloads > 0 ? g.photo_downloads : "—"}</td>
                     <td style={td}>
                       <button
                         onClick={() => toggleOwner(g)}
@@ -288,13 +482,24 @@ export default function AdminPage() {
                         {g.is_owner ? "Owner ✓" : "Set owner"}
                       </button>
                     </td>
+                    {isSuper && (
+                      <td style={td}>
+                        <button
+                          onClick={() => clearGuestSession(g)}
+                          style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #e67e22", color: "#e67e22", background: "transparent", cursor: "pointer" }}
+                        >
+                          Clear session
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {guests.length === 0 && (
-                  <tr><td colSpan={7} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No guests yet</td></tr>
+                  <tr><td colSpan={isSuper ? 9 : 8} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No guests yet</td></tr>
                 )}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}
@@ -318,7 +523,8 @@ export default function AdminPage() {
           </div>
           {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
           {!loading && (
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 560 }}>
               <thead>
                 <tr>{["Time", "Guest", "Event", "Data", "IP"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
@@ -339,6 +545,7 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}
@@ -348,7 +555,8 @@ export default function AdminPage() {
         <>
           {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
           {!loading && (
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 480 }}>
               <thead>
                 <tr>{["Device (short)", "Reason", "IP", "Blocked until", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
@@ -374,6 +582,7 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}
@@ -381,38 +590,61 @@ export default function AdminPage() {
       {/* ── LIVE STREAM ── */}
       {tab === "live" && (
         <div style={{ maxWidth: 680 }}>
+
+          {/* Ceremony */}
           <div style={card}>
-            <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>YouTube Live URL</h3>
-            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
-              Paste any YouTube URL — watch link, share link, or embed URL. Guests on the Wedding Day page will see this stream automatically once saved.
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "#1a1a1a" }}>⛪ Ceremony — St Andrews Kirk</h3>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "#888" }}>
+              YouTube URL for the ceremony live stream. Guests see this automatically on the Wedding Day page.
             </p>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <input
-                style={inputStyle}
-                value={ytInput}
-                onChange={(e) => { setYtInput(e.target.value); setYtSaved(false); }}
+                style={{ ...inputStyle, minWidth: 0 }}
+                value={ytCeremonyInput}
+                onChange={(e) => { setYtCeremonyInput(e.target.value); setYtCeremonySaved(false); }}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
-              <button style={saveBtn(ytSaving, ytSaved)} onClick={saveYoutube} disabled={ytSaving}>
-                {ytSaved ? "Saved ✓" : ytSaving ? "Saving…" : "Save"}
+              <button style={saveBtn(ytCeremonySaving, ytCeremonySaved)} onClick={saveCeremonyUrl} disabled={ytCeremonySaving}>
+                {ytCeremonySaved ? "Saved ✓" : ytCeremonySaving ? "Saving…" : "Save"}
               </button>
             </div>
-
-            {ytInput.trim() && !embedUrl && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "#e67e22" }}>
-                ⚠️ Couldn&apos;t parse a video ID — check the URL format.
-              </p>
+            {ytCeremonyInput.trim() && !ceremonyEmbedUrl && (
+              <p style={{ marginTop: 10, fontSize: 13, color: "#e67e22" }}>⚠️ Couldn&apos;t parse a video ID — check the URL.</p>
             )}
-
-            {embedUrl && (
-              <div style={{ marginTop: 20, borderRadius: 10, overflow: "hidden", background: "#000", aspectRatio: "16/9" }}>
-                <iframe
-                  src={embedUrl}
-                  style={{ width: "100%", height: "100%", border: "none" }}
+            {ceremonyEmbedUrl && (
+              <div style={{ marginTop: 18, borderRadius: 10, overflow: "hidden", background: "#000", aspectRatio: "16/9" }}>
+                <iframe src={ceremonyEmbedUrl} style={{ width: "100%", height: "100%", border: "none" }}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="YouTube preview"
-                />
+                  allowFullScreen title="Ceremony preview" />
+              </div>
+            )}
+          </div>
+
+          {/* Reception */}
+          <div style={card}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "#1a1a1a" }}>🎉 Reception — BKN Auditorium</h3>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "#888" }}>
+              YouTube URL for the reception live stream. Guests see this automatically on the Wedding Day page.
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input
+                style={{ ...inputStyle, minWidth: 0 }}
+                value={ytReceptionInput}
+                onChange={(e) => { setYtReceptionInput(e.target.value); setYtReceptionSaved(false); }}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              <button style={saveBtn(ytReceptionSaving, ytReceptionSaved)} onClick={saveReceptionUrl} disabled={ytReceptionSaving}>
+                {ytReceptionSaved ? "Saved ✓" : ytReceptionSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {ytReceptionInput.trim() && !receptionEmbedUrl && (
+              <p style={{ marginTop: 10, fontSize: 13, color: "#e67e22" }}>⚠️ Couldn&apos;t parse a video ID — check the URL.</p>
+            )}
+            {receptionEmbedUrl && (
+              <div style={{ marginTop: 18, borderRadius: 10, overflow: "hidden", background: "#000", aspectRatio: "16/9" }}>
+                <iframe src={receptionEmbedUrl} style={{ width: "100%", height: "100%", border: "none" }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen title="Reception preview" />
               </div>
             )}
           </div>
@@ -485,7 +717,7 @@ export default function AdminPage() {
       {tab === "preview" && (
         <div style={{ position: "relative" }}>
           <button
-            onClick={() => setTab("guests")}
+            onClick={() => setTab(isSuper ? "guests" : "live")}
             style={{
               position: "fixed", top: 14, right: 20, zIndex: 9999,
               background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)",
@@ -500,6 +732,103 @@ export default function AdminPage() {
             style={{ width: "100%", height: "100vh", border: "none", display: "block" }}
             title="Site preview"
           />
+        </div>
+      )}
+
+      {/* ── ADMINS ── */}
+      {tab === "admins" && (
+        <div style={{ maxWidth: 780 }}>
+
+          <div style={card}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#1a1a1a" }}>Add Admin</h3>
+            <form onSubmit={addAdmin} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 200px" }}>
+                <label style={{ fontSize: 12, color: "#888" }}>Email</label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  required
+                  style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 160px" }}>
+                <label style={{ fontSize: 12, color: "#888" }}>Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+                />
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#555", cursor: "pointer", paddingBottom: 2 }}>
+                <input
+                  type="checkbox"
+                  checked={newIsSuper}
+                  onChange={(e) => setNewIsSuper(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: "pointer" }}
+                />
+                Super Admin
+              </label>
+              <button
+                type="submit"
+                disabled={adminSaving}
+                style={{ padding: "9px 20px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: adminSaving ? "default" : "pointer" }}
+              >
+                {adminSaving ? "Adding…" : "+ Add"}
+              </button>
+            </form>
+            {adminError && <p style={{ marginTop: 10, color: "#c0392b", fontSize: 13, margin: "10px 0 0" }}>{adminError}</p>}
+          </div>
+
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 500 }}>
+            <thead>
+              <tr>{["Email", "Role", "Added by", "Date", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {admins.map((a) => (
+                <tr key={a.id}>
+                  <td style={td}>
+                    {a.email}
+                    {a.email === adminEmail && (
+                      <span style={{ marginLeft: 6, fontSize: 11, color: "#8B4A6B", background: "#f0e8f0", padding: "1px 7px", borderRadius: 10 }}>you</span>
+                    )}
+                  </td>
+                  <td style={td}>
+                    {a.is_super
+                      ? <span style={{ color: "#8B4A6B", fontWeight: 600 }}>★ Super</span>
+                      : <span style={{ color: "#888" }}>Regular</span>}
+                  </td>
+                  <td style={{ ...td, color: "#aaa" }}>{a.added_by ?? "—"}</td>
+                  <td style={{ ...td, color: "#aaa" }}>{new Date(a.created_at).toLocaleDateString()}</td>
+                  <td style={{ ...td, display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => toggleSuper(a)}
+                      style={{ fontSize: 12, padding: "3px 10px", borderRadius: 10, border: "1px solid #8B4A6B", color: "#8B4A6B", background: "transparent", cursor: "pointer" }}
+                    >
+                      {a.is_super ? "Demote" : "Make Super"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove ${a.email}? Their session will end immediately.`)) removeAdmin(a.id);
+                      }}
+                      style={{ fontSize: 12, padding: "3px 10px", borderRadius: 10, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer" }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {admins.length === 0 && (
+                <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No admins yet</td></tr>
+              )}
+            </tbody>
+          </table>
+          </div>
         </div>
       )}
     </div>
