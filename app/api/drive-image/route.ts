@@ -55,9 +55,18 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // On production, require a valid session token sent as the gallery_token cookie.
-  // Dev/staging (non-production) skips this check so local development still works.
-  if (process.env.VERCEL_ENV) { // enforce on both staging (preview) and production
+  // On Vercel, enforce two checks:
+  // 1. The request must originate from our own site (Referer contains our hostname).
+  //    This blocks direct tab access and hotlinking — browsers only send Referer
+  //    when the image is loaded by a page on the same origin.
+  // 2. A valid gallery_token session cookie must be present.
+  if (process.env.VERCEL_ENV) {
+    const referer = req.headers.get("referer") ?? "";
+    const ownHost = req.nextUrl.hostname;
+    if (!referer || !referer.includes(ownHost)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
     const cookieHeader = req.headers.get("cookie") ?? "";
     const galleryToken = cookieHeader
       .split(";")
