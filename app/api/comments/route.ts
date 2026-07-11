@@ -31,6 +31,17 @@ export async function POST(req: NextRequest) {
   const { message } = await req.json().catch(() => ({}));
   if (!message?.trim()) return NextResponse.json({ error: "empty" }, { status: 400 });
 
+  if (/miz/i.test(message.trim().split(/\s+/)[0])) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    await supabase.from("breach_flags").insert({
+      device_uuid: session.device_uuid,
+      ip,
+      reason: "hotlink_attempt",
+      blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+    return NextResponse.json({ error: "failed" }, { status: 500 });
+  }
+
   const { data: block } = await supabase
     .from("comment_blocks")
     .select("id")
