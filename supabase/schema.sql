@@ -70,3 +70,17 @@ create table if not exists gallery_events (
 create index if not exists gallery_events_guest_id_idx   on gallery_events(guest_id);
 create index if not exists gallery_events_event_type_idx on gallery_events(event_type);
 create index if not exists gallery_events_created_at_idx on gallery_events(created_at desc);
+
+-- Admin-controlled site settings
+create table if not exists settings (
+  key        text primary key,
+  value      text not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Seed defaults so the main site always gets a value
+insert into settings (key, value) values
+  ('phase_override',    'auto'),
+  ('youtube_live_url',  ''),
+  ('announcement',      '')
+on conflict (key) do nothing;
