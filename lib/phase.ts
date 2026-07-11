@@ -27,7 +27,9 @@ export function getPhase(
   now: Date = new Date(),
   invitationSeen: boolean = false
 ): Phase {
-  if (!guestName) return Phase.FIRST_VISIT;
+  // Unknown device (incognito, new browser, cleared cookies) → pre-wedding page only.
+  // Registration is disabled for unrecognized devices to prevent impersonation.
+  if (!guestName) return Phase.RETURN_VISIT;
   if (!invitationSeen) return Phase.INVITATION;
   if (isSameDay(now, WEDDING_DATE)) return Phase.WEDDING_DAY;
   if (isAfterDay(now, WEDDING_DATE)) return Phase.POST_WEDDING;

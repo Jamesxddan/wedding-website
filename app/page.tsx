@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
-import OpeningScreen from "@/components/phases/OpeningScreen";
 import InvitationCard from "@/components/phases/InvitationCard";
 import CountdownHero from "@/components/phases/CountdownHero";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
@@ -24,14 +22,9 @@ import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
 export default function Home() {
   const { phase, guestName, isLoading, refresh, sessionRestored } = usePhase();
-  const [showInvitation, setShowInvitation] = useState(false);
-  const [submittedName, setSubmittedName] = useState<string | null>(null);
 
-  // Track the phase the user actually sees — when the invitation card is shown
-  // after first registration, phase is still FIRST_VISIT until refresh() fires,
-  // so we override to INVITATION so the tracker captures that the card was shown.
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
-  useTrackPageVisit(isLoading ? null : (showInvitation ? Phase.INVITATION : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase)));
+  useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
 
   if (isLoading) {
     return (
@@ -46,12 +39,9 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-cream">
       <BackgroundMusic src="/song.mp3" />
-      {(phase === Phase.FIRST_VISIT && !showInvitation) && (
-        <OpeningScreen onComplete={(name) => { setSubmittedName(name); setShowInvitation(true); }} />
-      )}
 
-      {(showInvitation || phase === Phase.INVITATION) && (
-        <InvitationCard guestName={submittedName ?? guestName ?? "Friend"} onExplore={() => { setShowInvitation(false); refresh(); }} />
+      {phase === Phase.INVITATION && (
+        <InvitationCard guestName={guestName ?? "Friend"} onExplore={() => { refresh(); }} />
       )}
 
       {phase === Phase.RETURN_VISIT && (
