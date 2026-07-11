@@ -7,6 +7,8 @@ export interface PhaseState {
   phase: Phase;
   guestName: string | null;
   guestCity: string | null;
+  guestId: string | null;
+  isOwner: boolean;
   isLoading: boolean;
   sessionRestored: boolean;
   refresh: () => void;
@@ -17,6 +19,8 @@ export function usePhase(): PhaseState {
     phase: Phase.FIRST_VISIT,
     guestName: null,
     guestCity: null,
+    guestId: null,
+    isOwner: false,
     isLoading: true,
     sessionRestored: false,
   });
@@ -94,6 +98,8 @@ async function _runSessionCheck(
       city?: string;
       invitation_seen?: boolean;
       session_token?: string;
+      guest_id?: string;
+      is_owner?: boolean;
     };
 
     // Session gone from DB — guest was deleted or factory reset.
@@ -108,6 +114,8 @@ async function _runSessionCheck(
         phase: Phase.FIRST_VISIT,
         guestName: null,
         guestCity: null,
+        guestId: null,
+        isOwner: false,
         sessionRestored: false,
       }));
       return;
@@ -135,6 +143,8 @@ async function _runSessionCheck(
       phase: localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
       guestName: data.name,
       guestCity: data.city ?? null,
+      guestId: data.guest_id ?? null,
+      isOwner: data.is_owner ?? false,
       isLoading: false,
       sessionRestored: true,
     });
