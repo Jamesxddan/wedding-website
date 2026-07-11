@@ -55,7 +55,7 @@ function stickerData(message: string) {
 }
 
 interface Props {
-  guestName: string | null;
+  guestName?: string | null;
   guestId?: string | null;
   isOwner?: boolean;
 }
