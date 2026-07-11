@@ -31,6 +31,11 @@ const STICKERS = [
   { id: "wishes", label: "Best Wishes", emoji: "⭐" },
 ];
 
+function authHeaders(): HeadersInit {
+  const token = typeof window !== "undefined" ? localStorage.getItem("session_token") : null;
+  return { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
+}
+
 function timeLeft(createdAt: string): number {
   return Math.max(0, EDIT_MS - (Date.now() - new Date(createdAt).getTime()));
 }
@@ -109,7 +114,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     setError(null);
     const res = await fetch("/api/comments", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({ message: `[sticker:${sticker.id}]` }),
     });
     setPosting(false);
@@ -127,7 +132,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     setError(null);
     const res = await fetch("/api/comments", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({ message }),
     });
     setPosting(false);
@@ -144,7 +149,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     if (!editText.trim()) return;
     const res = await fetch("/api/comments", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({ id, message: editText }),
     });
     if (res.ok) { setEditingId(null); await load(); }
@@ -159,7 +164,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   async function deleteComment(id: string) {
     await fetch("/api/comments", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({ id }),
     });
     await load();
