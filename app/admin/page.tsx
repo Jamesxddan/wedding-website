@@ -297,7 +297,7 @@ export default function AdminPage() {
   }
 
   async function freshStartAll() {
-    if (!confirm("Force fresh start for ALL guests?\n\n• All sessions will be deleted\n• Phase will be set to Invitation (registration form)\n\nEvery guest will need to re-register. This cannot be undone.")) return;
+    if (!confirm("Force fresh start for ALL guests?\n\n• All sessions will be deleted\n• Registration form will open for everyone\n\nEvery guest will need to re-register. Remember to set phase back to Auto-detect when done. This cannot be undone.")) return;
     // 1. Delete all device fingerprints
     const delRes = await fetch("/api/admin/guests", {
       method: "DELETE",
@@ -305,8 +305,8 @@ export default function AdminPage() {
       body: JSON.stringify({ all: true }),
     });
     if (!delRes.ok) { alert("Failed to reset sessions"); return; }
-    // 2. Set phase override to Invitation
-    await savePhase("INVITATION");
+    // 2. Set phase override to FIRST_VISIT (registration form)
+    await savePhase("FIRST_VISIT");
     await load("guests");
   }
 

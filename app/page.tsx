@@ -5,6 +5,7 @@ import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
 import InvitationCard from "@/components/phases/InvitationCard";
+import OpeningScreen from "@/components/phases/OpeningScreen";
 import CountdownHero from "@/components/phases/CountdownHero";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
 import PostWeddingHero from "@/components/phases/PostWeddingHero";
@@ -107,6 +108,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-cream">
       <BackgroundMusic src="/song.mp3" />
+
+      {phase === Phase.FIRST_VISIT && (
+        <OpeningScreen onComplete={() => { refresh(); }} />
+      )}
 
       {phase === Phase.INVITATION && (
         <InvitationCard guestName={guestName ?? "Friend"} onExplore={() => { refresh(); }} />
