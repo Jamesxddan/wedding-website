@@ -3,11 +3,25 @@ import { supabase } from "@/lib/supabase";
 import { validateSession } from "@/lib/session-check";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000;
+const SILENT_DROP_LIMIT = 3;
+const SILENT_DROP_WINDOW_MS = 10 * 60 * 1000;
+
+function deobfuscate(text: string): string {
+  // Collapse single letters separated by spaces, dots, dashes, underscores, asterisks
+  // Runs 4 times to handle multi-level obfuscation
+  let t = text;
+  for (let i = 0; i < 4; i++) {
+    t = t.replace(/([a-z])([\s._\-*@#]+)([a-z])/gi, "$1$3");
+  }
+  return t.toLowerCase();
+}
 
 function isSilentDrop(text: string): boolean {
-  const t = text.toLowerCase();
-  const patterns = [/aarthi/,/\bfiz\b/,/fazi/,/fazela/,/fazeela/,/athu\s*baby/,/\bammu\b/,/\bex\b/];
-  return patterns.some((p) => p.test(t));
+  const check = (t: string) => {
+    const patterns = [/aarthi/,/\bfiz\b/,/fazi/,/fazela/,/fazeela/,/athu\s*baby/,/\bammu\b/,/\bex\b/];
+    return patterns.some((p) => p.test(t));
+  };
+  return check(text.toLowerCase()) || check(deobfuscate(text));
 }
 
 function isBad(text: string): boolean {
@@ -37,7 +51,38 @@ export async function POST(req: NextRequest) {
   const { message } = await req.json().catch(() => ({}));
   if (!message?.trim()) return NextResponse.json({ error: "empty" }, { status: 400 });
 
-  if (isSilentDrop(message)) return NextResponse.json({ error: "failed" }, { status: 500 });
+  if (isSilentDrop(message)) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const cutoff = new Date(Date.now() - SILENT_DROP_WINDOW_MS).toISOString();
+    const { count } = await supabase
+      .from("access_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", session.device_uuid)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .eq("event_type", "comment_attempt" as any)
+      .gte("created_at", cutoff);
+    if ((count ?? 0) >= SILENT_DROP_LIMIT - 1) {
+      await supabase.from("breach_flags").insert({
+        device_uuid: session.device_uuid,
+        ip,
+        reason: "hotlink_attempt",
+        blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
+      return NextResponse.json(
+        { error: "blocked_peace", message: "You have tried to disturb this couple's peace by using unnecessary words so you are blocked for 60 min" },
+        { status: 429 }
+      );
+    }
+    await supabase.from("access_logs").insert({
+      device_uuid: session.device_uuid,
+      guest_id: session.guest_id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      event_type: "comment_attempt" as any,
+      event_data: null,
+      ip,
+    });
+    return NextResponse.json({ error: "failed" }, { status: 500 });
+  }
 
   if (/miz/i.test(message.trim().split(/\s+/)[0])) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -110,7 +155,38 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "edit_expired" }, { status: 403 });
   }
 
-  if (isSilentDrop(message)) return NextResponse.json({ error: "failed" }, { status: 500 });
+  if (isSilentDrop(message)) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const cutoff = new Date(Date.now() - SILENT_DROP_WINDOW_MS).toISOString();
+    const { count } = await supabase
+      .from("access_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", session.device_uuid)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .eq("event_type", "comment_attempt" as any)
+      .gte("created_at", cutoff);
+    if ((count ?? 0) >= SILENT_DROP_LIMIT - 1) {
+      await supabase.from("breach_flags").insert({
+        device_uuid: session.device_uuid,
+        ip,
+        reason: "hotlink_attempt",
+        blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
+      return NextResponse.json(
+        { error: "blocked_peace", message: "You have tried to disturb this couple's peace by using unnecessary words so you are blocked for 60 min" },
+        { status: 429 }
+      );
+    }
+    await supabase.from("access_logs").insert({
+      device_uuid: session.device_uuid,
+      guest_id: session.guest_id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      event_type: "comment_attempt" as any,
+      event_data: null,
+      ip,
+    });
+    return NextResponse.json({ error: "failed" }, { status: 500 });
+  }
 
   if (isBad(message)) {
     await supabase.from("flagged_comments").insert({
