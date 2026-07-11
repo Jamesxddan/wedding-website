@@ -3,10 +3,11 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { device_uuid, browser_signals_hash, page } = body as {
+  const { device_uuid, browser_signals_hash, page, user_agent } = body as {
     device_uuid?: string;
     browser_signals_hash?: string;
     page?: string;
+    user_agent?: string;
   };
 
   if (!device_uuid) return NextResponse.json({ status: "new" });
@@ -26,9 +27,11 @@ export async function POST(req: NextRequest) {
   }
 
   if (fp) {
+    const fpUpdate: Record<string, unknown> = { last_seen_at: new Date().toISOString() };
+    if (user_agent) fpUpdate.user_agent = user_agent;
     await supabase
       .from("device_fingerprints")
-      .update({ last_seen_at: new Date().toISOString() })
+      .update(fpUpdate)
       .eq("device_uuid", device_uuid);
 
     const guest = fp.guests as unknown as {

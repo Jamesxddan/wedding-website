@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/admin-auth";
+import { auditLog, AuditAction } from "@/lib/admin-audit";
 
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -21,5 +22,13 @@ export async function POST(req: NextRequest) {
     .from("settings")
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const actionMap: Record<string, AuditAction> = {
+    phase_override: "phase_override",
+    announcement: "announcement_set",
+    youtube_live_url: "youtube_url_set",
+    youtube_ceremony_url: "youtube_url_set",
+    youtube_reception_url: "youtube_url_set",
+  };
+  if (actionMap[key]) void auditLog(actionMap[key], { key, value });
   return NextResponse.json({ ok: true });
 }

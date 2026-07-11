@@ -19,7 +19,7 @@ export function useTrackPageVisit(strPageKey: string | null) {
         await fetch("/api/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ device_uuid, browser_signals_hash, page: strPageKey }),
+          body: JSON.stringify({ device_uuid, browser_signals_hash, page: strPageKey, user_agent: navigator.userAgent }),
         });
       } catch {
         // Silent catch for network issues or non-production environment

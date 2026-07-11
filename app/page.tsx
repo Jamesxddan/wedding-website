@@ -39,7 +39,7 @@ function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
       const res = await fetch("/api/relink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), city: city.trim(), device_uuid, browser_signals_hash }),
+        body: JSON.stringify({ name: name.trim(), city: city.trim(), device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
       });
       const data = await res.json();
       if (!res.ok) {

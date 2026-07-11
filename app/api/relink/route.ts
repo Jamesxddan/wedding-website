@@ -6,11 +6,12 @@ import { logEvent } from "@/lib/breach";
 // Does NOT create new guests — only matches name+city to an existing row.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, city, device_uuid, browser_signals_hash } = body as {
+  const { name, city, device_uuid, browser_signals_hash, user_agent } = body as {
     name?: string;
     city?: string;
     device_uuid?: string;
     browser_signals_hash?: string;
+    user_agent?: string;
   };
 
   if (!name || !city || !device_uuid) {
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
       guest_id: guest.id,
       device_uuid,
       browser_signals_hash: browser_signals_hash ?? "",
+      user_agent: user_agent ?? null,
     })
     .select("session_token")
     .single();

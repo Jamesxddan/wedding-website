@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isAdmin, isSuperAdmin } from "@/lib/admin-auth";
+import { auditLog } from "@/lib/admin-audit";
 
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -8,25 +9,31 @@ export async function GET() {
   const { data, error } = await supabase
     .from("guests")
     .select(`id, name, city, invitation_seen, is_owner, created_at, last_seen_at,
-      device_fingerprints ( id ),
+      device_fingerprints ( id, user_agent, last_seen_at ),
       gallery_events ( event_type )`)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json(
-    (data ?? []).map((g) => ({
-      id: g.id,
-      name: g.name,
-      city: g.city,
-      invitation_seen: g.invitation_seen,
-      is_owner: g.is_owner,
-      created_at: g.created_at,
-      last_seen_at: g.last_seen_at,
-      device_count: (g.device_fingerprints as { id: string }[] | null ?? []).length,
-      photo_downloads: (g.gallery_events as { event_type: string }[] | null ?? [])
-        .filter((e) => e.event_type === "photo_download").length,
-    }))
+    (data ?? []).map((g) => {
+      const fps = (g.device_fingerprints as { id: string; user_agent: string | null; last_seen_at: string | null }[] | null) ?? [];
+      // Pick the most recently seen device's user_agent
+      const latestFp = fps.sort((a, b) => (b.last_seen_at ?? "").localeCompare(a.last_seen_at ?? ""))[0];
+      return {
+        id: g.id,
+        name: g.name,
+        city: g.city,
+        invitation_seen: g.invitation_seen,
+        is_owner: g.is_owner,
+        created_at: g.created_at,
+        last_seen_at: g.last_seen_at,
+        device_count: fps.length,
+        last_device_ua: latestFp?.user_agent ?? null,
+        photo_downloads: (g.gallery_events as { event_type: string }[] | null ?? [])
+          .filter((e) => e.event_type === "photo_download").length,
+      };
+    })
   );
 }
 
@@ -38,8 +45,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
+  const { data: g } = await supabase.from("guests").select("name").eq("id", id).maybeSingle();
   const { error } = await supabase.from("guests").update({ is_owner }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  void auditLog("toggle_owner", { guest_id: id, name: g?.name, is_owner });
   return NextResponse.json({ ok: true });
 }
 
@@ -56,6 +65,7 @@ export async function DELETE(req: NextRequest) {
     await supabase.from("breach_flags").delete().neq("id", FAKE);
     await supabase.from("device_fingerprints").delete().neq("id", FAKE);
     await supabase.from("guests").delete().neq("id", FAKE);
+    void auditLog("factory_reset", { note: "All guest data wiped" });
     return NextResponse.json({ ok: true });
   }
 
@@ -66,6 +76,7 @@ export async function DELETE(req: NextRequest) {
       .delete()
       .neq("id", "00000000-0000-0000-0000-000000000000");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    void auditLog("reset_all_sessions");
     return NextResponse.json({ ok: true });
   }
 
@@ -89,7 +100,9 @@ export async function DELETE(req: NextRequest) {
   await supabase.from("access_logs").delete().eq("guest_id", id);
   await supabase.from("gallery_events").delete().eq("guest_id", id);
   await supabase.from("device_fingerprints").delete().eq("guest_id", id);
+  const { data: guestRow } = await supabase.from("guests").select("name, city").eq("id", id).maybeSingle();
   await supabase.from("guests").delete().eq("id", id);
+  void auditLog("delete_guest", { guest_id: id, name: guestRow?.name, city: guestRow?.city });
 
   return NextResponse.json({ ok: true });
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins";
+type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit";
 
 interface Guest {
   id: string;
@@ -15,6 +15,7 @@ interface Guest {
   last_seen_at: string;
   device_count: number;
   photo_downloads: number;
+  last_device_ua: string | null;
 }
 
 interface LogRow {
@@ -166,7 +167,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (t: Tab) => {
     if (t === "live" || t === "control") { await loadSettings(); return; }
-    if (t === "preview") return;
+    if (t === "preview" || t === "audit") return;
     if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
     try {
@@ -464,6 +465,18 @@ export default function AdminPage() {
     );
   }
 
+  function parseUA(ua: string | null): string {
+    if (!ua) return "—";
+    if (/iPhone/.test(ua)) { const m = ua.match(/iPhone OS ([\d_]+)/); return `iPhone · iOS ${m ? m[1].replace(/_/g, ".") : ""}`; }
+    if (/iPad/.test(ua)) return "iPad";
+    if (/Android/.test(ua)) { const m = ua.match(/Android ([\d.]+)/); return `Android ${m ? m[1] : ""}`; }
+    if (/Mac OS X/.test(ua) && !/Mobile/.test(ua)) { const m = ua.match(/Mac OS X ([\d_]+)/); return `macOS ${m ? m[1].replace(/_/g, ".") : ""}`; }
+    if (/Windows NT 10/.test(ua)) return "Windows 10/11";
+    if (/Windows/.test(ua)) return "Windows";
+    if (/Linux/.test(ua)) return "Linux";
+    return ua.slice(0, 30);
+  }
+
   const superTabs: { key: Tab; label: string }[] = [
     { key: "guests", label: "Guests" },
     { key: "logs", label: "Logs" },
@@ -472,6 +485,7 @@ export default function AdminPage() {
     { key: "control", label: "⚙️ Site Control" },
     { key: "preview", label: "👁 Preview" },
     { key: "admins", label: "🔑 Admins" },
+    { key: "audit", label: "📋 Audit Log" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -572,13 +586,14 @@ export default function AdminPage() {
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 640 }}>
               <thead>
-                <tr>{["Name", "City", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+                <tr>{["Name", "City", "Device", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {guests.map((g) => (
                   <tr key={g.id}>
                     <td style={td}>{g.name}</td>
                     <td style={td}>{g.city}</td>
+                    <td style={{ ...td, fontSize: 12, color: "#888" }}>{parseUA(g.last_device_ua)}</td>
                     <td style={td}>{g.device_count}</td>
                     <td style={td}>{new Date(g.created_at).toLocaleDateString()}</td>
                     <td style={td}>{new Date(g.last_seen_at).toLocaleDateString()}</td>
@@ -605,7 +620,7 @@ export default function AdminPage() {
                   </tr>
                 ))}
                 {guests.length === 0 && (
-                  <tr><td colSpan={isSuper ? 9 : 8} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No guests yet</td></tr>
+                  <tr><td colSpan={isSuper ? 10 : 9} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No guests yet</td></tr>
                 )}
               </tbody>
             </table>
@@ -979,6 +994,62 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── AUDIT LOG ── */}
+      {tab === "audit" && isSuper && <AuditTab />}
+    </div>
+  );
+}
+
+function AuditTab() {
+  const [rows, setRows] = useState<{ id: string; admin_email: string; action: string; details: Record<string, unknown> | null; created_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/audit")
+      .then((r) => r.json())
+      .then((d) => { setRows(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const th: React.CSSProperties = { textAlign: "left", padding: "10px 14px", fontSize: 12, color: "#888", fontWeight: 600, borderBottom: "1px solid #eee", background: "#faf9f7" };
+  const td: React.CSSProperties = { padding: "10px 14px", fontSize: 13, color: "#333", borderBottom: "1px solid #f0ede9", verticalAlign: "top" };
+
+  return (
+    <div style={{ maxWidth: 980 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 18, color: "#1a1a1a" }}>Admin Audit Log</h2>
+        <span style={{ fontSize: 12, color: "#aaa" }}>Read-only · Cannot be deleted</span>
+      </div>
+      {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
+      <div style={{ overflowX: "auto", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 600 }}>
+          <thead>
+            <tr>
+              {["When", "Admin", "Action", "Details"].map((h) => <th key={h} style={th}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td style={{ ...td, color: "#aaa", whiteSpace: "nowrap" }}>{new Date(r.created_at).toLocaleString()}</td>
+                <td style={td}>{r.admin_email}</td>
+                <td style={td}>
+                  <span style={{ padding: "2px 8px", borderRadius: 10, background: "#f0e8f0", color: "#8B4A6B", fontWeight: 600, fontSize: 12 }}>
+                    {r.action}
+                  </span>
+                </td>
+                <td style={{ ...td, color: "#777", fontSize: 12, fontFamily: "monospace" }}>
+                  {r.details ? JSON.stringify(r.details) : "—"}
+                </td>
+              </tr>
+            ))}
+            {!loading && rows.length === 0 && (
+              <tr><td colSpan={4} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No audit entries yet</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

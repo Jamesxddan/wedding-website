@@ -79,6 +79,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
           mobile: mobile.trim() ? mobile.trim() : undefined,
           device_uuid,
           browser_signals_hash,
+          user_agent: navigator.userAgent,
         }),
       });
 

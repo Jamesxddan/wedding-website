@@ -3,13 +3,14 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, city, email, mobile, device_uuid, browser_signals_hash } = body as {
+  const { name, city, email, mobile, device_uuid, browser_signals_hash, user_agent } = body as {
     name?: string;
     city?: string;
     email?: string;
     mobile?: string;
     device_uuid?: string;
     browser_signals_hash?: string;
+    user_agent?: string;
   };
 
   if (!name || !city || !device_uuid) {
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
       guest_id: guestId,
       device_uuid,
       browser_signals_hash: browser_signals_hash ?? "",
+      user_agent: user_agent ?? null,
     })
     .select("session_token")
     .single();

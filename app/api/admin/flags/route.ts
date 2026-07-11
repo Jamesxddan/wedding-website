@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/admin-auth";
+import { auditLog } from "@/lib/admin-audit";
 
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -21,7 +22,9 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json().catch(() => ({}));
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
+  const { data: flag } = await supabase.from("breach_flags").select("device_uuid, reason").eq("id", id).maybeSingle();
   const { error } = await supabase.from("breach_flags").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  void auditLog("unblock_flag", { flag_id: id, device_uuid: flag?.device_uuid, reason: flag?.reason });
   return NextResponse.json({ ok: true });
 }

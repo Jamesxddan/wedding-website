@@ -85,7 +85,7 @@ async function _runSessionCheck(
     const res = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device_uuid, browser_signals_hash }),
+      body: JSON.stringify({ device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
     });
 
     if (!res.ok) return;
@@ -105,7 +105,7 @@ async function _runSessionCheck(
         const regRes = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: existingName, city: existingCity, device_uuid, browser_signals_hash }),
+          body: JSON.stringify({ name: existingName, city: existingCity, device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
         });
         if (regRes.ok) {
           const regData = (await regRes.json()) as { session_token?: string };
