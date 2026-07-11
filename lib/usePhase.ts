@@ -42,10 +42,10 @@ export function usePhase(): PhaseState {
       isLoading: false,
     }));
 
-    // Fire session check once per mount: no guest yet, or guest exists but
-    // missing a session_token (e.g. registered before Supabase was live)
-    const hasToken = !!localStorage.getItem("session_token");
-    if (!sessionChecked.current && (!name || !hasToken)) {
+    // Fire session check once per mount to validate the session_token is still
+    // live in the DB. If the admin reset sessions, the fingerprint is gone and
+    // the check auto-re-registers the guest using stored name/city.
+    if (!sessionChecked.current) {
       sessionChecked.current = true;
       _runSessionCheck(setState);
     }
