@@ -65,6 +65,30 @@ function youtubeEmbedUrl(raw: string): string | null {
   } catch { return null; }
 }
 
+function TestAlertButton() {
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  async function send() {
+    setStatus("sending");
+    const res = await fetch("/api/admin/test-alert", { method: "POST" });
+    setStatus(res.ok ? "sent" : "error");
+    setTimeout(() => setStatus("idle"), 4000);
+  }
+  return (
+    <button
+      onClick={send}
+      disabled={status === "sending"}
+      style={{
+        padding: "9px 20px", borderRadius: 8, border: "none", cursor: "pointer",
+        fontSize: 13, fontWeight: 600,
+        background: status === "sent" ? "#2ecc71" : status === "error" ? "#e74c3c" : "#8B4A6B",
+        color: "#fff", opacity: status === "sending" ? 0.6 : 1, transition: "background 0.2s",
+      }}
+    >
+      {status === "sending" ? "Sending…" : status === "sent" ? "Sent ✓ — check your inbox" : status === "error" ? "Failed — check RESEND_API_KEY" : "Send test alert"}
+    </button>
+  );
+}
+
 export default function AdminPage() {
   useTrackPageVisit("admin");
   const [authed, setAuthed] = useState(false);
@@ -767,6 +791,16 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Test Email Alert</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Sends a dummy breach alert to your inbox to verify Resend is configured correctly.
+              </p>
+              <TestAlertButton />
+            </div>
+          )}
         </div>
       )}
 
