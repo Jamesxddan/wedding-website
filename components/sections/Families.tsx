@@ -16,15 +16,17 @@ const FAMILIES: FamilySide[] = [
   {
     side: "James's Family",
     members: [
-      { name: "Mr. Daniel", role: "Father of the Groom" },
-      { name: "Mrs. Daniel", role: "Mother of the Groom" },
+      { name: "Mr. Joseph Rubin Washington", role: "Father of the Groom" },
+      { name: "Mrs. Sophia Joseph", role: "Mother of the Groom" },
+      { name: "John Jebasingh", role: "Brother of the Groom" },
     ],
   },
   {
     side: "Sharon's Family",
     members: [
-      { name: "Mr. Sharon's Father", role: "Father of the Bride" },
-      { name: "Mrs. Sharon's Mother", role: "Mother of the Bride" },
+      { name: "Mr. Yesurathinam", role: "Father of the Bride" },
+      { name: "Mrs. Singapogu Rizma", role: "Mother of the Bride" },
+      { name: "Shiny Singapogu", role: "Sister of the Bride" },
     ],
   },
 ];
@@ -65,9 +67,6 @@ export default function Families() {
           ))}
         </div>
 
-        <p className="font-body text-center text-deep-rose/50 text-xs mt-12 max-w-md mx-auto">
-          Family details will be updated closer to the wedding. Check back soon!
-        </p>
       </div>
     </section>
   );
