@@ -15,7 +15,7 @@ export async function checkAndBlock(
   ip: string | null,
   guest_id: string | null
 ): Promise<BreachBlock | null> {
-  if (process.env.VERCEL_ENV !== "production") return null;
+  if (!process.env.VERCEL_ENV) return null;
 
   // Owners are exempt — only check when guest_id is known
   if (guest_id) {

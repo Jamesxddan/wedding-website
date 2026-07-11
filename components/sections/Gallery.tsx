@@ -269,16 +269,20 @@ function BookPage({
   isLeft,
   pageNum,
   guestName,
+  fullWidth,
+  noSpineShadow,
 }: {
   photo: DrivePhoto | null;
   isLeft: boolean;
   pageNum?: number;
   guestName?: string;
+  fullWidth?: boolean;
+  noSpineShadow?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const watermarkText = guestName ? `James & Sharon  ·  ${guestName}` : null;
   return (
-    <div className="relative h-full flex-shrink-0" style={{ width: "50%", background: PAGE_BG }}>
+    <div className="relative h-full flex-shrink-0" style={{ width: fullWidth ? "100%" : "50%", background: PAGE_BG }}>
       {photo && (
         <>
           {!loaded && (
@@ -310,14 +314,14 @@ function BookPage({
               className="absolute pointer-events-none select-none"
               style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
             >
-              {[0, 1, 2, 3, 4].map((i) => (
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div
                   key={i}
                   style={{
                     position: "absolute",
-                    left: "-25%",
-                    right: "-25%",
-                    top: `${8 + i * 21}%`,
+                    left: "-35%",
+                    right: "-35%",
+                    top: `${3 + i * 11}%`,
                     transform: "rotate(-28deg)",
                     textAlign: "center",
                     pointerEvents: "none",
@@ -326,10 +330,12 @@ function BookPage({
                 >
                   <span style={{
                     fontFamily: "Georgia, serif",
-                    fontSize: "clamp(0.55rem, 1.4vw, 0.85rem)",
-                    color: "rgba(44,24,16,0.19)",
-                    letterSpacing: "0.3em",
+                    fontSize: "clamp(0.7rem, 1.8vw, 1.05rem)",
+                    fontWeight: "700",
+                    color: "rgba(44,24,16,0.22)",
+                    letterSpacing: "0.28em",
                     whiteSpace: "nowrap",
+                    textShadow: "0 0 1px rgba(44,24,16,0.10)",
                   }}>
                     {watermarkText}
                   </span>
@@ -347,17 +353,18 @@ function BookPage({
           {pageNum}
         </p>
       )}
-      {/* Inner shadow toward spine */}
-      <div
-        className="absolute inset-y-0 pointer-events-none"
-        style={{
-          [isLeft ? "right" : "left"]: 0,
-          width: 28,
-          background: isLeft
-            ? "linear-gradient(to left, rgba(0,0,0,0.07), transparent)"
-            : "linear-gradient(to right, rgba(0,0,0,0.07), transparent)",
-        }}
-      />
+      {!noSpineShadow && (
+        <div
+          className="absolute inset-y-0 pointer-events-none"
+          style={{
+            [isLeft ? "right" : "left"]: 0,
+            width: 28,
+            background: isLeft
+              ? "linear-gradient(to left, rgba(0,0,0,0.07), transparent)"
+              : "linear-gradient(to right, rgba(0,0,0,0.07), transparent)",
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -388,39 +395,49 @@ function BookSpread({
   );
 }
 
+function BookCoverLeft() {
+  return (
+    <div className="relative h-full w-full" style={{ background: "#f2ece0" }}>
+      <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
+        <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
+          "God&apos;s will was on<br/>our marriage"
+        </p>
+      </div>
+      <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />
+    </div>
+  );
+}
+
+function BookCoverRight() {
+  return (
+    <div className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden" style={{ background: "linear-gradient(160deg, #2c1810 0%, #4a2c15 40%, #3d2310 70%, #1e1008 100%)" }}>
+      <div className="absolute pointer-events-none" style={{ inset: "5%", border: "1.5px solid rgba(201,168,76,0.45)" }} />
+      <div className="absolute pointer-events-none" style={{ inset: "7.5%", border: "0.5px solid rgba(201,168,76,0.2)" }} />
+      <div className="relative z-10 text-center px-[12%]">
+        <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
+          AN ENGAGEMENT ALBUM
+        </p>
+        <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
+        <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
+        <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
+        <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
+        <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
+          OCTOBER 8, 2026 · CHENNAI
+        </p>
+      </div>
+      <div className="absolute left-0 inset-y-0 pointer-events-none" style={{ width: 20, background: "linear-gradient(to right, rgba(0,0,0,0.45), transparent)" }} />
+    </div>
+  );
+}
+
 function BookCover() {
   return (
     <div className="absolute inset-0 flex">
-      {/* Left: inside front cover */}
-      <div className="relative h-full" style={{ width: "50%", background: "#f2ece0" }}>
-        <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
-          <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
-            "God&apos;s will was on<br/>our marriage"
-          </p>
-        </div>
-        <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />
-      </div>
+      <div className="relative h-full" style={{ width: "50%" }}><BookCoverLeft /></div>
       {/* Spine */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 5, background: "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 6, background: "linear-gradient(to bottom, #c9a84c80, #8b691480, #c9a84c80)" }} />
-      {/* Right: cover face */}
-      <div className="relative h-full flex flex-col items-center justify-center overflow-hidden" style={{ width: "50%", background: "linear-gradient(160deg, #2c1810 0%, #4a2c15 40%, #3d2310 70%, #1e1008 100%)" }}>
-        <div className="absolute pointer-events-none" style={{ inset: "5%", border: "1.5px solid rgba(201,168,76,0.45)" }} />
-        <div className="absolute pointer-events-none" style={{ inset: "7.5%", border: "0.5px solid rgba(201,168,76,0.2)" }} />
-        <div className="relative z-10 text-center px-[12%]">
-          <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
-            AN ENGAGEMENT ALBUM
-          </p>
-          <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
-          <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
-          <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
-          <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
-          <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
-            OCTOBER 8, 2026 · CHENNAI
-          </p>
-        </div>
-        <div className="absolute left-0 inset-y-0 pointer-events-none" style={{ width: 20, background: "linear-gradient(to right, rgba(0,0,0,0.45), transparent)" }} />
-      </div>
+      <div className="relative h-full" style={{ width: "50%" }}><BookCoverRight /></div>
     </div>
   );
 }
@@ -507,21 +524,33 @@ function AlbumBook({
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3","4","5","s"].includes(e.key)) log("screenshot_macos");
       if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); log("print_attempt"); }
     };
+    const blur = () => {
+      if (sceneRef.current) sceneRef.current.style.filter = "blur(24px)";
+    };
+    const unblur = () => {
+      if (sceneRef.current) sceneRef.current.style.filter = "";
+    };
     const onVis = () => {
       if (document.hidden) {
         log("screenshot_attempt");
-        // Blur the book instantly — on many mobile browsers the page briefly hides
-        // during a screenshot capture; this makes the captured frame blurred.
-        if (sceneRef.current) sceneRef.current.style.filter = "blur(24px)";
+        blur();
       } else {
-        if (sceneRef.current) sceneRef.current.style.filter = "";
+        unblur();
       }
     };
+    // window blur fires on iOS when the screenshot UI appears (swipe gesture)
+    // and on Android when the app switcher opens during screenshot
+    const onBlur = () => { log("screenshot_attempt"); blur(); };
+    const onFocus = () => { unblur(); };
     document.addEventListener("keydown", onKey);
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -544,6 +573,24 @@ function AlbumBook({
         leftPageNum={ln <= photos.length ? ln : undefined}
         rightPageNum={rn <= photos.length ? rn : undefined}
         guestName={guestName || undefined}
+      />
+    );
+  };
+
+  const renderHalfPage = (si: number, side: "left" | "right") => {
+    const isLeft = side === "left";
+    if (si <= 0) return isLeft ? <BookCoverLeft /> : <BookCoverRight />;
+    const [l, r] = getSpreadPhotos(si);
+    const photo = isLeft ? l : r;
+    const pn = isLeft ? (si - 1) * 2 + 1 : (si - 1) * 2 + 2;
+    return (
+      <BookPage
+        photo={photo}
+        isLeft={isLeft}
+        pageNum={photo && pn <= photos.length ? pn : undefined}
+        guestName={guestName || undefined}
+        fullWidth
+        noSpineShadow
       />
     );
   };
@@ -707,16 +754,13 @@ function AlbumBook({
     if (timerRef.current !== null) clearTimeout(timerRef.current);
   }, []);
 
-  // Fold geometry: horizontal wipe with shadow crease.
-  // currentClip is always defined so CSS transition can interpolate between states.
-  const p = progress;
-  const showFold = p > 0.003 || isAnimating;
-  const foldX = dir === "next" ? (1 - p) * 100 : p * 100;
-  const currentClip = dir === "next"
-    ? `polygon(0% 0%, ${foldX}% 0%, ${foldX}% 100%, 0% 100%)`
-    : `polygon(${foldX}% 0%, 100% 0%, 100% 100%, ${foldX}% 100%)`;
-
-  const adjacentSpreadIndex = dir === "next" ? spreadIndex + 1 : spreadIndex - 1;
+  // 3D leaf-turn geometry
+  const showLeaf = progress > 0.003 || isAnimating;
+  const turningIsRight = dir === "next"; // right half turns left for "next", left half turns right for "prev"
+  const adjacentSpreadIndex = turningIsRight ? spreadIndex + 1 : spreadIndex - 1;
+  const leafRotateY = turningIsRight ? -progress * 180 : progress * 180;
+  // fold shadow peaks at 90° (progress=0.5) — drives cast shadow + fold crease darkness
+  const foldShadow = Math.sin(progress * Math.PI);
 
   const leftNum  = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 1;
   const rightNum = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 2;
@@ -747,10 +791,10 @@ function AlbumBook({
           className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors z-20"
         >×</button>
 
-        {/* Book spread */}
+        {/* Book spread — no overflow:hidden so CSS preserve-3d works on the turning leaf */}
         <div
           ref={sceneRef}
-          className="relative select-none overflow-hidden"
+          className="relative select-none"
           style={{
             width: "min(94vw, calc(88vh * 1.5))",
             aspectRatio: "3/2",
@@ -758,39 +802,88 @@ function AlbumBook({
             boxShadow: "0 30px 90px rgba(0,0,0,0.75), 0 8px 30px rgba(0,0,0,0.5)",
             cursor: busy ? "grabbing" : "grab",
             touchAction: "none",
+            perspective: "700px",
           }}
           onContextMenu={e => e.preventDefault()}
         >
-          {/* Layer 1: adjacent spread (bottom, fully visible during animation) */}
-          {showFold && (
-            <div className="absolute inset-0">{renderSpread(adjacentSpreadIndex)}</div>
-          )}
+          {!showLeaf ? (
+            // Static state: full spread
+            <div className="absolute inset-0">{renderSpread(spreadIndex)}</div>
+          ) : (
+            <>
+              {/* Layer 1: target spread (full, underneath) */}
+              <div className="absolute inset-0" style={{ zIndex: 0 }}>
+                {renderSpread(adjacentSpreadIndex)}
+              </div>
 
-          {/* Layer 2: current spread, clipped during fold */}
-          <div
-            className="absolute inset-0"
-            style={{
-              clipPath: currentClip,
-              transition: isAnimating ? "clip-path 0.65s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
-            }}
-          >
-            {renderSpread(spreadIndex)}
-          </div>
+              {/* Cast shadow from turning page onto target spread — peaks at 90° */}
+              <div className="absolute inset-0 pointer-events-none" style={{
+                zIndex: 1,
+                background: `rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)})`,
+              }} />
 
-          {/* Layer 3: crease shadow at fold line */}
-          {showFold && (
-            <div
-              className="absolute inset-y-0 pointer-events-none"
-              style={{
-                left: `calc(${foldX}% - 24px)`,
-                width: 48,
-                zIndex: 20,
-                transition: isAnimating ? "left 0.65s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
-                background: dir === "next"
-                  ? "linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 40%, rgba(255,255,255,0.04) 70%, transparent 100%)"
-                  : "linear-gradient(to left, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 40%, rgba(255,255,255,0.04) 70%, transparent 100%)",
-              }}
-            />
+              {/* Layer 2: anchor — stationary half, with retreating edge shadow */}
+              <div
+                className="absolute inset-y-0"
+                style={{
+                  [turningIsRight ? "left" : "right"]: 0,
+                  width: "50%",
+                  zIndex: 2,
+                }}
+              >
+                {renderHalfPage(spreadIndex, turningIsRight ? "left" : "right")}
+                {/* Shadow near spine edge — fades as page turns away */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: turningIsRight
+                    ? `linear-gradient(to left, rgba(0,0,0,${((1 - progress) * 0.14).toFixed(3)}) 0%, transparent 50%)`
+                    : `linear-gradient(to right, rgba(0,0,0,${((1 - progress) * 0.14).toFixed(3)}) 0%, transparent 50%)`,
+                }} />
+              </div>
+
+              {/* Layer 3: spine (always at centre, on top) */}
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 10, background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 11, background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)" }} />
+
+              {/* Layer 4: turning leaf — 3D flip pivoting from spine at lower-corner origin */}
+              <div
+                style={{
+                  position: "absolute",
+                  [turningIsRight ? "right" : "left"]: 0,
+                  width: "50%",
+                  height: "100%",
+                  zIndex: 4,
+                  transformStyle: "preserve-3d",
+                  // Pivot near bottom of spine — gives the "lift from bottom corner" feel
+                  transformOrigin: turningIsRight ? "left 78%" : "right 78%",
+                  transform: `rotateY(${leafRotateY}deg)`,
+                  transition: isAnimating ? "transform 0.72s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+                }}
+              >
+                {/* Front face */}
+                <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden" }}>
+                  {renderHalfPage(spreadIndex, turningIsRight ? "right" : "left")}
+                  {/* Dynamic fold crease shadow — darkens as page lifts off */}
+                  <div style={{
+                    position: "absolute", inset: 0, pointerEvents: "none",
+                    background: turningIsRight
+                      ? `linear-gradient(to right, rgba(0,0,0,${(foldShadow * 0.6).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.18).toFixed(3)}) 22%, transparent 60%)`
+                      : `linear-gradient(to left,  rgba(0,0,0,${(foldShadow * 0.6).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.18).toFixed(3)}) 22%, transparent 60%)`,
+                  }} />
+                </div>
+
+                {/* Back face — brief paper-back flash then reveals next photo */}
+                <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: PAGE_BG }}>
+                  {renderHalfPage(adjacentSpreadIndex, turningIsRight ? "left" : "right")}
+                  {/* Dynamic back-face shadow — mirrors front, brightens as page settles */}
+                  <div style={{
+                    position: "absolute", inset: 0, pointerEvents: "none",
+                    background: turningIsRight
+                      ? `linear-gradient(to left,  rgba(0,0,0,${(foldShadow * 0.45).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 25%, transparent 65%)`
+                      : `linear-gradient(to right, rgba(0,0,0,${(foldShadow * 0.45).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 25%, transparent 65%)`,
+                  }} />
+                </div>
+              </div>
+            </>
           )}
         </div>
 

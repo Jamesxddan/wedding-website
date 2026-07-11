@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(body, {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "private, max-age=86400",
+        "Cache-Control": "no-store",
       },
     });
   } catch {
