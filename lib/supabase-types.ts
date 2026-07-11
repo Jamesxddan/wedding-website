@@ -32,7 +32,7 @@ export interface BreachFlag {
   id: string;
   device_uuid: string;
   ip: string | null;
-  reason: "api_rate_limit" | "repeated_form_submit";
+  reason: "api_rate_limit" | "repeated_form_submit" | "hotlink_attempt";
   blocked_until: string;
   created_at: string;
 }

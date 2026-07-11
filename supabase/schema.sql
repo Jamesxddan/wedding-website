@@ -49,7 +49,7 @@ create table if not exists breach_flags (
   id            uuid primary key default gen_random_uuid(),
   device_uuid   text not null,
   ip            text,
-  reason        text not null check (reason in ('api_rate_limit','repeated_form_submit')),
+  reason        text not null check (reason in ('api_rate_limit','repeated_form_submit','hotlink_attempt')),
   blocked_until timestamptz not null,
   created_at    timestamptz not null default now()
 );

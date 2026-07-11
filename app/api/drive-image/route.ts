@@ -56,16 +56,14 @@ export async function GET(req: NextRequest) {
   }
 
   // On Vercel, enforce two checks:
-  // 1. The request must originate from our own site (Referer contains our hostname).
-  //    This blocks direct tab access and hotlinking — browsers only send Referer
-  //    when the image is loaded by a page on the same origin.
+  // 1. Referer must be from our own hostname — blocks direct tab access / hotlinking.
   // 2. A valid gallery_token session cookie must be present.
+  // If someone has a valid cookie but bad Referer (direct URL access while logged in),
+  // immediately kill their session and ban them for 1 hour.
   if (process.env.VERCEL_ENV) {
     const referer = req.headers.get("referer") ?? "";
     const ownHost = req.nextUrl.hostname;
-    if (!referer || !referer.includes(ownHost)) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
     const cookieHeader = req.headers.get("cookie") ?? "";
     const galleryToken = cookieHeader
@@ -73,6 +71,30 @@ export async function GET(req: NextRequest) {
       .map(c => c.trim())
       .find(c => c.startsWith("gallery_token="))
       ?.slice("gallery_token=".length);
+
+    if (!referer || !referer.includes(ownHost)) {
+      // If they have a valid session token, identify and punish them.
+      if (galleryToken) {
+        const { data: fp } = await supabase
+          .from("device_fingerprints")
+          .select("device_uuid")
+          .eq("session_token", galleryToken)
+          .maybeSingle();
+        if (fp) {
+          // Kill their session so they must re-register.
+          await supabase.from("device_fingerprints").delete().eq("session_token", galleryToken);
+          // Block re-registration for 1 hour.
+          await supabase.from("breach_flags").insert({
+            device_uuid: fp.device_uuid,
+            ip,
+            reason: "hotlink_attempt",
+            blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          });
+        }
+      }
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
     if (!galleryToken || !(await isValidSession(galleryToken))) {
       return new NextResponse("Forbidden", { status: 403 });
     }
