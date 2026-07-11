@@ -273,6 +273,7 @@ function BookPage({
   wmTime,
   fullWidth,
   noSpineShadow,
+  isMobile,
 }: {
   photo: DrivePhoto | null;
   isLeft: boolean;
@@ -282,6 +283,7 @@ function BookPage({
   wmTime?: string;    // IST open-time (rendered on its own line)
   fullWidth?: boolean;
   noSpineShadow?: boolean;
+  isMobile?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const lineParts = ["James & Sharon", guestName, wmExtra].filter(Boolean);
@@ -320,14 +322,14 @@ function BookPage({
               className="absolute pointer-events-none select-none"
               style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
             >
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              {(isMobile ? [0, 1, 2, 3] : [0, 1, 2, 3, 4, 5, 6, 7, 8]).map((i) => (
                 <div
                   key={i}
                   style={{
                     position: "absolute",
                     left: "-35%",
                     right: "-35%",
-                    top: `${3 + i * 11}%`,
+                    top: isMobile ? `${8 + i * 24}%` : `${3 + i * 11}%`,
                     transform: "rotate(-28deg)",
                     textAlign: "center",
                     pointerEvents: "none",
@@ -340,10 +342,10 @@ function BookPage({
                       fontFamily: "Georgia, serif",
                       fontSize: "clamp(0.7rem, 1.8vw, 1.05rem)",
                       fontWeight: "700",
-                      color: "rgba(44,24,16,0.22)",
+                      color: isMobile ? "rgba(44,24,16,0.11)" : "rgba(44,24,16,0.22)",
                       letterSpacing: "0.28em",
                       whiteSpace: "nowrap",
-                      textShadow: "0 0 1px rgba(44,24,16,0.10)",
+                      textShadow: "0 0 1px rgba(44,24,16,0.05)",
                     }}>
                       {watermarkLine1}
                     </span>
@@ -354,7 +356,7 @@ function BookPage({
                       fontFamily: "Georgia, serif",
                       fontSize: "clamp(0.55rem, 1.3vw, 0.82rem)",
                       fontWeight: "400",
-                      color: "rgba(44,24,16,0.18)",
+                      color: isMobile ? "rgba(44,24,16,0.08)" : "rgba(44,24,16,0.18)",
                       letterSpacing: "0.20em",
                       whiteSpace: "nowrap",
                     }}>
@@ -392,7 +394,7 @@ function BookPage({
 }
 
 function BookSpread({
-  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra, wmTime,
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra, wmTime, isMobile,
 }: {
   leftPhoto: DrivePhoto | null;
   rightPhoto: DrivePhoto | null;
@@ -401,10 +403,11 @@ function BookSpread({
   guestName?: string;
   wmExtra?: string;
   wmTime?: string;
+  isMobile?: boolean;
 }) {
   return (
     <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
-      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} isMobile={isMobile} />
       {/* Spine shadow */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
         width: 32, zIndex: 5,
@@ -414,7 +417,7 @@ function BookSpread({
         width: 2, zIndex: 6,
         background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
       }} />
-      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} isMobile={isMobile} />
     </div>
   );
 }
@@ -479,6 +482,7 @@ function ctxDrawHalfPage(
   pageNum: number | undefined,
   wmLine1: string | null,
   wmLine2: string | null,
+  isMobile: boolean,
 ) {
   ctx.fillStyle = PAGE_BG;
   ctx.fillRect(0, 0, W, H);
@@ -507,15 +511,17 @@ function ctxDrawHalfPage(
     const diag = Math.sqrt(W * W + H * H);
     ctx.translate(W / 2, H / 2);
     ctx.rotate(-Math.PI / 4);
-    const rowSpacing = Math.min(H * 0.14, 52);
+    const rowSpacing = isMobile ? Math.min(H * 0.24, 88) : Math.min(H * 0.14, 52);
     const numRows = Math.ceil(diag / rowSpacing) + 1;
     const fs1 = Math.min(W * 0.020, 10.5);
     const fs2 = Math.min(W * 0.015, 8.2);
+    const alpha1 = isMobile ? 0.11 : 0.22;
+    const alpha2 = isMobile ? 0.08 : 0.18;
     for (let r = -numRows; r <= numRows; r++) {
       const ry = r * rowSpacing;
       if (wmLine1) {
         ctx.font = `bold ${fs1}px Georgia, serif`;
-        ctx.fillStyle = "rgba(44,24,16,0.22)";
+        ctx.fillStyle = `rgba(44,24,16,${alpha1})`;
         ctx.textAlign = "center";
         for (let xi = -2; xi <= 2; xi++) {
           ctx.fillText(wmLine1, xi * (diag / 2.5), ry);
@@ -523,7 +529,7 @@ function ctxDrawHalfPage(
       }
       if (wmLine2) {
         ctx.font = `${fs2}px Georgia, serif`;
-        ctx.fillStyle = "rgba(44,24,16,0.18)";
+        ctx.fillStyle = `rgba(44,24,16,${alpha2})`;
         ctx.textAlign = "center";
         for (let xi = -2; xi <= 2; xi++) {
           ctx.fillText(wmLine2, xi * (diag / 2.5), ry + (wmLine1 ? fs1 + 2 : 0));
@@ -568,6 +574,7 @@ function ctxDrawCurl(
   progress: number,
   foldShadow: number,
   mirrorX: boolean,   // true for prev direction (left page curls right)
+  isMobile: boolean,
 ) {
   const R = W / Math.PI;
   const foldX = W * (1 - progress);
@@ -577,7 +584,7 @@ function ctxDrawCurl(
   const frontOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
   ctxDrawHalfPage(
     frontOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
-    W, H, frontImg, frontIsLeft, frontPageNum, wm1, wm2,
+    W, H, frontImg, frontIsLeft, frontPageNum, wm1, wm2, isMobile,
   );
   // When mirrorX is active the canvas has scale(-1,1), so pre-flip the OC
   // content so the double-flip restores the correct orientation.
@@ -586,7 +593,7 @@ function ctxDrawCurl(
   const backOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
   ctxDrawHalfPage(
     backOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
-    W, H, backImg, backIsLeft, backPageNum, wm1, wm2,
+    W, H, backImg, backIsLeft, backPageNum, wm1, wm2, isMobile,
   );
   const backOC = mirrorX ? hFlipCanvas(backOCBase, W, H) : backOCBase;
 
@@ -788,6 +795,7 @@ function AlbumBook({
         guestName={guestName || undefined}
         wmExtra={wmExtra}
         wmTime={wmTime}
+        isMobile={isMobile}
       />
     );
   };
@@ -808,6 +816,7 @@ function AlbumBook({
         wmTime={wmTime}
         fullWidth
         noSpineShadow
+        isMobile={isMobile}
       />
     );
   };
@@ -1062,6 +1071,7 @@ function AlbumBook({
         wm1, wm2,
         p1, Math.sin(p1 * Math.PI),
         !turningIsRight,
+        isMobile,
       );
       ctx.restore();
     }
@@ -1081,6 +1091,7 @@ function AlbumBook({
           wm1, wm2,
           uncurlP, Math.sin(uncurlP * Math.PI),
           true,
+          isMobile,
         );
       } else {
         // Prev right page unfurls in right half (no mirror)
@@ -1092,6 +1103,7 @@ function AlbumBook({
           wm1, wm2,
           uncurlP, Math.sin(uncurlP * Math.PI),
           false,
+          isMobile,
         );
       }
       ctx.restore();

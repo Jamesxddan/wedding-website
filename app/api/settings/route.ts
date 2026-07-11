@@ -6,7 +6,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("settings")
     .select("key, value")
-    .in("key", ["phase_override", "youtube_live_url", "announcement"]);
+    .in("key", ["phase_override", "youtube_live_url", "youtube_ceremony_url", "youtube_reception_url", "announcement"]);
 
   if (error) return NextResponse.json({}, { status: 500 });
 

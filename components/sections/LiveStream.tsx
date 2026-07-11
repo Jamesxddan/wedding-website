@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 interface Props {
   url: string;
   label: string;
   channel: string;
+  delaySeconds?: number;
 }
 
 function extractYoutubeId(url: string): string | null {
@@ -21,7 +24,15 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-export default function LiveStream({ url, label, channel }: Props) {
+export default function LiveStream({ url, label, channel, delaySeconds = 0 }: Props) {
+  const [ready, setReady] = useState(delaySeconds <= 0);
+
+  useEffect(() => {
+    if (delaySeconds <= 0) { setReady(true); return; }
+    const t = setTimeout(() => setReady(true), delaySeconds * 1000);
+    return () => clearTimeout(t);
+  }, [delaySeconds]);
+
   if (!url) return null;
 
   const youtubeId = extractYoutubeId(url);
@@ -36,13 +47,24 @@ export default function LiveStream({ url, label, channel }: Props) {
 
       {youtubeId ? (
         <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ paddingBottom: "56.25%" }}>
-          <iframe
-            className="absolute inset-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
-            title={channel}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          {ready ? (
+            <iframe
+              className="absolute inset-0 w-full h-full"
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+              title={channel}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: "#0a0a0a" }}
+            >
+              <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, letterSpacing: 2 }}>
+                Stream loading…
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         /* Non-YouTube URL — show Watch Live button */

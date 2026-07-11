@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import LiveStream from "@/components/sections/LiveStream";
@@ -14,12 +14,26 @@ interface Props {
   guestName: string;
 }
 
-const hasKirk = !!KIRK_STREAM_URL;
-const hasBKN = !!BKN_STREAM_URL;
-const hasAnyStream = hasKirk || hasBKN;
+const STREAM_DELAY = 4;
 
 export default function WeddingDayBanner({ guestName }: Props) {
   const [cabMode, setCabMode] = useState<CabMode>(null);
+  const [kirkUrl, setKirkUrl] = useState(KIRK_STREAM_URL);
+  const [bknUrl, setBknUrl] = useState(BKN_STREAM_URL);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.youtube_ceremony_url) setKirkUrl(data.youtube_ceremony_url);
+        if (data.youtube_reception_url) setBknUrl(data.youtube_reception_url);
+      })
+      .catch(() => {});
+  }, []);
+
+  const hasKirk = !!kirkUrl;
+  const hasBKN = !!bknUrl;
+  const hasAnyStream = hasKirk || hasBKN;
 
   return (
     <>
@@ -83,14 +97,16 @@ export default function WeddingDayBanner({ guestName }: Props) {
             </div>
 
             <LiveStream
-              url={KIRK_STREAM_URL}
+              url={kirkUrl}
               channel="St Andrews Kirk"
               label="Watch the ceremony live from St Andrews Kirk"
+              delaySeconds={STREAM_DELAY}
             />
             <LiveStream
-              url={BKN_STREAM_URL}
+              url={bknUrl}
               channel="BKN Auditorium"
               label="Watch the reception live from BKN Auditorium"
+              delaySeconds={STREAM_DELAY}
             />
           </div>
         </section>
