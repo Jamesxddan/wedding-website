@@ -22,7 +22,7 @@ export interface AccessLog {
   id: string;
   guest_id: string | null;
   device_uuid: string;
-  event_type: "phase_view" | "photo_api" | "form_submit" | "session_restore" | "breach_flag";
+  event_type: "phase_view" | "photo_api" | "form_submit" | "session_restore" | "breach_flag" | "relink_failed";
   event_data: Record<string, unknown> | null;
   ip: string | null;
   created_at: string;

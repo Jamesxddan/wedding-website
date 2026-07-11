@@ -597,11 +597,23 @@ export default function AdminPage() {
                 {logs.map((l) => {
                   const guestName = ((l.guests as unknown) as { name: string } | null)?.name ?? "—";
                   const guestId = l.guest_id;
+                  const isRelinkFail = l.event_type === "relink_failed";
                   return (
-                  <tr key={l.id}>
+                  <tr key={l.id} style={isRelinkFail ? { background: "#fff8f0" } : undefined}>
                     <td style={td}>{new Date(l.created_at).toLocaleString()}</td>
                     <td style={td}>{guestName}</td>
-                    <td style={td}><code style={{ fontSize: 12 }}>{l.event_type}</code></td>
+                    <td style={td}>
+                      <code style={{ fontSize: 12, color: isRelinkFail ? "#e67e22" : undefined }}>{l.event_type}</code>
+                      {isRelinkFail && isSuper && (
+                        <button
+                          onClick={() => savePhase("INVITATION")}
+                          title="Open registration form for all guests"
+                          style={{ marginLeft: 8, background: "#e67e22", border: "none", color: "#fff", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                        >
+                          Open form
+                        </button>
+                      )}
+                    </td>
                     <td style={{ ...td, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {l.event_data ? JSON.stringify(l.event_data) : "—"}
                     </td>

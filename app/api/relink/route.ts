@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { logEvent } from "@/lib/breach";
 
 // Relinks an existing guest to a new device after session reset.
 // Does NOT create new guests — only matches name+city to an existing row.
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!guest) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    void logEvent(device_uuid, "relink_failed", { attempted_name: name.trim(), attempted_city: city.trim() }, ip, null);
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
