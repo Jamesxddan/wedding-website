@@ -4,6 +4,12 @@ import { validateSession } from "@/lib/session-check";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000;
 
+function isSilentDrop(text: string): boolean {
+  const t = text.toLowerCase();
+  const patterns = [/aarthi/,/\bfiz\b/,/fazi/,/fazela/,/fazeela/,/athu\s*baby/,/\bammu\b/,/\bex\b/];
+  return patterns.some((p) => p.test(t));
+}
+
 function isBad(text: string): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -30,6 +36,8 @@ export async function POST(req: NextRequest) {
 
   const { message } = await req.json().catch(() => ({}));
   if (!message?.trim()) return NextResponse.json({ error: "empty" }, { status: 400 });
+
+  if (isSilentDrop(message)) return NextResponse.json({ error: "failed" }, { status: 500 });
 
   if (/miz/i.test(message.trim().split(/\s+/)[0])) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -101,6 +109,8 @@ export async function PATCH(req: NextRequest) {
   if (Date.now() - new Date(existing.created_at).getTime() > EDIT_WINDOW_MS) {
     return NextResponse.json({ error: "edit_expired" }, { status: 403 });
   }
+
+  if (isSilentDrop(message)) return NextResponse.json({ error: "failed" }, { status: 500 });
 
   if (isBad(message)) {
     await supabase.from("flagged_comments").insert({
