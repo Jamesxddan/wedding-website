@@ -19,6 +19,7 @@ interface Guest {
 
 interface LogRow {
   id: string;
+  guest_id: string | null;
   device_uuid: string;
   event_type: string;
   event_data: Record<string, unknown> | null;
@@ -269,6 +270,21 @@ export default function AdminPage() {
       return;
     }
     await load("guests");
+  }
+
+  async function clearGuestLogs(guest_id: string, name: string) {
+    if (!confirm(`Clear all logs for ${name}? This cannot be undone.`)) return;
+    const res = await fetch("/api/admin/logs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guest_id }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to clear logs");
+      return;
+    }
+    await load("logs");
   }
 
   async function unblock(f: Flag) {
@@ -551,22 +567,38 @@ export default function AdminPage() {
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 560 }}>
               <thead>
-                <tr>{["Time", "Guest", "Event", "Data", "IP"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+                <tr>{["Time", "Guest", "Event", "Data", "IP", ...(isSuper ? [""] : [])].map((h, i) => <th key={i} style={th}>{h}</th>)}</tr>
               </thead>
               <tbody>
-                {logs.map((l) => (
+                {logs.map((l) => {
+                  const guestName = ((l.guests as unknown) as { name: string } | null)?.name ?? "—";
+                  const guestId = l.guest_id;
+                  return (
                   <tr key={l.id}>
                     <td style={td}>{new Date(l.created_at).toLocaleString()}</td>
-                    <td style={td}>{((l.guests as unknown) as { name: string } | null)?.name ?? "—"}</td>
+                    <td style={td}>{guestName}</td>
                     <td style={td}><code style={{ fontSize: 12 }}>{l.event_type}</code></td>
                     <td style={{ ...td, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {l.event_data ? JSON.stringify(l.event_data) : "—"}
                     </td>
                     <td style={td}>{l.ip ?? "—"}</td>
+                    {isSuper && (
+                      <td style={{ ...td, textAlign: "center" }}>
+                        {guestId && (
+                          <button
+                            onClick={() => clearGuestLogs(guestId, guestName)}
+                            style={{ background: "none", border: "1px solid #e8a0a0", color: "#c0392b", borderRadius: 6, padding: "2px 10px", fontSize: 12, cursor: "pointer" }}
+                          >
+                            Clear logs
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
-                ))}
+                  );
+                })}
                 {logs.length === 0 && (
-                  <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No logs</td></tr>
+                  <tr><td colSpan={isSuper ? 6 : 5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No logs</td></tr>
                 )}
               </tbody>
             </table>

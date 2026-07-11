@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { isAdmin } from "@/lib/admin-auth";
+import { isAdmin, isSuperAdmin } from "@/lib/admin-auth";
 
 export async function GET(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("access_logs")
-    .select(`id, device_uuid, event_type, event_data, ip, created_at, guests ( name )`)
+    .select(`id, guest_id, device_uuid, event_type, event_data, ip, created_at, guests ( name )`)
     .order("created_at", { ascending: false })
     .limit(fetchLimit);
 
@@ -29,4 +29,27 @@ export async function GET(req: NextRequest) {
     : (data ?? []);
 
   return NextResponse.json(rows);
+}
+
+// Super-admin: delete all logs for a specific guest_id, or all logs if { all: true }
+export async function DELETE(req: NextRequest) {
+  if (!(await isSuperAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+
+  if (body.all === true) {
+    const { error } = await supabase
+      .from("access_logs")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const { guest_id } = body;
+  if (!guest_id) return NextResponse.json({ error: "missing guest_id or all flag" }, { status: 400 });
+
+  const { error } = await supabase.from("access_logs").delete().eq("guest_id", guest_id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
