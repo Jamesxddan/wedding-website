@@ -13,7 +13,8 @@ export type AuditAction =
   | "announcement_set"
   | "unblock_flag"
   | "youtube_url_set"
-  | "toggle_owner";
+  | "toggle_owner"
+  | "content_update";
 
 export async function auditLog(action: AuditAction, details?: Record<string, unknown>): Promise<void> {
   try {

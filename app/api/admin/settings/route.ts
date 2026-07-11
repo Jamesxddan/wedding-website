@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { key, value } = await req.json().catch(() => ({}));
   if (!key || typeof value !== "string") return NextResponse.json({ error: "missing fields" }, { status: 400 });
-  const allowed = ["phase_override", "youtube_live_url", "youtube_ceremony_url", "youtube_reception_url", "announcement"];
+  const allowed = ["phase_override", "youtube_live_url", "youtube_ceremony_url", "youtube_reception_url", "announcement", "families"];
   if (!allowed.includes(key)) return NextResponse.json({ error: "unknown key" }, { status: 400 });
   const { error } = await supabase
     .from("settings")
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     youtube_live_url: "youtube_url_set",
     youtube_ceremony_url: "youtube_url_set",
     youtube_reception_url: "youtube_url_set",
+    families: "content_update",
   };
   if (actionMap[key]) void auditLog(actionMap[key], { key, value });
   return NextResponse.json({ ok: true });

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments";
+type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
 
 interface Guest {
   id: string;
@@ -167,7 +167,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (t: Tab) => {
     if (t === "live" || t === "control") { await loadSettings(); return; }
-    if (t === "preview" || t === "audit" || t === "comments") return;
+    if (t === "preview" || t === "audit" || t === "comments" || t === "content") return;
     if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
     try {
@@ -487,6 +487,7 @@ export default function AdminPage() {
     { key: "admins", label: "🔑 Admins" },
     { key: "audit", label: "📋 Audit Log" },
     { key: "comments", label: "💬 Comments" },
+    { key: "content", label: "✏️ Site Content" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -1001,6 +1002,9 @@ export default function AdminPage() {
 
       {/* ── COMMENTS MODERATION ── */}
       {tab === "comments" && isSuper && <CommentsTab />}
+
+      {/* ── SITE CONTENT ── */}
+      {tab === "content" && isSuper && <ContentTab />}
     </div>
   );
 }
@@ -1174,6 +1178,120 @@ function CommentsTab() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+interface FamilyMember { name: string; role: string; }
+interface FamiliesData { james: FamilyMember[]; sharon: FamilyMember[]; }
+
+const DEFAULT_FAMILIES: FamiliesData = {
+  james: [
+    { name: "Mr. Joseph Rubin Washington", role: "Father of the Groom" },
+    { name: "Mrs. Sophia Joseph", role: "Mother of the Groom" },
+    { name: "John Jebasingh", role: "Brother of the Groom" },
+  ],
+  sharon: [
+    { name: "Mr. Yesurathinam", role: "Father of the Bride" },
+    { name: "Mrs. Singapogu Rizma", role: "Mother of the Bride" },
+    { name: "Shiny Singapogu", role: "Sister of the Bride" },
+  ],
+};
+
+function ContentTab() {
+  const [families, setFamilies] = useState<FamiliesData>(DEFAULT_FAMILIES);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.families) {
+          try {
+            const parsed = JSON.parse(data.families) as FamiliesData;
+            if (parsed.james && parsed.sharon) setFamilies(parsed);
+          } catch { /* use default */ }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  function updateMember(side: "james" | "sharon", index: number, field: "name" | "role", value: string) {
+    setFamilies((prev) => {
+      const members = prev[side].map((m, i) => i === index ? { ...m, [field]: value } : m);
+      return { ...prev, [side]: members };
+    });
+    setSaved(false);
+  }
+
+  function addMember(side: "james" | "sharon") {
+    setFamilies((prev) => ({ ...prev, [side]: [...prev[side], { name: "", role: "" }] }));
+    setSaved(false);
+  }
+
+  function removeMember(side: "james" | "sharon", index: number) {
+    setFamilies((prev) => ({ ...prev, [side]: prev[side].filter((_, i) => i !== index) }));
+    setSaved(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "families", value: JSON.stringify(families) }),
+    });
+    setSaving(false);
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    else setError("Failed to save.");
+  }
+
+  const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", borderRadius: 7, border: "1px solid #e0dbd4", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };
+  const btn: React.CSSProperties = { padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 };
+
+  const renderSide = (side: "james" | "sharon", label: string) => (
+    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e0d8", padding: 20, flex: 1, minWidth: 280 }}>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", marginBottom: 16 }}>{label}</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {families[side].map((m, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+              <input style={inp} value={m.name} placeholder="Full name" onChange={(e) => updateMember(side, i, "name", e.target.value)} />
+              <input style={{ ...inp, fontSize: 12, color: "#888" }} value={m.role} placeholder="Role (e.g. Father of the Groom)" onChange={(e) => updateMember(side, i, "role", e.target.value)} />
+            </div>
+            <button onClick={() => removeMember(side, i)} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "6px 10px", marginTop: 2 }}>✕</button>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => addMember(side)} style={{ ...btn, background: "#f0ede9", color: "#555", marginTop: 14 }}>+ Add member</button>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 860 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#1a1a1a" }}>Site Content</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#aaa" }}>Changes go live immediately after saving.</p>
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{ ...btn, background: saved ? "#2ecc71" : "#8B4A6B", color: "#fff", padding: "9px 22px", fontSize: 13, opacity: saving ? 0.6 : 1 }}
+        >
+          {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+        </button>
+      </div>
+      {error && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+      <h3 style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#999", marginBottom: 14 }}>The Families</h3>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {renderSide("james", "James's Family")}
+        {renderSide("sharon", "Sharon's Family")}
+      </div>
     </div>
   );
 }
