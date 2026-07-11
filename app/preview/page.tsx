@@ -50,11 +50,12 @@ export default function PreviewPage() {
     const isDev = process.env.NODE_ENV !== "production";
     const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
     const hasFlag = window.location.search.includes("dev=1");
-    if (!isDev && !isPreview && !hasFlag) {
-      window.location.href = "/";
-    } else {
-      setVisible(true);
-    }
+    if (isDev || isPreview || hasFlag) { setVisible(true); return; }
+    // Also allow admin session (production)
+    fetch("/api/admin/settings").then((r) => {
+      if (r.ok) setVisible(true);
+      else window.location.href = "/admin";
+    });
   }, []);
 
   function switchPhase(newPhase: string) {
@@ -198,9 +199,12 @@ export default function PreviewPage() {
           ↺ Reload
         </button>
 
-        <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, letterSpacing: 1 }}>
-          STAGING ONLY
-        </span>
+        <a
+          href="/admin"
+          style={{ color: "rgba(255,255,255,0.25)", fontSize: 10, letterSpacing: 1, textDecoration: "none" }}
+        >
+          ← Admin
+        </a>
       </div>
 
       {/* Device frame area */}
