@@ -677,7 +677,8 @@ function AlbumBook({
 
   const sceneRef      = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
-  const imgCacheRef   = useRef<Map<string, HTMLImageElement>>(new Map());
+  const imgCacheRef      = useRef<Map<string, HTMLImageElement>>(new Map());
+  const fullPreloadedRef = useRef<Set<string>>(new Set()); // tracks fullUrl preloads
   const proxy         = useRef({ value: 0 });
   const tweenRef      = useRef<gsap.core.Tween | null>(null);
   const dirRef        = useRef<"next" | "prev">("next");
@@ -814,21 +815,32 @@ function AlbumBook({
   const hasPrev = spreadIndex > 0;
   const hasNext = spreadIndex < totalSpreads - 1;
 
-  // Preload photos for canvas (thumbnailUrl = /api/drive-image proxy, same-origin)
+  // Preload photos for canvas (thumbnail) and BookPage (full-size).
+  // Both use the same /api/drive-image proxy so browser in-memory image cache
+  // ensures the DOM <img> in BookPage reuses what we prefetched here.
   useEffect(() => {
-    const urls: string[] = [];
     for (let offset = -1; offset <= 2; offset++) {
       const [l, r] = getSpreadPhotos(spreadIndex + offset);
-      [l, r].forEach(ph => { if (ph) urls.push(ph.thumbnailUrl); });
+      [l, r].forEach(ph => {
+        if (!ph) return;
+        // Thumbnail — needed by canvas cylinder-curl animation
+        if (!imgCacheRef.current.has(ph.thumbnailUrl)) {
+          const img = new window.Image();
+          img.onload = () => imgCacheRef.current.set(ph.thumbnailUrl, img);
+          img.onerror = () => imgCacheRef.current.set(ph.thumbnailUrl, img);
+          img.src = ph.thumbnailUrl;
+          imgCacheRef.current.set(ph.thumbnailUrl, img);
+        }
+        // Full-size — needed by BookPage after the animation completes.
+        // Preload one spread behind and two ahead so images are ready before
+        // the user sees the static spread.
+        if (!fullPreloadedRef.current.has(ph.fullUrl)) {
+          const img = new window.Image();
+          img.src = ph.fullUrl;
+          fullPreloadedRef.current.add(ph.fullUrl);
+        }
+      });
     }
-    urls.forEach(url => {
-      if (imgCacheRef.current.has(url)) return;
-      const img = new window.Image();
-      img.onload = () => imgCacheRef.current.set(url, img);
-      img.onerror = () => imgCacheRef.current.set(url, img);
-      img.src = url;
-      imgCacheRef.current.set(url, img); // placeholder while loading
-    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spreadIndex]);
 
