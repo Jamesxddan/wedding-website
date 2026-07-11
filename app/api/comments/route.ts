@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { validateSession } from "@/lib/session-check";
 
 const EDIT_WINDOW_MS = 2 * 60 * 1000;
-const SILENT_DROP_LIMIT = 3;
+const SILENT_DROP_LIMIT = 15;
 const SILENT_DROP_WINDOW_MS = 10 * 60 * 1000;
 
 function deobfuscate(text: string): string {
