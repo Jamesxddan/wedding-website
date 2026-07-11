@@ -270,6 +270,7 @@ function BookPage({
   pageNum,
   guestName,
   wmExtra,
+  wmTime,
   fullWidth,
   noSpineShadow,
 }: {
@@ -277,13 +278,15 @@ function BookPage({
   isLeft: boolean;
   pageNum?: number;
   guestName?: string;
-  wmExtra?: string;
+  wmExtra?: string;   // city
+  wmTime?: string;    // IST open-time (rendered on its own line)
   fullWidth?: boolean;
   noSpineShadow?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
-  const parts = ["James & Sharon", guestName, wmExtra].filter(Boolean);
-  const watermarkText = parts.length > 1 ? parts.join("  ·  ") : null;
+  const lineParts = ["James & Sharon", guestName, wmExtra].filter(Boolean);
+  const watermarkLine1 = lineParts.length > 1 ? lineParts.join("  ·  ") : null;
+  const watermarkLine2 = wmTime ?? null;
   return (
     <div className="relative h-full flex-shrink-0" style={{ width: fullWidth ? "100%" : "50%", background: PAGE_BG }}>
       {photo && (
@@ -312,7 +315,7 @@ function BookPage({
             }}
           />
           {/* Diagonal watermark — visible in screenshots, traceable to guest */}
-          {watermarkText && loaded && (
+          {(watermarkLine1 || watermarkLine2) && loaded && (
             <div
               className="absolute pointer-events-none select-none"
               style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
@@ -331,17 +334,33 @@ function BookPage({
                     userSelect: "none",
                   }}
                 >
-                  <span style={{
-                    fontFamily: "Georgia, serif",
-                    fontSize: "clamp(0.7rem, 1.8vw, 1.05rem)",
-                    fontWeight: "700",
-                    color: "rgba(44,24,16,0.22)",
-                    letterSpacing: "0.28em",
-                    whiteSpace: "nowrap",
-                    textShadow: "0 0 1px rgba(44,24,16,0.10)",
-                  }}>
-                    {watermarkText}
-                  </span>
+                  {watermarkLine1 && (
+                    <span style={{
+                      display: "block",
+                      fontFamily: "Georgia, serif",
+                      fontSize: "clamp(0.7rem, 1.8vw, 1.05rem)",
+                      fontWeight: "700",
+                      color: "rgba(44,24,16,0.22)",
+                      letterSpacing: "0.28em",
+                      whiteSpace: "nowrap",
+                      textShadow: "0 0 1px rgba(44,24,16,0.10)",
+                    }}>
+                      {watermarkLine1}
+                    </span>
+                  )}
+                  {watermarkLine2 && (
+                    <span style={{
+                      display: "block",
+                      fontFamily: "Georgia, serif",
+                      fontSize: "clamp(0.55rem, 1.3vw, 0.82rem)",
+                      fontWeight: "400",
+                      color: "rgba(44,24,16,0.18)",
+                      letterSpacing: "0.20em",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {watermarkLine2}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -373,7 +392,7 @@ function BookPage({
 }
 
 function BookSpread({
-  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra,
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra, wmTime,
 }: {
   leftPhoto: DrivePhoto | null;
   rightPhoto: DrivePhoto | null;
@@ -381,10 +400,11 @@ function BookSpread({
   rightPageNum?: number;
   guestName?: string;
   wmExtra?: string;
+  wmTime?: string;
 }) {
   return (
     <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
-      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} />
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
       {/* Spine shadow */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
         width: 32, zIndex: 5,
@@ -394,7 +414,7 @@ function BookSpread({
         width: 2, zIndex: 6,
         background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
       }} />
-      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
     </div>
   );
 }
@@ -448,6 +468,170 @@ function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
   );
 }
 
+// ─── Canvas cylinder-curl helpers ────────────────────────────────────────────
+
+function ctxDrawHalfPage(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  W: number,
+  H: number,
+  img: HTMLImageElement | undefined,
+  isLeft: boolean,
+  pageNum: number | undefined,
+  wmLine1: string | null,
+  wmLine2: string | null,
+) {
+  ctx.fillStyle = PAGE_BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    const inset = 0.07;
+    const bw = W * (1 - 2 * inset);
+    const bh = H * (1 - 2 * inset);
+    const bx = W * inset;
+    const by = H * inset;
+    const imgAR = img.naturalWidth / img.naturalHeight;
+    const boxAR = bw / bh;
+    let pw: number, ph: number, px: number, py: number;
+    if (imgAR > boxAR) {
+      pw = bw; ph = bw / imgAR;
+      px = bx; py = by + (bh - ph) / 2;
+    } else {
+      ph = bh; pw = bh * imgAR;
+      py = by; px = bx + (bw - pw) / 2;
+    }
+    ctx.drawImage(img, px, py, pw, ph);
+  }
+
+  if (wmLine1 || wmLine2) {
+    ctx.save();
+    const diag = Math.sqrt(W * W + H * H);
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-Math.PI / 4);
+    const rowSpacing = Math.min(H * 0.14, 52);
+    const numRows = Math.ceil(diag / rowSpacing) + 1;
+    const fs1 = Math.min(W * 0.020, 10.5);
+    const fs2 = Math.min(W * 0.015, 8.2);
+    for (let r = -numRows; r <= numRows; r++) {
+      const ry = r * rowSpacing;
+      if (wmLine1) {
+        ctx.font = `bold ${fs1}px Georgia, serif`;
+        ctx.fillStyle = "rgba(44,24,16,0.22)";
+        ctx.textAlign = "center";
+        for (let xi = -2; xi <= 2; xi++) {
+          ctx.fillText(wmLine1, xi * (diag / 2.5), ry);
+        }
+      }
+      if (wmLine2) {
+        ctx.font = `${fs2}px Georgia, serif`;
+        ctx.fillStyle = "rgba(44,24,16,0.18)";
+        ctx.textAlign = "center";
+        for (let xi = -2; xi <= 2; xi++) {
+          ctx.fillText(wmLine2, xi * (diag / 2.5), ry + (wmLine1 ? fs1 + 2 : 0));
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  if (pageNum !== undefined) {
+    ctx.save();
+    ctx.font = `${Math.min(W * 0.018, 9)}px Georgia, serif`;
+    ctx.fillStyle = "rgba(44,24,16,0.35)";
+    ctx.textAlign = isLeft ? "left" : "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(String(pageNum), isLeft ? W * 0.06 : W * 0.94, H * 0.94);
+    ctx.restore();
+  }
+}
+
+function hFlipCanvas(src: OffscreenCanvas, W: number, H: number): OffscreenCanvas {
+  const oc = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  const c = oc.getContext("2d") as OffscreenCanvasRenderingContext2D;
+  c.translate(W, 0);
+  c.scale(-1, 1);
+  c.drawImage(src, 0, 0);
+  return oc;
+}
+
+function ctxDrawCurl(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  frontImg: HTMLImageElement | undefined,
+  backImg: HTMLImageElement | undefined,
+  frontIsLeft: boolean,
+  backIsLeft: boolean,
+  frontPageNum: number | undefined,
+  backPageNum: number | undefined,
+  wm1: string | null,
+  wm2: string | null,
+  progress: number,
+  foldShadow: number,
+  mirrorX: boolean,   // true for prev direction (left page curls right)
+) {
+  const R = W / Math.PI;
+  const foldX = W * (1 - progress);
+  const thetaMax = progress * Math.PI;
+  const N = 60;
+
+  const frontOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  ctxDrawHalfPage(
+    frontOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
+    W, H, frontImg, frontIsLeft, frontPageNum, wm1, wm2,
+  );
+  // When mirrorX is active the canvas has scale(-1,1), so pre-flip the OC
+  // content so the double-flip restores the correct orientation.
+  const frontOC = mirrorX ? hFlipCanvas(frontOCBase, W, H) : frontOCBase;
+
+  const backOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  ctxDrawHalfPage(
+    backOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
+    W, H, backImg, backIsLeft, backPageNum, wm1, wm2,
+  );
+  const backOC = mirrorX ? hFlipCanvas(backOCBase, W, H) : backOCBase;
+
+  // caller is responsible for clearRect and save/translate[/scale] before invoking this
+  if (foldX > 0) {
+    ctx.drawImage(frontOC, 0, 0, foldX, H, 0, 0, foldX, H);
+  }
+
+  for (let i = 0; i < N; i++) {
+    const t0 = (i / N) * thetaMax;
+    const t1 = ((i + 1) / N) * thetaMax;
+    const tMid = (t0 + t1) / 2;
+
+    const x0s = foldX + R * Math.sin(t0);
+    const x1s = foldX + R * Math.sin(t1);
+    const screenLeft = Math.min(x0s, x1s);
+    const scrnW = Math.abs(x1s - x0s);
+    if (scrnW < 0.25) continue;
+
+    if (tMid <= Math.PI / 2) {
+      const srcX0 = foldX + (W - foldX) * (i / N);
+      const srcW = (W - foldX) / N;
+      if (srcW > 0) {
+        ctx.drawImage(frontOC, srcX0, 0, srcW, H, screenLeft, 0, scrnW, H);
+      }
+    } else {
+      const bSrc0 = W - ((t0 - Math.PI / 2) / (thetaMax - Math.PI / 2)) * (W - foldX);
+      const bSrc1 = W - ((t1 - Math.PI / 2) / (thetaMax - Math.PI / 2)) * (W - foldX);
+      const srcLeft = Math.min(bSrc0, bSrc1);
+      const srcW = Math.abs(bSrc1 - bSrc0);
+      if (srcW > 0) {
+        ctx.drawImage(backOC, srcLeft, 0, srcW, H, screenLeft, 0, scrnW, H);
+      }
+    }
+
+    const alpha = (1 - Math.abs(Math.cos(tMid))) * foldShadow * 0.55;
+    if (alpha > 0.005) {
+      ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+      ctx.fillRect(screenLeft, 0, scrnW, H);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function AlbumBook({
   photos, index, onClose, onIndexChange, folder,
 }: {
@@ -478,6 +662,11 @@ function AlbumBook({
   const [spreadIndex, setSpreadIndex] = useState(() =>
     Math.min(Math.floor(index / 2) + 1, totalSpreads - 1)
   );
+  // Ref so GSAP callbacks (closures) always read the latest spread without
+  // triggering re-registration of the observer effect.
+  const spreadIndexRef = useRef(spreadIndex);
+  spreadIndexRef.current = spreadIndex;
+
   const [progress, setProgress]         = useState(0);
   const [dir, setDir]                   = useState<"next" | "prev">("next");
   const [busy, setBusy]                 = useState(false);
@@ -487,6 +676,8 @@ function AlbumBook({
   const [dismissedRotate, setDismissedRotate] = useState(false);
 
   const sceneRef      = useRef<HTMLDivElement>(null);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const imgCacheRef   = useRef<Map<string, HTMLImageElement>>(new Map());
   const proxy         = useRef({ value: 0 });
   const tweenRef      = useRef<gsap.core.Tween | null>(null);
   const dirRef        = useRef<"next" | "prev">("next");
@@ -579,7 +770,8 @@ function AlbumBook({
     return [photos[base] ?? null, photos[base + 1] ?? null];
   };
 
-  const wmExtra = [guestCity, openedAtRef.current].filter(Boolean).join("  ·  ") || undefined;
+  const wmExtra = guestCity || undefined;                      // city — line 1
+  const wmTime  = openedAtRef.current || undefined;            // IST open-time — line 2
 
   const renderSpread = (si: number) => {
     if (si <= 0) return <BookCover folder={folder} />;
@@ -594,6 +786,7 @@ function AlbumBook({
         rightPageNum={rn <= photos.length ? rn : undefined}
         guestName={guestName || undefined}
         wmExtra={wmExtra}
+        wmTime={wmTime}
       />
     );
   };
@@ -611,6 +804,7 @@ function AlbumBook({
         pageNum={photo && pn <= photos.length ? pn : undefined}
         guestName={guestName || undefined}
         wmExtra={wmExtra}
+        wmTime={wmTime}
         fullWidth
         noSpineShadow
       />
@@ -620,46 +814,52 @@ function AlbumBook({
   const hasPrev = spreadIndex > 0;
   const hasNext = spreadIndex < totalSpreads - 1;
 
-  // Preload next 2 spreads
+  // Preload photos for canvas (thumbnailUrl = /api/drive-image proxy, same-origin)
   useEffect(() => {
-    for (let offset = 1; offset <= 2; offset++) {
+    const urls: string[] = [];
+    for (let offset = -1; offset <= 2; offset++) {
       const [l, r] = getSpreadPhotos(spreadIndex + offset);
-      [l, r].forEach(ph => { if (ph) { const img = new Image(); img.src = ph.fullUrl; } });
+      [l, r].forEach(ph => { if (ph) urls.push(ph.thumbnailUrl); });
     }
+    urls.forEach(url => {
+      if (imgCacheRef.current.has(url)) return;
+      const img = new window.Image();
+      img.onload = () => imgCacheRef.current.set(url, img);
+      img.onerror = () => imgCacheRef.current.set(url, img);
+      img.src = url;
+      imgCacheRef.current.set(url, img); // placeholder while loading
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spreadIndex]);
 
-  // CSS-transition-based animation: rAF is throttled in background tabs but
-  // CSS transitions run on the compositor regardless. We drive the state to the
-  // target in a microtask so React has one render at the "from" value before
-  // we commit the "to" value, giving the browser time to set up the transition.
+  // GSAP-driven animation — drives progress each frame so the canvas redraws smoothly.
   const animateTo = useCallback((onComplete: () => void) => {
     tweenRef.current?.kill();
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; }
     proxy.current.value = 0;
     setProgress(0);
     setIsAnimating(true);
-    // one tick so React paints the "from" state with transition enabled
-    timerRef.current = setTimeout(() => {
-      setProgress(1);
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        onComplete();
-      }, 660);
-    }, 16);
+    tweenRef.current = gsap.to(proxy.current, {
+      value: 1,
+      duration: 0.72,
+      ease: "power2.out",
+      onUpdate() { setProgress(proxy.current.value); },
+      onComplete() { tweenRef.current = null; onComplete(); },
+    });
   }, []);
 
   const snapBack = useCallback((fromP: number) => {
     tweenRef.current?.kill();
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; }
     proxy.current.value = fromP;
     setIsAnimating(true);
-    setProgress(0);
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      setIsAnimating(false);
-      setBusy(false);
-    }, 320);
+    tweenRef.current = gsap.to(proxy.current, {
+      value: 0,
+      duration: 0.32,
+      ease: "power1.out",
+      onUpdate() { setProgress(proxy.current.value); },
+      onComplete() { tweenRef.current = null; setIsAnimating(false); setBusy(false); },
+    });
   }, []);
 
   const goNext = useCallback(() => {
@@ -668,14 +868,13 @@ function AlbumBook({
     setDir("next");
     dirRef.current = "next";
     animateTo(() => {
-      setSpreadIndex(s => {
-        const n = s + 1;
-        onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2));
-        return n;
-      });
+      const n = spreadIndexRef.current + 1;
+      setSpreadIndex(n);
       setProgress(0);
       setIsAnimating(false);
       setBusy(false);
+      // Defer cross-component setState to avoid concurrent-mode render warning
+      setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
     });
   }, [busy, hasNext, animateTo, onIndexChange]);
 
@@ -685,14 +884,12 @@ function AlbumBook({
     setDir("prev");
     dirRef.current = "prev";
     animateTo(() => {
-      setSpreadIndex(s => {
-        const n = s - 1;
-        onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2));
-        return n;
-      });
+      const n = spreadIndexRef.current - 1;
+      setSpreadIndex(n);
       setProgress(0);
       setIsAnimating(false);
       setBusy(false);
+      setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
     });
   }, [busy, hasPrev, animateTo, onIndexChange]);
 
@@ -741,13 +938,17 @@ function AlbumBook({
         if (p > 0.3 || vel > 400) {
           if (localDir === "next" && hasNext) {
             animateTo(() => {
-              setSpreadIndex(s => { const n = s + 1; onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)); return n; });
+              const n = spreadIndexRef.current + 1;
+              setSpreadIndex(n);
               setProgress(0); setIsAnimating(false); setBusy(false);
+              setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
             });
           } else if (localDir === "prev" && hasPrev) {
             animateTo(() => {
-              setSpreadIndex(s => { const n = s - 1; onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)); return n; });
+              const n = spreadIndexRef.current - 1;
+              setSpreadIndex(n);
               setProgress(0); setIsAnimating(false); setBusy(false);
+              setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
             });
           } else {
             snapBack(p);
@@ -776,25 +977,116 @@ function AlbumBook({
     if (timerRef.current !== null) clearTimeout(timerRef.current);
   }, []);
 
-  // 3D leaf-turn geometry
+  // Canvas cylinder-curl geometry
   const showLeaf = progress > 0.003 || isAnimating;
-  const turningIsRight = dir === "next"; // right half turns left for "next", left half turns right for "prev"
+  const turningIsRight = dir === "next";
   const adjacentSpreadIndex = turningIsRight ? spreadIndex + 1 : spreadIndex - 1;
-  const leafRotateY = turningIsRight ? -progress * 180 : progress * 180;
-  // fold shadow peaks at 90° (progress=0.5) — drives cast shadow + fold crease darkness
+  // fold shadow peaks at 90° — drives cast shadow on the static layer underneath
   const foldShadow = Math.sin(progress * Math.PI);
 
-  // Corner-peel mask: the fold line sweeps from the outer-bottom corner up the outer edge (phase 1)
-  // then across the top edge (phase 2), revealing the turning leaf from the corner outward.
-  // Fixed fold point: bottom of spine (0%,100%) for right-turn; (100%,100%) for left-turn.
-  const movingY = Math.max(0, 1 - progress / 0.7);                      // 1→0 during progress [0, 0.7]
-  const movingX = Math.min(1, Math.max(0, 1 - (progress - 0.7) / 0.3)); // 1→0 during progress [0.7, 1]
-  // Unpeeled polygon (still-flat area of current page). 4 points, consistent count for CSS transition.
-  const cornerMaskClip = turningIsRight
-    // fold from (0%,100%) [spine-bottom] sweeping right edge then top edge
-    ? `polygon(0% 0%, ${(movingX * 100).toFixed(1)}% 0%, 100% ${(movingY * 100).toFixed(1)}%, 0% 100%)`
-    // fold from (100%,100%) [spine-bottom] sweeping left edge then top edge
-    : `polygon(${((1 - movingX) * 100).toFixed(1)}% 0%, 100% 0%, 100% 100%, 0% ${(movingY * 100).toFixed(1)}%)`;
+  // Canvas draw effect — redraws at every progress tick (GSAP drives setProgress each frame)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !showLeaf) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth;   // full book width
+    const cssH = canvas.clientHeight;
+    const halfW = cssW / 2;            // one page width
+    if (cssW === 0 || cssH === 0) return;
+    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+      canvas.width  = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const [l, r] = getSpreadPhotos(spreadIndex);
+    const frontPhoto = turningIsRight ? r : l;
+    const [al, ar] = getSpreadPhotos(adjacentSpreadIndex);
+    const backPhoto  = turningIsRight ? al : ar;
+
+    const frontImg = frontPhoto ? imgCacheRef.current.get(frontPhoto.thumbnailUrl) : undefined;
+    const backImg  = backPhoto  ? imgCacheRef.current.get(backPhoto.thumbnailUrl)  : undefined;
+
+    const frontIsLeft = !turningIsRight;
+    const backIsLeft  =  turningIsRight;
+    const frontPageNum = frontPhoto
+      ? (spreadIndex - 1) * 2 + (turningIsRight ? 2 : 1) : undefined;
+    const backPageNum  = backPhoto
+      ? (adjacentSpreadIndex - 1) * 2 + (turningIsRight ? 1 : 2) : undefined;
+
+    const wm1 = ["James & Sharon", guestName, wmExtra].filter(Boolean).join("  ·  ") || null;
+    const wm2 = wmTime ?? null;
+
+    // Two-phase full-spread turn so the page visually crosses the spine:
+    //
+    //  Phase 1 (progress 0→0.5, p1 0→1): turning page curls from outer edge inward to spine.
+    //  Phase 2 (progress 0.5→1, p2 0→1): adjacent page uncurls from spine outward onto the
+    //    opposite half, replacing what Layer 2 showed there.
+    //
+    // For NEXT (turningIsRight): Phase 1 on right half, Phase 2 on left half (mirrored).
+    // For PREV (!turningIsRight): Phase 1 on left half (mirrored), Phase 2 on right half.
+
+    const p1 = Math.min(progress * 2, 1);
+    const p2 = Math.max(progress * 2 - 1, 0);
+
+    // Phase 1 — turning page curls toward spine (suppressed once Phase 2 begins
+    // to avoid a double-cylinder overlap at the spine centre)
+    if (p1 > 0.003 && p2 < 0.003) {
+      ctx.save();
+      if (turningIsRight) {
+        ctx.translate(halfW, 0);          // right half, no flip
+      } else {
+        ctx.translate(halfW, 0);
+        ctx.scale(-1, 1);                 // left half, mirror so fold sweeps outer→spine
+      }
+      ctxDrawCurl(ctx, halfW, cssH,
+        frontImg, undefined,              // cream paper back (next page revealed in Phase 2)
+        frontIsLeft, false,
+        frontPageNum, undefined,
+        wm1, wm2,
+        p1, Math.sin(p1 * Math.PI),
+        !turningIsRight,
+      );
+      ctx.restore();
+    }
+
+    // Phase 2 — adjacent page uncurls from spine onto the opposite half
+    if (p2 > 0.003) {
+      const uncurlP = 1 - p2;            // 1→0: fully curled at spine → fully flat
+      ctx.save();
+      if (turningIsRight) {
+        // Next left page unfurls in left half (mirrored)
+        ctx.translate(halfW, 0);
+        ctx.scale(-1, 1);
+        ctxDrawCurl(ctx, halfW, cssH,
+          backImg, undefined,
+          backIsLeft, false,
+          backPageNum, undefined,
+          wm1, wm2,
+          uncurlP, Math.sin(uncurlP * Math.PI),
+          true,
+        );
+      } else {
+        // Prev right page unfurls in right half (no mirror)
+        ctx.translate(halfW, 0);
+        ctxDrawCurl(ctx, halfW, cssH,
+          backImg, undefined,
+          backIsLeft, false,
+          backPageNum, undefined,
+          wm1, wm2,
+          uncurlP, Math.sin(uncurlP * Math.PI),
+          false,
+        );
+      }
+      ctx.restore();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, showLeaf, spreadIndex, adjacentSpreadIndex, turningIsRight,
+      foldShadow, guestName, wmExtra, wmTime]);
 
   const leftNum  = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 1;
   const rightNum = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 2;
@@ -878,69 +1170,19 @@ function AlbumBook({
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 10, background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 11, background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)" }} />
 
-              {/* Layer 4: turning leaf — pivots from bottom of spine (corner peel anchor) */}
-              <div
+              {/* Layer 4: Canvas cylinder curl — full-width so the fold sweeps across the whole spread */}
+              <canvas
+                ref={canvasRef}
                 style={{
                   position: "absolute",
-                  [turningIsRight ? "right" : "left"]: 0,
-                  width: "50%",
+                  inset: 0,
+                  width: "100%",
                   height: "100%",
                   zIndex: 4,
-                  transformStyle: "preserve-3d",
-                  // Pivot at bottom of spine — matches the fixed fold-line anchor point
-                  transformOrigin: turningIsRight ? "left 100%" : "right 100%",
-                  transform: `rotateY(${leafRotateY}deg)`,
-                  transition: isAnimating ? "transform 0.72s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-                }}
-              >
-                {/* Front face */}
-                <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden" }}>
-                  {renderHalfPage(spreadIndex, turningIsRight ? "right" : "left")}
-                  {/* Fold crease shadow along the diagonal — darkens from outer corner inward */}
-                  <div style={{
-                    position: "absolute", inset: 0, pointerEvents: "none",
-                    background: turningIsRight
-                      ? `linear-gradient(to top-left, rgba(0,0,0,${(foldShadow * 0.5).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 30%, transparent 60%)`
-                      : `linear-gradient(to top-right, rgba(0,0,0,${(foldShadow * 0.5).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 30%, transparent 60%)`,
-                  }} />
-                </div>
-
-                {/* Back face — brief paper-back flash then reveals next photo */}
-                <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)", background: PAGE_BG }}>
-                  {renderHalfPage(adjacentSpreadIndex, turningIsRight ? "left" : "right")}
-                  {/* Dynamic back-face shadow — mirrors front, brightens as page settles */}
-                  <div style={{
-                    position: "absolute", inset: 0, pointerEvents: "none",
-                    background: turningIsRight
-                      ? `linear-gradient(to left,  rgba(0,0,0,${(foldShadow * 0.45).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 25%, transparent 65%)`
-                      : `linear-gradient(to right, rgba(0,0,0,${(foldShadow * 0.45).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 25%, transparent 65%)`,
-                  }} />
-                </div>
-              </div>
-
-              {/* Layer 5: corner mask — covers the still-flat portion of the current page,
-                  clipped to the unpeeled polygon so the turning leaf shows through the peeled area */}
-              <div
-                style={{
-                  position: "absolute",
-                  [turningIsRight ? "right" : "left"]: 0,
-                  width: "50%",
-                  height: "100%",
-                  zIndex: 5,
-                  clipPath: cornerMaskClip,
-                  transition: isAnimating ? "clip-path 0.72s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
                   pointerEvents: "none",
+                  display: showLeaf ? "block" : "none",
                 }}
-              >
-                {renderHalfPage(spreadIndex, turningIsRight ? "right" : "left")}
-                {/* Shadow at the fold crease — darkens near the diagonal peeling edge */}
-                <div style={{
-                  position: "absolute", inset: 0, pointerEvents: "none",
-                  background: turningIsRight
-                    ? `linear-gradient(to top-left, rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)}) 0%, transparent 40%)`
-                    : `linear-gradient(to top-right, rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)}) 0%, transparent 40%)`,
-                }} />
-              </div>
+              />
             </>
           )}
         </div>
