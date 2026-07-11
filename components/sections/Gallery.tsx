@@ -762,6 +762,18 @@ function AlbumBook({
   // fold shadow peaks at 90° (progress=0.5) — drives cast shadow + fold crease darkness
   const foldShadow = Math.sin(progress * Math.PI);
 
+  // Corner-peel mask: the fold line sweeps from the outer-bottom corner up the outer edge (phase 1)
+  // then across the top edge (phase 2), revealing the turning leaf from the corner outward.
+  // Fixed fold point: bottom of spine (0%,100%) for right-turn; (100%,100%) for left-turn.
+  const movingY = Math.max(0, 1 - progress / 0.7);                      // 1→0 during progress [0, 0.7]
+  const movingX = Math.min(1, Math.max(0, 1 - (progress - 0.7) / 0.3)); // 1→0 during progress [0.7, 1]
+  // Unpeeled polygon (still-flat area of current page). 4 points, consistent count for CSS transition.
+  const cornerMaskClip = turningIsRight
+    // fold from (0%,100%) [spine-bottom] sweeping right edge then top edge
+    ? `polygon(0% 0%, ${(movingX * 100).toFixed(1)}% 0%, 100% ${(movingY * 100).toFixed(1)}%, 0% 100%)`
+    // fold from (100%,100%) [spine-bottom] sweeping left edge then top edge
+    : `polygon(${((1 - movingX) * 100).toFixed(1)}% 0%, 100% 0%, 100% 100%, 0% ${(movingY * 100).toFixed(1)}%)`;
+
   const leftNum  = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 1;
   const rightNum = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 2;
   const spreadLabel = spreadIndex === 0
@@ -844,7 +856,7 @@ function AlbumBook({
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 10, background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 11, background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)" }} />
 
-              {/* Layer 4: turning leaf — 3D flip pivoting from spine at lower-corner origin */}
+              {/* Layer 4: turning leaf — pivots from bottom of spine (corner peel anchor) */}
               <div
                 style={{
                   position: "absolute",
@@ -853,8 +865,8 @@ function AlbumBook({
                   height: "100%",
                   zIndex: 4,
                   transformStyle: "preserve-3d",
-                  // Pivot near bottom of spine — gives the "lift from bottom corner" feel
-                  transformOrigin: turningIsRight ? "left 78%" : "right 78%",
+                  // Pivot at bottom of spine — matches the fixed fold-line anchor point
+                  transformOrigin: turningIsRight ? "left 100%" : "right 100%",
                   transform: `rotateY(${leafRotateY}deg)`,
                   transition: isAnimating ? "transform 0.72s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
                 }}
@@ -862,12 +874,12 @@ function AlbumBook({
                 {/* Front face */}
                 <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden" }}>
                   {renderHalfPage(spreadIndex, turningIsRight ? "right" : "left")}
-                  {/* Dynamic fold crease shadow — darkens as page lifts off */}
+                  {/* Fold crease shadow along the diagonal — darkens from outer corner inward */}
                   <div style={{
                     position: "absolute", inset: 0, pointerEvents: "none",
                     background: turningIsRight
-                      ? `linear-gradient(to right, rgba(0,0,0,${(foldShadow * 0.6).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.18).toFixed(3)}) 22%, transparent 60%)`
-                      : `linear-gradient(to left,  rgba(0,0,0,${(foldShadow * 0.6).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.18).toFixed(3)}) 22%, transparent 60%)`,
+                      ? `linear-gradient(to top-left, rgba(0,0,0,${(foldShadow * 0.5).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 30%, transparent 60%)`
+                      : `linear-gradient(to top-right, rgba(0,0,0,${(foldShadow * 0.5).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 30%, transparent 60%)`,
                   }} />
                 </div>
 
@@ -882,6 +894,30 @@ function AlbumBook({
                       : `linear-gradient(to right, rgba(0,0,0,${(foldShadow * 0.45).toFixed(3)}) 0%, rgba(0,0,0,${(foldShadow * 0.12).toFixed(3)}) 25%, transparent 65%)`,
                   }} />
                 </div>
+              </div>
+
+              {/* Layer 5: corner mask — covers the still-flat portion of the current page,
+                  clipped to the unpeeled polygon so the turning leaf shows through the peeled area */}
+              <div
+                style={{
+                  position: "absolute",
+                  [turningIsRight ? "right" : "left"]: 0,
+                  width: "50%",
+                  height: "100%",
+                  zIndex: 5,
+                  clipPath: cornerMaskClip,
+                  transition: isAnimating ? "clip-path 0.72s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+                  pointerEvents: "none",
+                }}
+              >
+                {renderHalfPage(spreadIndex, turningIsRight ? "right" : "left")}
+                {/* Shadow at the fold crease — darkens near the diagonal peeling edge */}
+                <div style={{
+                  position: "absolute", inset: 0, pointerEvents: "none",
+                  background: turningIsRight
+                    ? `linear-gradient(to top-left, rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)}) 0%, transparent 40%)`
+                    : `linear-gradient(to top-right, rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)}) 0%, transparent 40%)`,
+                }} />
               </div>
             </>
           )}
