@@ -120,7 +120,7 @@ export default function Home() {
       {phase === Phase.RETURN_VISIT && (
         <>
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} />
-          {!guestName && <RelinkForm onSuccess={refresh} />}
+          {!guestName && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={refresh} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <OurStory />
