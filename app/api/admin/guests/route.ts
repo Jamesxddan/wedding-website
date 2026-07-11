@@ -43,13 +43,25 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// Super-admin only: clear a guest's device fingerprints so they must re-register.
-// The guest row, logs, and gallery events are never deleted.
+// Super-admin only: clear device fingerprints so guests must re-register.
+// Pass { id } to reset one guest, or { all: true } to reset every guest.
+// Guest rows, logs, and gallery events are never deleted.
 export async function DELETE(req: NextRequest) {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { id } = await req.json().catch(() => ({}));
-  if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+
+  if (body.all === true) {
+    const { error } = await supabase
+      .from("device_fingerprints")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all rows
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const { id } = body;
+  if (!id) return NextResponse.json({ error: "missing id or all flag" }, { status: 400 });
 
   const { error } = await supabase
     .from("device_fingerprints")

@@ -256,6 +256,21 @@ export default function AdminPage() {
     await load("guests");
   }
 
+  async function resetAllSessions() {
+    if (!confirm("Reset ALL guest sessions? Every guest will be logged out and must re-register. This cannot be undone.")) return;
+    const res = await fetch("/api/admin/guests", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to reset sessions");
+      return;
+    }
+    await load("guests");
+  }
+
   async function unblock(f: Flag) {
     await fetch("/api/admin/flags", {
       method: "DELETE",
@@ -457,6 +472,16 @@ export default function AdminPage() {
       {/* ── GUESTS ── */}
       {tab === "guests" && (
         <>
+          {isSuper && (
+            <div style={{ marginBottom: 14, display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={resetAllSessions}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 10, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer", fontWeight: 600 }}
+              >
+                ⚠️ Reset ALL Sessions
+              </button>
+            </div>
+          )}
           {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
           {!loading && (
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
