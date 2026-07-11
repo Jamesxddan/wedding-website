@@ -110,9 +110,9 @@ export default function FirstVisitForm({ onComplete }: Props) {
   const canSubmit = name.trim().length > 0 && selectedCity !== null && isFormValid && !isSubmitting;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full max-w-md">
-      <div className="flex flex-col gap-2">
-        <label htmlFor="guest-name" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 w-full max-w-md">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="guest-name" className="font-heading text-deep-rose text-xs tracking-widest uppercase">
           Your Name
         </label>
         <input
@@ -121,13 +121,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+          className="border border-champagne rounded-lg px-4 py-2 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
           autoComplete="off"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="guest-email" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="guest-email" className="font-heading text-deep-rose text-xs tracking-widest uppercase">
           Your Email
         </label>
         <input
@@ -136,13 +136,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email address (optional if mobile is filled)"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+          className="border border-champagne rounded-lg px-4 py-2 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
           autoComplete="off"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="guest-mobile" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="guest-mobile" className="font-heading text-deep-rose text-xs tracking-widest uppercase">
           Your Mobile Number
         </label>
         <input
@@ -151,13 +151,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
           placeholder="Your mobile number (optional if email is filled)"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+          className="border border-champagne rounded-lg px-4 py-2 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
           autoComplete="off"
         />
       </div>
 
-      <div className="flex flex-col gap-2 relative" ref={dropdownRef}>
-        <label htmlFor="guest-city" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+      <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
+        <label htmlFor="guest-city" className="font-heading text-deep-rose text-xs tracking-widest uppercase">
           Your City
         </label>
         <input
@@ -166,7 +166,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
           value={cityQuery}
           onChange={(e) => handleCityChange(e.target.value)}
           placeholder="Search your city"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+          className="border border-champagne rounded-lg px-4 py-2 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
           autoComplete="off"
         />
         {showDropdown && (
@@ -195,7 +195,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="mt-2 px-8 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm transition-opacity disabled:opacity-40 hover:opacity-90"
+        className="mt-1 px-5 py-2 rounded-full bg-deep-rose text-cream font-heading tracking-wider uppercase text-sm transition-opacity disabled:opacity-40 hover:opacity-90 w-full"
       >
         {isSubmitting ? "One moment…" : "Open your invitation"}
       </button>

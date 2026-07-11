@@ -122,7 +122,7 @@ export default function OpeningScreen({ onComplete }: Props) {
 
   return (
     <div
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-10"
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-4"
       style={{
         background: [
           "radial-gradient(ellipse at 50% -10%, rgba(212,175,55,0.22) 0%, transparent 60%)",
@@ -173,12 +173,12 @@ export default function OpeningScreen({ onComplete }: Props) {
       <div className="relative flex flex-col items-center gap-0" style={{ zIndex: 4 }}>
 
         {/* Interlocking wedding rings */}
-        <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 22 }}>
+        <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 10 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/rings.png"
             alt="Wedding rings"
-            width={200}
+            width={130}
             style={{ mixBlendMode: "multiply", animation: "pulse-glow 3s ease-in-out 2s infinite" }}
           />
         </div>
@@ -191,14 +191,14 @@ export default function OpeningScreen({ onComplete }: Props) {
           style={{
             fontFamily: "Georgia, serif", fontStyle: "italic",
             fontSize: 12, letterSpacing: 2, color: `rgba(107,42,58,0.5)`,
-            margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
+            margin: "6px 0 4px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
           Together with their families
         </p>
 
         {/* Names */}
-        <div className="text-center" style={{ marginBottom: 8 }}>
+        <div className="text-center" style={{ marginBottom: 4 }}>
           <span
             className="block"
             style={{
@@ -264,7 +264,7 @@ export default function OpeningScreen({ onComplete }: Props) {
           </span>
         </div>
 
-        <div style={{ margin: "14px 0 16px" }}>
+        <div style={{ margin: "8px 0 10px" }}>
           <Divider delay="4.2s" />
         </div>
 
@@ -273,7 +273,7 @@ export default function OpeningScreen({ onComplete }: Props) {
           style={{
             background: "rgba(255,255,255,0.88)",
             border: `1px solid ${GOLD_RGBA(0.3)}`,
-            borderRadius: 16, padding: "18px 24px", width: 280,
+            borderRadius: 16, padding: "14px 20px", width: 280,
             boxShadow: `0 6px 40px rgba(90,31,46,0.08), 0 0 0 1px ${GOLD_RGBA(0.08)}`,
             backdropFilter: "blur(8px)",
             animation: "form-rise 1s cubic-bezier(0.22,1,0.36,1) 4.7s both",
@@ -284,7 +284,7 @@ export default function OpeningScreen({ onComplete }: Props) {
             style={{
               fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: 3,
               textTransform: "uppercase", color: "rgba(107,42,58,0.4)",
-              marginBottom: 14,
+              marginBottom: 8,
             }}
           >
             — You are invited —
