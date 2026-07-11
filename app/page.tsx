@@ -22,6 +22,7 @@ import Marquee from "@/components/ui/Marquee";
 import Reveal from "@/components/ui/Reveal";
 import BackgroundMusic from "@/components/ui/BackgroundMusic";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
+import { SiteContentProvider } from "@/lib/SiteContentContext";
 
 function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
@@ -106,6 +107,7 @@ export default function Home() {
   }
 
   return (
+    <SiteContentProvider>
     <main className="min-h-screen bg-cream">
       <BackgroundMusic src="/song.mp3" />
 
@@ -142,5 +144,6 @@ export default function Home() {
         <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
     </main>
+    </SiteContentProvider>
   );
 }
