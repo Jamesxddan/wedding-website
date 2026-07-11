@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { supabase } from "@/lib/supabase";
+import { sendBreachAlert } from "@/lib/alert";
 
 // In-memory session token cache — avoids a DB hit on every image request.
 // Entries expire after 5 minutes; valid session tokens are re-confirmed on cache miss.
@@ -89,6 +90,12 @@ export async function GET(req: NextRequest) {
             ip,
             reason: "hotlink_attempt",
             blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          });
+          void sendBreachAlert({
+            reason: "hotlink_attempt",
+            device_uuid: fp.device_uuid,
+            ip,
+            extra: "Session killed. Guest blocked from re-registering for 1 hour.",
           });
         }
       }

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { sendBreachAlert } from "@/lib/alert";
 
 const API_RATE_WINDOW_S = 60;
 const API_RATE_LIMIT = 30;
@@ -43,6 +44,7 @@ export async function checkAndBlock(
       reason: "api_rate_limit",
       blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
+    void sendBreachAlert({ reason: "api_rate_limit", device_uuid, ip });
     return {
       message: "We're just catching our breath — please give it a moment and try again.",
       status: 429,
@@ -84,6 +86,7 @@ export async function checkAndBlock(
       reason: "repeated_form_submit",
       blocked_until: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
+    void sendBreachAlert({ reason: "repeated_form_submit", device_uuid, ip });
     return {
       message: "It looks like you've visited a few times already — please check back in a little while. We can't wait to celebrate with you! 🌸",
       status: 429,
