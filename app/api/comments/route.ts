@@ -7,13 +7,23 @@ const SILENT_DROP_LIMIT = 3;
 const SILENT_DROP_WINDOW_MS = 10 * 60 * 1000;
 
 function deobfuscate(text: string): string {
-  // Collapse single letters separated by spaces, dots, dashes, underscores, asterisks
-  // Runs 4 times to handle multi-level obfuscation
-  let t = text;
-  for (let i = 0; i < 4; i++) {
-    t = t.replace(/([a-z])([\s._\-*@#]+)([a-z])/gi, "$1$3");
+  // 1. Unicode normalization strips combining accents: à→a, é→e, ü→u, ë→e, etc.
+  let t = text.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // 2. Phonetic: ph before a letter → f  (phiz→fiz, phazi→fazi)
+  t = t.replace(/ph(?=[a-zA-Z])/gi, "f");
+  // 3. Leet-speak digit/symbol substitutions
+  t = t
+    .toLowerCase()
+    .replace(/4/g, "a")
+    .replace(/3/g, "e")
+    .replace(/[1!|]/g, "i")
+    .replace(/0/g, "o");
+  // 4. Collapse ANY non-alpha chars between letters — 6 passes for deeply nested patterns.
+  //    Catches: spaces, dots, dashes, emoji, zero-width chars, symbols, etc.
+  for (let i = 0; i < 6; i++) {
+    t = t.replace(/([a-z])([^a-z]+)([a-z])/g, "$1$3");
   }
-  return t.toLowerCase();
+  return t;
 }
 
 function isSilentDrop(text: string): boolean {
@@ -84,7 +94,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "failed" }, { status: 500 });
   }
 
-  if (/miz/i.test(message.trim().split(/\s+/)[0])) {
+  if (/miz/.test(deobfuscate(message))) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
     await supabase.from("breach_flags").insert({
       device_uuid: session.device_uuid,
@@ -184,6 +194,17 @@ export async function PATCH(req: NextRequest) {
       event_type: "comment_attempt" as any,
       event_data: null,
       ip,
+    });
+    return NextResponse.json({ error: "failed" }, { status: 500 });
+  }
+
+  if (/miz/.test(deobfuscate(message))) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    await supabase.from("breach_flags").insert({
+      device_uuid: session.device_uuid,
+      ip,
+      reason: "hotlink_attempt",
+      blocked_until: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
     return NextResponse.json({ error: "failed" }, { status: 500 });
   }
