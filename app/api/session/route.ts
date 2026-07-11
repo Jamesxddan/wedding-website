@@ -3,12 +3,15 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { device_uuid, browser_signals_hash } = body as {
+  const { device_uuid, browser_signals_hash, page } = body as {
     device_uuid?: string;
     browser_signals_hash?: string;
+    page?: string;
   };
 
   if (!device_uuid) return NextResponse.json({ status: "new" });
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
   // Primary lookup: device_uuid
   const { data: fp } = await supabase
@@ -16,6 +19,11 @@ export async function POST(req: NextRequest) {
     .select(`session_token, guest_id, guests ( name, city, invitation_seen, is_owner )`)
     .eq("device_uuid", device_uuid)
     .maybeSingle();
+
+  if (page) {
+    const { logEvent } = await import("@/lib/breach");
+    await logEvent(device_uuid, "phase_view", { [page]: new Date().toISOString() }, ip, fp?.guest_id ?? null);
+  }
 
   if (fp) {
     await supabase

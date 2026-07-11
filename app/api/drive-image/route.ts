@@ -1,12 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
+import { supabase } from "@/lib/supabase";
+
+// In-memory session token cache — avoids a DB hit on every image request.
+// Entries expire after 5 minutes; valid session tokens are re-confirmed on cache miss.
+const sessionCache = new Map<string, { valid: boolean; expiresAt: number }>();
+const SESSION_CACHE_TTL = 5 * 60 * 1000;
+
+async function isValidSession(sessionToken: string): Promise<boolean> {
+  const hit = sessionCache.get(sessionToken);
+  if (hit && hit.expiresAt > Date.now()) return hit.valid;
+  const { data } = await supabase
+    .from("device_fingerprints")
+    .select("device_uuid")
+    .eq("session_token", sessionToken)
+    .maybeSingle();
+  const valid = !!data;
+  sessionCache.set(sessionToken, { valid, expiresAt: Date.now() + SESSION_CACHE_TTL });
+  return valid;
+}
+
+function verifyToken(token: string): string | null {
+  const secret = process.env.DRIVE_TOKEN_SECRET;
+  if (!secret) {
+    // No secret — dev mode, treat token as raw file ID
+    return /^[\w-]+$/.test(token) ? token : null;
+  }
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf8");
+    const lastDot = decoded.lastIndexOf(".");
+    if (lastDot === -1) return null;
+    const fileId = decoded.slice(0, lastDot);
+    const receivedSig = decoded.slice(lastDot + 1);
+    const expectedSig = createHmac("sha256", secret).update(fileId).digest("hex").slice(0, 24);
+    if (receivedSig !== expectedSig) return null;
+    if (!/^[\w-]+$/.test(fileId)) return null;
+    return fileId;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
-  const fileId = req.nextUrl.searchParams.get("id");
+  const token = req.nextUrl.searchParams.get("id");
   const sz = req.nextUrl.searchParams.get("sz") ?? "600";
 
-  if (!apiKey || !fileId || !/^[\w-]+$/.test(fileId)) {
+  if (!apiKey || !token) {
     return new NextResponse("Not found", { status: 404 });
+  }
+
+  const fileId = verifyToken(token);
+  if (!fileId) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  // On production, require a valid session token sent as the gallery_token cookie.
+  // Dev/staging (non-production) skips this check so local development still works.
+  if (process.env.VERCEL_ENV) { // enforce on both staging (preview) and production
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const galleryToken = cookieHeader
+      .split(";")
+      .map(c => c.trim())
+      .find(c => c.startsWith("gallery_token="))
+      ?.slice("gallery_token=".length);
+    if (!galleryToken || !(await isValidSession(galleryToken))) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
   }
 
   // Fetch thumbnail server-side — avoids ERR_BLOCKED_BY_ORB (browser-only restriction)
@@ -35,7 +95,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(body, {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+        "Cache-Control": "no-store",
       },
     });
   } catch {

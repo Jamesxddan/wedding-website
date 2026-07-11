@@ -244,71 +244,668 @@ function LoadMoreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-// ─── Interactive page-turn lightbox ──────────────────────────────────────────
+// ─── Album Book ──────────────────────────────────────────────────────────────
 
-function PageTurnLightbox({
-  photos, index, onClose, onIndexChange,
+const PAGE_BG = "#f7f3ec";
+
+function RotateDevicePrompt({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/96 flex flex-col items-center justify-center gap-8 px-8">
+      <div style={{ fontSize: "4rem", animation: "rotateHint 2.2s ease-in-out infinite" }}>📱</div>
+      <div className="text-center">
+        <p className="font-body text-white text-lg mb-2">Rotate your device</p>
+        <p className="font-body text-white/50 text-sm">The album looks best in landscape</p>
+      </div>
+      <button onClick={onDismiss} className="font-body text-white/30 text-xs tracking-widest underline underline-offset-2">
+        view anyway
+      </button>
+      <style>{`@keyframes rotateHint { 0%,100%{transform:rotate(0deg)} 40%,60%{transform:rotate(90deg)} }`}</style>
+    </div>
+  );
+}
+
+function BookPage({
+  photo,
+  isLeft,
+  pageNum,
+  guestName,
+  wmExtra,
+  wmTime,
+  fullWidth,
+  noSpineShadow,
+}: {
+  photo: DrivePhoto | null;
+  isLeft: boolean;
+  pageNum?: number;
+  guestName?: string;
+  wmExtra?: string;   // city
+  wmTime?: string;    // IST open-time (rendered on its own line)
+  fullWidth?: boolean;
+  noSpineShadow?: boolean;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const lineParts = ["James & Sharon", guestName, wmExtra].filter(Boolean);
+  const watermarkLine1 = lineParts.length > 1 ? lineParts.join("  ·  ") : null;
+  const watermarkLine2 = wmTime ?? null;
+  return (
+    <div className="relative h-full flex-shrink-0" style={{ width: fullWidth ? "100%" : "50%", background: PAGE_BG }}>
+      {photo && (
+        <>
+          {!loaded && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full border-2 border-amber-300/40 border-t-amber-600/70 animate-spin" />
+            </div>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.fullUrl}
+            alt=""
+            draggable={false}
+            onLoad={() => setLoaded(true)}
+            className="absolute pointer-events-none"
+            style={{
+              inset: "7%",
+              width: "86%",
+              height: "86%",
+              objectFit: "contain",
+              background: PAGE_BG,
+              opacity: loaded ? 1 : 0,
+              transition: "opacity 0.35s",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.09), 0 3px 12px rgba(0,0,0,0.06)",
+            }}
+          />
+          {/* Diagonal watermark — visible in screenshots, traceable to guest */}
+          {(watermarkLine1 || watermarkLine2) && loaded && (
+            <div
+              className="absolute pointer-events-none select-none"
+              style={{ inset: "7%", width: "86%", height: "86%", overflow: "hidden", zIndex: 10 }}
+            >
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    left: "-35%",
+                    right: "-35%",
+                    top: `${3 + i * 11}%`,
+                    transform: "rotate(-28deg)",
+                    textAlign: "center",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  {watermarkLine1 && (
+                    <span style={{
+                      display: "block",
+                      fontFamily: "Georgia, serif",
+                      fontSize: "clamp(0.7rem, 1.8vw, 1.05rem)",
+                      fontWeight: "700",
+                      color: "rgba(44,24,16,0.22)",
+                      letterSpacing: "0.28em",
+                      whiteSpace: "nowrap",
+                      textShadow: "0 0 1px rgba(44,24,16,0.10)",
+                    }}>
+                      {watermarkLine1}
+                    </span>
+                  )}
+                  {watermarkLine2 && (
+                    <span style={{
+                      display: "block",
+                      fontFamily: "Georgia, serif",
+                      fontSize: "clamp(0.55rem, 1.3vw, 0.82rem)",
+                      fontWeight: "400",
+                      color: "rgba(44,24,16,0.18)",
+                      letterSpacing: "0.20em",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {watermarkLine2}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {pageNum !== undefined && (
+        <p
+          className="absolute bottom-2 font-body text-[9px] tracking-widest pointer-events-none select-none"
+          style={{ [isLeft ? "left" : "right"]: "8%", color: "rgba(0,0,0,0.2)" }}
+        >
+          {pageNum}
+        </p>
+      )}
+      {!noSpineShadow && (
+        <div
+          className="absolute inset-y-0 pointer-events-none"
+          style={{
+            [isLeft ? "right" : "left"]: 0,
+            width: 28,
+            background: isLeft
+              ? "linear-gradient(to left, rgba(0,0,0,0.07), transparent)"
+              : "linear-gradient(to right, rgba(0,0,0,0.07), transparent)",
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BookSpread({
+  leftPhoto, rightPhoto, leftPageNum, rightPageNum, guestName, wmExtra, wmTime,
+}: {
+  leftPhoto: DrivePhoto | null;
+  rightPhoto: DrivePhoto | null;
+  leftPageNum?: number;
+  rightPageNum?: number;
+  guestName?: string;
+  wmExtra?: string;
+  wmTime?: string;
+}) {
+  return (
+    <div className="absolute inset-0 flex" style={{ background: PAGE_BG }}>
+      <BookPage photo={leftPhoto} isLeft pageNum={leftPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
+      {/* Spine shadow */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
+        width: 32, zIndex: 5,
+        background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)",
+      }} />
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{
+        width: 2, zIndex: 6,
+        background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)",
+      }} />
+      <BookPage photo={rightPhoto} isLeft={false} pageNum={rightPageNum} guestName={guestName} wmExtra={wmExtra} wmTime={wmTime} />
+    </div>
+  );
+}
+
+function BookCoverLeft() {
+  return (
+    <div className="relative h-full w-full" style={{ background: "#f2ece0" }}>
+      <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
+        <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
+          "God&apos;s will was on<br/>our marriage"
+        </p>
+      </div>
+      <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />
+    </div>
+  );
+}
+
+function BookCoverRight({ folder }: { folder: "engagement" | "wedding" }) {
+  const albumLabel = folder === "engagement" ? "AN ENGAGEMENT ALBUM" : "A WEDDING ALBUM";
+  const dateLabel  = folder === "engagement" ? "FEBRUARY 12, 2026 · CHENNAI" : "OCTOBER 8, 2026 · CHENNAI";
+  return (
+    <div className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden" style={{ background: "linear-gradient(160deg, #2c1810 0%, #4a2c15 40%, #3d2310 70%, #1e1008 100%)" }}>
+      <div className="absolute pointer-events-none" style={{ inset: "5%", border: "1.5px solid rgba(201,168,76,0.45)" }} />
+      <div className="absolute pointer-events-none" style={{ inset: "7.5%", border: "0.5px solid rgba(201,168,76,0.2)" }} />
+      <div className="relative z-10 text-center px-[12%]">
+        <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
+          {albumLabel}
+        </p>
+        <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
+        <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
+        <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
+        <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
+        <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
+          {dateLabel}
+        </p>
+      </div>
+      <div className="absolute left-0 inset-y-0 pointer-events-none" style={{ width: 20, background: "linear-gradient(to right, rgba(0,0,0,0.45), transparent)" }} />
+    </div>
+  );
+}
+
+function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
+  return (
+    <div className="absolute inset-0 flex">
+      <div className="relative h-full" style={{ width: "50%" }}><BookCoverLeft /></div>
+      {/* Spine */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 5, background: "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 6, background: "linear-gradient(to bottom, #c9a84c80, #8b691480, #c9a84c80)" }} />
+      <div className="relative h-full" style={{ width: "50%" }}><BookCoverRight folder={folder} /></div>
+    </div>
+  );
+}
+
+// ─── Canvas cylinder-curl helpers ────────────────────────────────────────────
+
+function ctxDrawHalfPage(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  W: number,
+  H: number,
+  img: HTMLImageElement | undefined,
+  isLeft: boolean,
+  pageNum: number | undefined,
+  wmLine1: string | null,
+  wmLine2: string | null,
+) {
+  ctx.fillStyle = PAGE_BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    const inset = 0.07;
+    const bw = W * (1 - 2 * inset);
+    const bh = H * (1 - 2 * inset);
+    const bx = W * inset;
+    const by = H * inset;
+    const imgAR = img.naturalWidth / img.naturalHeight;
+    const boxAR = bw / bh;
+    let pw: number, ph: number, px: number, py: number;
+    if (imgAR > boxAR) {
+      pw = bw; ph = bw / imgAR;
+      px = bx; py = by + (bh - ph) / 2;
+    } else {
+      ph = bh; pw = bh * imgAR;
+      py = by; px = bx + (bw - pw) / 2;
+    }
+    ctx.drawImage(img, px, py, pw, ph);
+  }
+
+  if (wmLine1 || wmLine2) {
+    ctx.save();
+    const diag = Math.sqrt(W * W + H * H);
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-Math.PI / 4);
+    const rowSpacing = Math.min(H * 0.14, 52);
+    const numRows = Math.ceil(diag / rowSpacing) + 1;
+    const fs1 = Math.min(W * 0.020, 10.5);
+    const fs2 = Math.min(W * 0.015, 8.2);
+    for (let r = -numRows; r <= numRows; r++) {
+      const ry = r * rowSpacing;
+      if (wmLine1) {
+        ctx.font = `bold ${fs1}px Georgia, serif`;
+        ctx.fillStyle = "rgba(44,24,16,0.22)";
+        ctx.textAlign = "center";
+        for (let xi = -2; xi <= 2; xi++) {
+          ctx.fillText(wmLine1, xi * (diag / 2.5), ry);
+        }
+      }
+      if (wmLine2) {
+        ctx.font = `${fs2}px Georgia, serif`;
+        ctx.fillStyle = "rgba(44,24,16,0.18)";
+        ctx.textAlign = "center";
+        for (let xi = -2; xi <= 2; xi++) {
+          ctx.fillText(wmLine2, xi * (diag / 2.5), ry + (wmLine1 ? fs1 + 2 : 0));
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  if (pageNum !== undefined) {
+    ctx.save();
+    ctx.font = `${Math.min(W * 0.018, 9)}px Georgia, serif`;
+    ctx.fillStyle = "rgba(44,24,16,0.35)";
+    ctx.textAlign = isLeft ? "left" : "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(String(pageNum), isLeft ? W * 0.06 : W * 0.94, H * 0.94);
+    ctx.restore();
+  }
+}
+
+function hFlipCanvas(src: OffscreenCanvas, W: number, H: number): OffscreenCanvas {
+  const oc = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  const c = oc.getContext("2d") as OffscreenCanvasRenderingContext2D;
+  c.translate(W, 0);
+  c.scale(-1, 1);
+  c.drawImage(src, 0, 0);
+  return oc;
+}
+
+function ctxDrawCurl(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  frontImg: HTMLImageElement | undefined,
+  backImg: HTMLImageElement | undefined,
+  frontIsLeft: boolean,
+  backIsLeft: boolean,
+  frontPageNum: number | undefined,
+  backPageNum: number | undefined,
+  wm1: string | null,
+  wm2: string | null,
+  progress: number,
+  foldShadow: number,
+  mirrorX: boolean,   // true for prev direction (left page curls right)
+) {
+  const R = W / Math.PI;
+  const foldX = W * (1 - progress);
+  const thetaMax = progress * Math.PI;
+  const N = 60;
+
+  const frontOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  ctxDrawHalfPage(
+    frontOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
+    W, H, frontImg, frontIsLeft, frontPageNum, wm1, wm2,
+  );
+  // When mirrorX is active the canvas has scale(-1,1), so pre-flip the OC
+  // content so the double-flip restores the correct orientation.
+  const frontOC = mirrorX ? hFlipCanvas(frontOCBase, W, H) : frontOCBase;
+
+  const backOCBase = new OffscreenCanvas(Math.ceil(W), Math.ceil(H));
+  ctxDrawHalfPage(
+    backOCBase.getContext("2d") as OffscreenCanvasRenderingContext2D,
+    W, H, backImg, backIsLeft, backPageNum, wm1, wm2,
+  );
+  const backOC = mirrorX ? hFlipCanvas(backOCBase, W, H) : backOCBase;
+
+  // caller is responsible for clearRect and save/translate[/scale] before invoking this
+  if (foldX > 0) {
+    ctx.drawImage(frontOC, 0, 0, foldX, H, 0, 0, foldX, H);
+  }
+
+  for (let i = 0; i < N; i++) {
+    const t0 = (i / N) * thetaMax;
+    const t1 = ((i + 1) / N) * thetaMax;
+    const tMid = (t0 + t1) / 2;
+
+    const x0s = foldX + R * Math.sin(t0);
+    const x1s = foldX + R * Math.sin(t1);
+    const screenLeft = Math.min(x0s, x1s);
+    const scrnW = Math.abs(x1s - x0s);
+    if (scrnW < 0.25) continue;
+
+    if (tMid <= Math.PI / 2) {
+      const srcX0 = foldX + (W - foldX) * (i / N);
+      const srcW = (W - foldX) / N;
+      if (srcW > 0) {
+        ctx.drawImage(frontOC, srcX0, 0, srcW, H, screenLeft, 0, scrnW, H);
+      }
+    } else {
+      const bSrc0 = W - ((t0 - Math.PI / 2) / (thetaMax - Math.PI / 2)) * (W - foldX);
+      const bSrc1 = W - ((t1 - Math.PI / 2) / (thetaMax - Math.PI / 2)) * (W - foldX);
+      const srcLeft = Math.min(bSrc0, bSrc1);
+      const srcW = Math.abs(bSrc1 - bSrc0);
+      if (srcW > 0) {
+        ctx.drawImage(backOC, srcLeft, 0, srcW, H, screenLeft, 0, scrnW, H);
+      }
+    }
+
+    const alpha = (1 - Math.abs(Math.cos(tMid))) * foldShadow * 0.55;
+    if (alpha > 0.005) {
+      ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+      ctx.fillRect(screenLeft, 0, scrnW, H);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AlbumBook({
+  photos, index, onClose, onIndexChange, folder,
 }: {
   photos: DrivePhoto[];
   index: number;
   onClose: () => void;
   onIndexChange: (i: number) => void;
+  folder: "engagement" | "wedding";
 }) {
-  const [progress, setProgress] = useState(0); // 0 = rest, 1 = fully turned
-  const [dir, setDir]           = useState<"next" | "prev">("next");
+  const [guestName, setGuestName] = useState<string>("");
+  const [guestCity, setGuestCity] = useState<string>("");
+  const openedAtRef = useRef<string>("");
+  useEffect(() => {
+    setGuestName(localStorage.getItem("guest_name") ?? "");
+    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    openedAtRef.current = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      day: "numeric",
+      month: "short",
+    }).format(new Date());
+  }, []);
+  // Spread 0 = cover; spread k≥1 has photos[(k-1)*2] and photos[(k-1)*2+1]
+  const totalSpreads = 1 + Math.ceil(photos.length / 2);
 
-  const sceneRef  = useRef<HTMLDivElement>(null);
-  const proxy     = useRef({ value: 0 });
-  const tweenRef  = useRef<gsap.core.Tween | null>(null);
-  const dirRef    = useRef<"next" | "prev">("next");
+  const [spreadIndex, setSpreadIndex] = useState(() =>
+    Math.min(Math.floor(index / 2) + 1, totalSpreads - 1)
+  );
+  // Ref so GSAP callbacks (closures) always read the latest spread without
+  // triggering re-registration of the observer effect.
+  const spreadIndexRef = useRef(spreadIndex);
+  spreadIndexRef.current = spreadIndex;
 
-  const current    = photos[index];
-  const photoNext  = photos[index + 1] ?? null;
-  const photoPrev  = photos[index - 1] ?? null;
-  const underPhoto = dir === "next" ? photoNext : photoPrev;
+  const [progress, setProgress]         = useState(0);
+  const [dir, setDir]                   = useState<"next" | "prev">("next");
+  const [busy, setBusy]                 = useState(false);
+  const [isAnimating, setIsAnimating]   = useState(false);
+  const [isMobile, setIsMobile]         = useState(false);
+  const [isPortrait, setIsPortrait]     = useState(false);
+  const [dismissedRotate, setDismissedRotate] = useState(false);
 
-  // GSAP-powered progress animation
-  const animateTo = useCallback((target: number, onComplete?: () => void) => {
+  const sceneRef      = useRef<HTMLDivElement>(null);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const imgCacheRef      = useRef<Map<string, HTMLImageElement>>(new Map());
+  const fullPreloadedRef = useRef<Set<string>>(new Set()); // tracks fullUrl preloads
+  const proxy         = useRef({ value: 0 });
+  const tweenRef      = useRef<gsap.core.Tween | null>(null);
+  const dirRef        = useRef<"next" | "prev">("next");
+  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spreadIdxRef  = useRef(spreadIndex); // always reflects current spread for event handlers
+  useEffect(() => { spreadIdxRef.current = spreadIndex; }, [spreadIndex]);
+
+  // Detect mobile / orientation
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  // Screenshot / print logging
+  useEffect(() => {
+    const token = localStorage.getItem("session_token");
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { "x-session-token": token } : {}),
+    };
+
+    const currentSpreadMeta = () => {
+      const si = spreadIdxRef.current;
+      const base = (si - 1) * 2;
+      const left  = si > 0 ? photos[base]     : null;
+      const right = si > 0 ? photos[base + 1] : null;
+      return {
+        spread_index: si,
+        page_left:  si > 0 ? (si - 1) * 2 + 1 : null,
+        page_right: si > 0 && right ? (si - 1) * 2 + 2 : null,
+        photo_left:  left?.name  ?? null,
+        photo_right: right?.name ?? null,
+        total_photos: photos.length,
+      };
+    };
+
+    const log = (type: string) =>
+      fetch("/api/gallery-event", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ type, metadata: currentSpreadMeta() }),
+      }).catch(() => {});
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen") log("screenshot_printscreen");
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && ["3","4","5","s"].includes(e.key)) log("screenshot_macos");
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") { e.preventDefault(); log("print_attempt"); }
+    };
+    const blur = () => {
+      if (sceneRef.current) sceneRef.current.style.filter = "blur(24px)";
+    };
+    const unblur = () => {
+      if (sceneRef.current) sceneRef.current.style.filter = "";
+    };
+    const onVis = () => {
+      if (document.hidden) {
+        log("screenshot_attempt");
+        blur();
+      } else {
+        unblur();
+      }
+    };
+    // window blur fires on iOS when the screenshot UI appears (swipe gesture)
+    // and on Android when the app switcher opens during screenshot
+    const onBlur = () => { log("screenshot_attempt"); blur(); };
+    const onFocus = () => { unblur(); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getSpreadPhotos = (si: number): [DrivePhoto | null, DrivePhoto | null] => {
+    if (si <= 0) return [null, null];
+    const base = (si - 1) * 2;
+    return [photos[base] ?? null, photos[base + 1] ?? null];
+  };
+
+  const wmExtra = guestCity || undefined;                      // city — line 1
+  const wmTime  = openedAtRef.current || undefined;            // IST open-time — line 2
+
+  const renderSpread = (si: number) => {
+    if (si <= 0) return <BookCover folder={folder} />;
+    const [l, r] = getSpreadPhotos(si);
+    const ln = (si - 1) * 2 + 1;
+    const rn = (si - 1) * 2 + 2;
+    return (
+      <BookSpread
+        leftPhoto={l}
+        rightPhoto={r}
+        leftPageNum={ln <= photos.length ? ln : undefined}
+        rightPageNum={rn <= photos.length ? rn : undefined}
+        guestName={guestName || undefined}
+        wmExtra={wmExtra}
+        wmTime={wmTime}
+      />
+    );
+  };
+
+  const renderHalfPage = (si: number, side: "left" | "right") => {
+    const isLeft = side === "left";
+    if (si <= 0) return isLeft ? <BookCoverLeft /> : <BookCoverRight folder={folder} />;
+    const [l, r] = getSpreadPhotos(si);
+    const photo = isLeft ? l : r;
+    const pn = isLeft ? (si - 1) * 2 + 1 : (si - 1) * 2 + 2;
+    return (
+      <BookPage
+        photo={photo}
+        isLeft={isLeft}
+        pageNum={photo && pn <= photos.length ? pn : undefined}
+        guestName={guestName || undefined}
+        wmExtra={wmExtra}
+        wmTime={wmTime}
+        fullWidth
+        noSpineShadow
+      />
+    );
+  };
+
+  const hasPrev = spreadIndex > 0;
+  const hasNext = spreadIndex < totalSpreads - 1;
+
+  // Preload photos for canvas (thumbnail) and BookPage (full-size).
+  // Both use the same /api/drive-image proxy so browser in-memory image cache
+  // ensures the DOM <img> in BookPage reuses what we prefetched here.
+  useEffect(() => {
+    for (let offset = -1; offset <= 2; offset++) {
+      const [l, r] = getSpreadPhotos(spreadIndex + offset);
+      [l, r].forEach(ph => {
+        if (!ph) return;
+        // Thumbnail — needed by canvas cylinder-curl animation
+        if (!imgCacheRef.current.has(ph.thumbnailUrl)) {
+          const img = new window.Image();
+          img.onload = () => imgCacheRef.current.set(ph.thumbnailUrl, img);
+          img.onerror = () => imgCacheRef.current.set(ph.thumbnailUrl, img);
+          img.src = ph.thumbnailUrl;
+          imgCacheRef.current.set(ph.thumbnailUrl, img);
+        }
+        // Full-size — needed by BookPage after the animation completes.
+        // Preload one spread behind and two ahead so images are ready before
+        // the user sees the static spread.
+        if (!fullPreloadedRef.current.has(ph.fullUrl)) {
+          const img = new window.Image();
+          img.src = ph.fullUrl;
+          fullPreloadedRef.current.add(ph.fullUrl);
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spreadIndex]);
+
+  // GSAP-driven animation — drives progress each frame so the canvas redraws smoothly.
+  const animateTo = useCallback((onComplete: () => void) => {
     tweenRef.current?.kill();
+    if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; }
+    proxy.current.value = 0;
+    setProgress(0);
+    setIsAnimating(true);
     tweenRef.current = gsap.to(proxy.current, {
-      value: target,
-      duration: 0.52,
-      ease: "power3.inOut",
-      onUpdate: () => setProgress(proxy.current.value),
-      onComplete,
+      value: 1,
+      duration: 0.72,
+      ease: "power2.out",
+      onUpdate() { setProgress(proxy.current.value); },
+      onComplete() { tweenRef.current = null; onComplete(); },
     });
   }, []);
 
-  const completeTurn = useCallback((d: "next" | "prev", fromP = 0) => {
-    if (d === "next" && !photoNext) return;
-    if (d === "prev" && !photoPrev) return;
-    dirRef.current = d;
-    setDir(d);
-    proxy.current.value = fromP;
-    setProgress(fromP);
-    animateTo(1, () => {
-      proxy.current.value = 0;
-      setProgress(0);
-      onIndexChange(d === "next" ? index + 1 : index - 1);
-    });
-  }, [animateTo, index, onIndexChange, photoNext, photoPrev]);
-
   const snapBack = useCallback((fromP: number) => {
+    tweenRef.current?.kill();
+    if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; }
     proxy.current.value = fromP;
-    animateTo(0);
-  }, [animateTo]);
+    setIsAnimating(true);
+    tweenRef.current = gsap.to(proxy.current, {
+      value: 0,
+      duration: 0.32,
+      ease: "power1.out",
+      onUpdate() { setProgress(proxy.current.value); },
+      onComplete() { tweenRef.current = null; setIsAnimating(false); setBusy(false); },
+    });
+  }, []);
 
   const goNext = useCallback(() => {
-    if (tweenRef.current?.isActive() || !photoNext) return;
-    completeTurn("next");
-  }, [photoNext, completeTurn]);
+    if (busy || !hasNext) return;
+    setBusy(true);
+    setDir("next");
+    dirRef.current = "next";
+    animateTo(() => {
+      const n = spreadIndexRef.current + 1;
+      setSpreadIndex(n);
+      setProgress(0);
+      setIsAnimating(false);
+      setBusy(false);
+      // Defer cross-component setState to avoid concurrent-mode render warning
+      setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
+    });
+  }, [busy, hasNext, animateTo, onIndexChange]);
 
   const goPrev = useCallback(() => {
-    if (tweenRef.current?.isActive() || !photoPrev) return;
-    completeTurn("prev");
-  }, [photoPrev, completeTurn]);
+    if (busy || !hasPrev) return;
+    setBusy(true);
+    setDir("prev");
+    dirRef.current = "prev";
+    animateTo(() => {
+      const n = spreadIndexRef.current - 1;
+      setSpreadIndex(n);
+      setProgress(0);
+      setIsAnimating(false);
+      setBusy(false);
+      setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
+    });
+  }, [busy, hasPrev, animateTo, onIndexChange]);
 
-  // GSAP Observer — velocity-aware drag, handles both mouse and touch
+  // Drag / swipe via GSAP Observer
   useEffect(() => {
     if (!sceneRef.current) return;
     let dragging = false;
@@ -319,373 +916,316 @@ function PageTurnLightbox({
       target: sceneRef.current,
       type: "touch,pointer",
       lockAxis: true,
-      dragMinimum: 6,
+      dragMinimum: 8,
       onPress(self) {
         if (tweenRef.current?.isActive()) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
-        const relX = self.x - rect.left;
-        localDir = relX >= rect.width * 0.45 ? "next" : "prev";
-        if (localDir === "next" && !photoNext) return;
-        if (localDir === "prev" && !photoPrev) return;
+        localDir = (self.x ?? 0) - rect.left >= rect.width * 0.5 ? "next" : "prev";
+        if (localDir === "next" && !hasNext) return;
+        if (localDir === "prev" && !hasPrev) return;
         dragging = true;
-        dragStartX = self.startX;
+        dragStartX = self.startX ?? 0;
         dirRef.current = localDir;
         setDir(localDir);
         proxy.current.value = 0;
         setProgress(0);
+        setBusy(true);
       },
       onDrag(self) {
         if (!dragging) return;
         tweenRef.current?.kill();
         const rect = sceneRef.current!.getBoundingClientRect();
-        const delta = dirRef.current === "next"
-          ? dragStartX - self.x   // drag left = next
-          : self.x - dragStartX;  // drag right = prev
-        const newP = Math.max(0, Math.min(0.97, delta / (rect.width * 0.65)));
-        proxy.current.value = newP;
-        setProgress(newP);
+        const delta = localDir === "next"
+          ? dragStartX - (self.x ?? 0)
+          : (self.x ?? 0) - dragStartX;
+        proxy.current.value = Math.max(0, Math.min(0.97, delta / (rect.width * 0.7)));
+        setProgress(proxy.current.value);
       },
       onDragEnd(self) {
         if (!dragging) return;
         dragging = false;
         const p = proxy.current.value;
-        // Velocity in px/s; positive = in the turn direction
-        const vel = dirRef.current === "next" ? -self.velocityX : self.velocityX;
-        if (p > 0.28 || vel > 420) {
-          completeTurn(dirRef.current, p);
+        const vel = localDir === "next" ? -(self.velocityX ?? 0) : (self.velocityX ?? 0);
+        if (p > 0.3 || vel > 400) {
+          if (localDir === "next" && hasNext) {
+            animateTo(() => {
+              const n = spreadIndexRef.current + 1;
+              setSpreadIndex(n);
+              setProgress(0); setIsAnimating(false); setBusy(false);
+              setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
+            });
+          } else if (localDir === "prev" && hasPrev) {
+            animateTo(() => {
+              const n = spreadIndexRef.current - 1;
+              setSpreadIndex(n);
+              setProgress(0); setIsAnimating(false); setBusy(false);
+              setTimeout(() => onIndexChange(n <= 0 ? 0 : Math.max(0, (n - 1) * 2)), 0);
+            });
+          } else {
+            snapBack(p);
+          }
         } else {
           snapBack(p);
         }
       },
     });
+    return () => obs.kill();
+  }, [hasNext, hasPrev, animateTo, snapBack, onIndexChange]);
 
-    return () => { obs.kill(); };
-  }, [photoNext, photoPrev, completeTurn, snapBack]);
-
-  // Keyboard navigation
+  // Keyboard
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape")     onClose();
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft")  goPrev();
-    }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose, goNext, goPrev]);
 
-  useEffect(() => () => { tweenRef.current?.kill(); }, []);
+  useEffect(() => () => {
+    tweenRef.current?.kill();
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+  }, []);
 
-  if (!current) return null;
+  // Canvas cylinder-curl geometry
+  const showLeaf = progress > 0.003 || isAnimating;
+  const turningIsRight = dir === "next";
+  const adjacentSpreadIndex = turningIsRight ? spreadIndex + 1 : spreadIndex - 1;
+  // fold shadow peaks at 90° — drives cast shadow on the static layer underneath
+  const foldShadow = Math.sin(progress * Math.PI);
 
-  // ── Geometry ──────────────────────────────────────────────────────────────
-  const p        = progress;
-  const showFold = p > 0.003;
-  const busy     = tweenRef.current?.isActive() ?? false;
+  // Canvas draw effect — redraws at every progress tick (GSAP drives setProgress each frame)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !showLeaf) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  // Diagonal fold line: sweeps from the bottom-right (or bottom-left for prev)
-  // corner across the image. Two phases:
-  //   phase1 (p ≤ 0.5): fold line endpoint A on right/left edge, B on bottom edge
-  //   phase2 (p > 0.5): fold line endpoint A on top edge, B on left/right edge
-  const phase1 = p <= 0.5;
-
-  let foldAx: number, foldAy: number, foldBx: number, foldBy: number;
-  if (dir === "next") {
-    if (phase1) {
-      foldAx = 100;              // right edge
-      foldAy = (1 - 2 * p) * 100; // descends from H to 0 as p→0.5
-      foldBx = (1 - 2 * p) * 100; // moves left from W to 0
-      foldBy = 100;              // bottom edge
-    } else {
-      foldAx = (2 - 2 * p) * 100; // top edge, moves right→left
-      foldAy = 0;
-      foldBx = 0;                // left edge
-      foldBy = (2 - 2 * p) * 100; // moves up from H to 0
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth;   // full book width
+    const cssH = canvas.clientHeight;
+    const halfW = cssW / 2;            // one page width
+    if (cssW === 0 || cssH === 0) return;
+    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+      canvas.width  = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
     }
-  } else {
-    if (phase1) {
-      foldAx = 0;                // left edge
-      foldAy = (1 - 2 * p) * 100;
-      foldBx = 2 * p * 100;     // bottom edge moves right
-      foldBy = 100;
-    } else {
-      foldAx = (2 * p - 1) * 100; // top edge moves left→right
-      foldAy = 0;
-      foldBx = 100;              // right edge
-      foldBy = (2 - 2 * p) * 100;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const [l, r] = getSpreadPhotos(spreadIndex);
+    const frontPhoto = turningIsRight ? r : l;
+    const [al, ar] = getSpreadPhotos(adjacentSpreadIndex);
+    const backPhoto  = turningIsRight ? al : ar;
+
+    const frontImg = frontPhoto ? imgCacheRef.current.get(frontPhoto.thumbnailUrl) : undefined;
+    const backImg  = backPhoto  ? imgCacheRef.current.get(backPhoto.thumbnailUrl)  : undefined;
+
+    const frontIsLeft = !turningIsRight;
+    const backIsLeft  =  turningIsRight;
+    const frontPageNum = frontPhoto
+      ? (spreadIndex - 1) * 2 + (turningIsRight ? 2 : 1) : undefined;
+    const backPageNum  = backPhoto
+      ? (adjacentSpreadIndex - 1) * 2 + (turningIsRight ? 1 : 2) : undefined;
+
+    const wm1 = ["James & Sharon", guestName, wmExtra].filter(Boolean).join("  ·  ") || null;
+    const wm2 = wmTime ?? null;
+
+    // Two-phase full-spread turn so the page visually crosses the spine:
+    //
+    //  Phase 1 (progress 0→0.5, p1 0→1): turning page curls from outer edge inward to spine.
+    //  Phase 2 (progress 0.5→1, p2 0→1): adjacent page uncurls from spine outward onto the
+    //    opposite half, replacing what Layer 2 showed there.
+    //
+    // For NEXT (turningIsRight): Phase 1 on right half, Phase 2 on left half (mirrored).
+    // For PREV (!turningIsRight): Phase 1 on left half (mirrored), Phase 2 on right half.
+
+    const p1 = Math.min(progress * 2, 1);
+    const p2 = Math.max(progress * 2 - 1, 0);
+
+    // Phase 1 — turning page curls toward spine (suppressed once Phase 2 begins
+    // to avoid a double-cylinder overlap at the spine centre)
+    if (p1 > 0.003 && p2 < 0.003) {
+      ctx.save();
+      if (turningIsRight) {
+        ctx.translate(halfW, 0);          // right half, no flip
+      } else {
+        ctx.translate(halfW, 0);
+        ctx.scale(-1, 1);                 // left half, mirror so fold sweeps outer→spine
+      }
+      ctxDrawCurl(ctx, halfW, cssH,
+        frontImg, undefined,              // cream paper back (next page revealed in Phase 2)
+        frontIsLeft, false,
+        frontPageNum, undefined,
+        wm1, wm2,
+        p1, Math.sin(p1 * Math.PI),
+        !turningIsRight,
+      );
+      ctx.restore();
     }
-  }
 
-  // Clip-path for stationary layer (current photo, everything on the "keep" side)
-  let stationaryClip: string | undefined;
-  if (showFold) {
-    if (dir === "next") {
-      stationaryClip = phase1
-        ? `polygon(0% 0%, 100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 0% 100%)`
-        : `polygon(0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
-    } else {
-      stationaryClip = phase1
-        ? `polygon(100% 0%, 0% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%, 100% 100%)`
-        : `polygon(100% 0%, ${foldAx}% ${foldAy}%, ${foldBx}% ${foldBy}%)`;
+    // Phase 2 — adjacent page uncurls from spine onto the opposite half
+    if (p2 > 0.003) {
+      const uncurlP = 1 - p2;            // 1→0: fully curled at spine → fully flat
+      ctx.save();
+      if (turningIsRight) {
+        // Next left page unfurls in left half (mirrored)
+        ctx.translate(halfW, 0);
+        ctx.scale(-1, 1);
+        ctxDrawCurl(ctx, halfW, cssH,
+          backImg, undefined,
+          backIsLeft, false,
+          backPageNum, undefined,
+          wm1, wm2,
+          uncurlP, Math.sin(uncurlP * Math.PI),
+          true,
+        );
+      } else {
+        // Prev right page unfurls in right half (no mirror)
+        ctx.translate(halfW, 0);
+        ctxDrawCurl(ctx, halfW, cssH,
+          backImg, undefined,
+          backIsLeft, false,
+          backPageNum, undefined,
+          wm1, wm2,
+          uncurlP, Math.sin(uncurlP * Math.PI),
+          false,
+        );
+      }
+      ctx.restore();
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, showLeaf, spreadIndex, adjacentSpreadIndex, turningIsRight,
+      foldShadow, guestName, wmExtra, wmTime]);
 
-  // Vertical fold leaf — 3D page turn strip
-  // Positioned at the leftmost/rightmost x-point of the diagonal fold line
-  // so the 3D rotation starts where the fold visually begins
-  const leafFoldX  = dir === "next"
-    ? (phase1 ? foldBx : 0)          // x of bottommost fold point for next
-    : (phase1 ? 0 : 100 - foldBx);   // mirrored for prev
-  const leafLeft   = dir === "next" ? leafFoldX : undefined;
-  const leafRight  = dir === "prev" ? leafFoldX : undefined;
-  const leafWidth  = dir === "next" ? (100 - leafFoldX) : (100 - leafFoldX);
-  const angle      = p * 180;
+  const leftNum  = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 1;
+  const rightNum = spreadIndex <= 0 ? undefined : (spreadIndex - 1) * 2 + 2;
+  const spreadLabel = spreadIndex === 0
+    ? "Cover"
+    : `${leftNum}–${Math.min(rightNum ?? 0, photos.length)} of ${photos.length}`;
 
-  // Image inside the front face: full scene width projected onto the leaf
-  const imgWidthInLeaf = leafWidth > 0.5 ? (100 / leafWidth) * 100 : 100;
-
-  // Corner peel element: parchment triangle in the corner (visible early in drag)
-  // Fades into the main fold leaf as p grows
-  const cornerPeelVisible = showFold && p < 0.55;
-  const cornerTopY  = Math.max(0, (1 - 2 * p) * 100); // % from top
-  const cornerSideX = Math.max(0, (1 - 2 * p) * 100); // % from side
-  const cornerPeelOpacity = Math.max(0, 1 - p / 0.45);
-  const cornerPeelClip = dir === "next"
-    ? `polygon(100% 100%, 100% ${cornerTopY}%, ${cornerSideX}% 100%)`
-    : `polygon(0% 100%, 0% ${cornerTopY}%, ${100 - cornerSideX}% 100%)`;
+  const showRotate = isMobile && isPortrait && !dismissedRotate;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/92 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      {/* Counter */}
-      <p className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[11px] tracking-widest text-white/50 z-20 pointer-events-none select-none">
-        {index + 1} / {photos.length}
-      </p>
+    <>
+      {showRotate && <RotateDevicePrompt onDismiss={() => setDismissedRotate(true)} />}
 
-      {/* Close */}
-      <button
-        onClick={onClose}
-        aria-label="Close"
-        className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xl transition-colors z-20"
-      >×</button>
-
-      {/* ── Scene ── */}
       <div
-        ref={sceneRef}
-        className="relative rounded-2xl overflow-hidden shadow-2xl select-none"
-        style={{
-          width:       "min(82vw, 1100px)",
-          height:      "min(85vh, 800px)",
-          perspective: "1800px",
-          cursor:      busy ? "grabbing" : "grab",
-          touchAction: "none",
-        }}
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: "rgba(8,4,2,0.96)" }}
+        onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       >
-        {/* Layer 0 — destination photo (always behind) */}
-        {underPhoto && showFold && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={underPhoto.fullUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ objectFit: "contain" }}
-            draggable={false}
-          />
-        )}
+        {/* Top bar */}
+        <p className="absolute top-4 left-1/2 -translate-x-1/2 font-body text-[10px] tracking-widest text-white/35 z-20 pointer-events-none select-none">
+          {spreadLabel}
+        </p>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-lg transition-colors z-20"
+        >×</button>
 
-        {/* Layer 1 — stationary current photo, diagonally clipped */}
+        {/* Book spread — no overflow:hidden so CSS preserve-3d works on the turning leaf */}
         <div
-          className="absolute inset-0"
-          style={{ clipPath: stationaryClip }}
+          ref={sceneRef}
+          className="relative select-none"
+          style={{
+            width: "min(94vw, calc(88vh * 1.5))",
+            aspectRatio: "3/2",
+            borderRadius: "3px",
+            boxShadow: "0 30px 90px rgba(0,0,0,0.75), 0 8px 30px rgba(0,0,0,0.5)",
+            cursor: busy ? "grabbing" : "grab",
+            touchAction: "none",
+            perspective: "700px",
+          }}
+          onContextMenu={e => e.preventDefault()}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={current.fullUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ objectFit: "contain" }}
-            draggable={false}
-          />
-          {/* Shadow cast by turning leaf onto the stationary side */}
-          {showFold && (
-            <div
-              className="absolute top-0 bottom-0 pointer-events-none"
-              style={{
-                [dir === "next" ? "right" : "left"]: 0,
-                width: "90px",
-                background: dir === "next"
-                  ? `linear-gradient(to right, transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`
-                  : `linear-gradient(to left,  transparent, rgba(0,0,0,${Math.min(0.48, p * 0.65)}))`,
-              }}
-            />
+          {!showLeaf ? (
+            // Static state: full spread
+            <div className="absolute inset-0">{renderSpread(spreadIndex)}</div>
+          ) : (
+            <>
+              {/* Layer 1: target spread (full, underneath) */}
+              <div className="absolute inset-0" style={{ zIndex: 0 }}>
+                {renderSpread(adjacentSpreadIndex)}
+              </div>
+
+              {/* Cast shadow from turning page onto target spread — peaks at 90° */}
+              <div className="absolute inset-0 pointer-events-none" style={{
+                zIndex: 1,
+                background: `rgba(0,0,0,${(foldShadow * 0.28).toFixed(3)})`,
+              }} />
+
+              {/* Layer 2: anchor — stationary half, with retreating edge shadow */}
+              <div
+                className="absolute inset-y-0"
+                style={{
+                  [turningIsRight ? "left" : "right"]: 0,
+                  width: "50%",
+                  zIndex: 2,
+                }}
+              >
+                {renderHalfPage(spreadIndex, turningIsRight ? "left" : "right")}
+                {/* Shadow near spine edge — fades as page turns away */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: turningIsRight
+                    ? `linear-gradient(to left, rgba(0,0,0,${((1 - progress) * 0.14).toFixed(3)}) 0%, transparent 50%)`
+                    : `linear-gradient(to right, rgba(0,0,0,${((1 - progress) * 0.14).toFixed(3)}) 0%, transparent 50%)`,
+                }} />
+              </div>
+
+              {/* Layer 3: spine (always at centre, on top) */}
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 10, background: "linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 11, background: "linear-gradient(to bottom, #c9a84c55, #8b691455, #c9a84c55)" }} />
+
+              {/* Layer 4: Canvas cylinder curl — full-width so the fold sweeps across the whole spread */}
+              <canvas
+                ref={canvasRef}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  zIndex: 4,
+                  pointerEvents: "none",
+                  display: showLeaf ? "block" : "none",
+                }}
+              />
+            </>
           )}
         </div>
 
-        {/* Layer 2 — corner peel: flat parchment triangle lifting from corner */}
-        {cornerPeelVisible && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              clipPath: cornerPeelClip,
-              opacity:  cornerPeelOpacity,
-              background: "linear-gradient(135deg, #f0e8d5 0%, #e2d5b8 50%, #d8c9a3 100%)",
-              // Slight shadow line at the fold edge
-              boxShadow: dir === "next"
-                ? "inset 3px 0 8px rgba(0,0,0,0.18)"
-                : "inset -3px 0 8px rgba(0,0,0,0.18)",
-            }}
-          />
-        )}
-
-        {/* Layer 3 — 3D turning leaf: the page rotating in 3D around the fold axis */}
-        {showFold && (
-          <div
-            className="absolute top-0 bottom-0 overflow-hidden"
-            style={{
-              left:            leafLeft !== undefined ? `${leafLeft}%` : undefined,
-              right:           leafRight !== undefined ? `${leafRight}%` : undefined,
-              width:           `${leafWidth}%`,
-              transformOrigin: dir === "next" ? "left center" : "right center",
-              transform:       `perspective(1600px) rotateY(${dir === "next" ? -angle : angle}deg)`,
-              transformStyle:  "preserve-3d",
-            }}
+        {/* Nav arrows */}
+        {hasPrev && (
+          <button
+            onClick={goPrev}
+            aria-label="Previous spread"
+            disabled={busy}
+            className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-20 transition-colors disabled:opacity-20"
           >
-            {/* Front face — shows the turning portion of the current image */}
-            <div
-              className="absolute inset-0 overflow-hidden"
-              style={{
-                backfaceVisibility:       "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={current.fullUrl}
-                alt=""
-                style={{
-                  position:       "absolute",
-                  top:            0,
-                  bottom:         0,
-                  [dir === "next" ? "right" : "left"]: 0,
-                  width:          `${imgWidthInLeaf}%`,
-                  objectFit:      "contain",
-                  objectPosition: dir === "next" ? "right center" : "left center",
-                }}
-                draggable={false}
-              />
-              {/* Depth shading: darkens toward the fold edge */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: dir === "next"
-                    ? `linear-gradient(to right, rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`
-                    : `linear-gradient(to left,  rgba(0,0,0,${Math.min(0.58, p * 0.78)}), rgba(0,0,0,0.02) 60%, transparent)`,
-                }}
-              />
-              {/* Specular highlight at the crease */}
-              {p > 0.04 && p < 0.93 && (
-                <div
-                  className="absolute top-0 bottom-0 pointer-events-none"
-                  style={{
-                    [dir === "next" ? "left" : "right"]: 0,
-                    width: "20px",
-                    background: dir === "next"
-                      ? `linear-gradient(to right, rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`
-                      : `linear-gradient(to left,  rgba(255,255,255,${0.2 * Math.sin(p * Math.PI)}), transparent)`,
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Back face — warm parchment paper, visible after 90° rotation */}
-            <div
-              className="absolute inset-0"
-              style={{
-                transform:                "rotateY(180deg)",
-                backfaceVisibility:       "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                background: "linear-gradient(160deg, #f5eddc 0%, #ecdfc9 45%, #e0d3b8 100%)",
-              }}
-            >
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: dir === "next"
-                  ? "linear-gradient(to right, rgba(0,0,0,0.2), transparent 65%)"
-                  : "linear-gradient(to left,  rgba(0,0,0,0.2), transparent 65%)",
-              }} />
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: dir === "next"
-                  ? "linear-gradient(to left, rgba(255,255,255,0.12), transparent 45%)"
-                  : "linear-gradient(to right, rgba(255,255,255,0.12), transparent 45%)",
-              }} />
-            </div>
-          </div>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         )}
-
-        {/* Corner hint — very subtle peel affordance at rest */}
-        {!showFold && (photoNext || photoPrev) && (
-          <>
-            {photoNext && (
-              <div
-                className="absolute bottom-0 right-0 pointer-events-none"
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  clipPath: "polygon(100% 100%, 100% 0%, 0% 100%)",
-                  background: "linear-gradient(135deg, #f0e8d5, #ddd0b5)",
-                  opacity: 0.55,
-                  boxShadow: "-1px -1px 5px rgba(0,0,0,0.22)",
-                }}
-              />
-            )}
-            {photoPrev && (
-              <div
-                className="absolute bottom-0 left-0 pointer-events-none"
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  clipPath: "polygon(0% 100%, 0% 0%, 100% 100%)",
-                  background: "linear-gradient(225deg, #f0e8d5, #ddd0b5)",
-                  opacity: 0.55,
-                  boxShadow: "1px -1px 5px rgba(0,0,0,0.22)",
-                }}
-              />
-            )}
-          </>
+        {hasNext && (
+          <button
+            onClick={goNext}
+            aria-label="Next spread"
+            disabled={busy}
+            className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-20 transition-colors disabled:opacity-20"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         )}
       </div>
-
-      {/* Prev arrow */}
-      {photoPrev && (
-        <button
-          onClick={goPrev}
-          aria-label="Previous photo"
-          disabled={busy}
-          className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M13 4L7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      )}
-
-      {/* Next arrow */}
-      {photoNext && (
-        <button
-          onClick={goNext}
-          aria-label="Next photo"
-          disabled={busy}
-          className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all z-20 disabled:opacity-25"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -702,6 +1242,15 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [openAlbum, setOpenAlbum] = useState<DriveAlbum | null>(null);
   const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Set gallery_token cookie early so thumbnail img tags (which can't use custom
+  // headers) pass the drive-image auth check as soon as the section mounts.
+  useEffect(() => {
+    const token = localStorage.getItem("session_token");
+    if (token) {
+      document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
+    }
+  }, []);
 
   useEffect(() => {
     const sessionToken = localStorage.getItem("session_token");
@@ -737,9 +1286,24 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const photos = folder === "engagement" ? state.photos : (openAlbum?.photos ?? []);
     const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
+    // Set a short-lived cookie so drive-image route can authenticate img tag requests
+    const token = localStorage.getItem("session_token");
+    if (token) {
+      document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
+    }
+    // Track gallery open in the phase_view event_data row
+    fetch("/api/gallery-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
+      body: JSON.stringify({ type: "gallery_open" }),
+    }).catch(() => {});
   }, [folder, state.photos, openAlbum]);
 
-  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+    // Revoke the gallery access cookie when the book is closed
+    document.cookie = "gallery_token=; path=/api/drive-image; SameSite=Strict; max-age=0";
+  }, []);
 
   const handleIndexChange = useCallback((i: number) => setLightboxIndex(i), []);
 
@@ -840,11 +1404,12 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
 
       {/* Lightbox */}
       {lightboxIndex !== null && (
-        <PageTurnLightbox
+        <AlbumBook
           photos={lightboxPhotos}
           index={lightboxIndex}
           onClose={closeLightbox}
           onIndexChange={handleIndexChange}
+          folder={folder}
         />
       )}
     </section>

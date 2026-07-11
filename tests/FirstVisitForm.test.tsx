@@ -34,6 +34,8 @@ import FirstVisitForm from "@/components/phases/FirstVisitForm";
 async function fillAndSubmit(onComplete = vi.fn()) {
   render(<FirstVisitForm onComplete={onComplete} />);
   await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
+  await userEvent.type(screen.getByPlaceholderText(/your email address/i), "james@example.com");
+  await userEvent.type(screen.getByPlaceholderText(/your mobile number/i), "+919876543210");
   await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
   await waitFor(() => screen.getByText("Chennai"));
   fireEvent.mouseDown(screen.getByText("Chennai"));
@@ -53,9 +55,11 @@ describe("FirstVisitForm", () => {
     });
   });
 
-  it("renders name input and city search", () => {
+  it("renders name, email, mobile, and city inputs", () => {
     render(<FirstVisitForm onComplete={() => {}} />);
     expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your email address/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your mobile number/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search your city/i)).toBeInTheDocument();
   });
 
@@ -87,6 +91,8 @@ describe("FirstVisitForm", () => {
       expect(global.fetch).toHaveBeenCalledWith("/api/register", expect.objectContaining({ method: "POST" }));
       expect(localStorageMock.getItem("guest_name")).toBe("James");
       expect(localStorageMock.getItem("guest_city")).toBe("Chennai");
+      expect(localStorageMock.getItem("guest_email")).toBe("james@example.com");
+      expect(localStorageMock.getItem("guest_mobile")).toBe("+919876543210");
       expect(localStorageMock.getItem("session_token")).toBe("tok-xyz");
       expect(onComplete).toHaveBeenCalledWith("James");
     });
@@ -95,6 +101,7 @@ describe("FirstVisitForm", () => {
   it("submit is disabled when city is typed but not selected from dropdown", async () => {
     render(<FirstVisitForm onComplete={() => {}} />);
     await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
+    await userEvent.type(screen.getByPlaceholderText(/your email address/i), "james@example.com");
     await userEvent.type(screen.getByPlaceholderText(/search your city/i), "Chen");
     expect(screen.getByRole("button", { name: /open your invitation/i })).toBeDisabled();
   });

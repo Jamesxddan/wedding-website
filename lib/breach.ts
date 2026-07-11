@@ -15,7 +15,7 @@ export async function checkAndBlock(
   ip: string | null,
   guest_id: string | null
 ): Promise<BreachBlock | null> {
-  if (process.env.VERCEL_ENV !== "production") return null;
+  if (!process.env.VERCEL_ENV) return null;
 
   // Owners are exempt — only check when guest_id is known
   if (guest_id) {
@@ -101,6 +101,33 @@ export async function logEvent(
   guest_id?: string | null
 ): Promise<void> {
   try {
+    if (event_type === "phase_view" && event_data) {
+      const { data: existing } = await supabase
+        .from("access_logs")
+        .select("id, event_data, guest_id")
+        .eq("device_uuid", device_uuid)
+        .eq("event_type", "phase_view")
+        .maybeSingle();
+
+      if (existing) {
+        const merged_data = {
+          ...(existing.event_data as Record<string, unknown> || {}),
+          ...event_data,
+        };
+        await supabase
+          .from("access_logs")
+          .update({
+            event_data: merged_data,
+            created_at: new Date().toISOString(),
+            ip: ip ?? undefined,
+            guest_id: guest_id || existing.guest_id || null,
+          })
+          .eq("id", existing.id);
+        console.log(`[logEvent] Updated existing phase_view in DB for device ${device_uuid}:`, merged_data);
+        return;
+      }
+    }
+
     await supabase.from("access_logs").insert({
       device_uuid,
       guest_id: guest_id ?? null,
@@ -108,7 +135,9 @@ export async function logEvent(
       event_data,
       ip,
     });
-  } catch {
+    console.log(`[logEvent] Inserted new ${event_type} in DB for device ${device_uuid}:`, event_data);
+  } catch (err) {
     // Never let logging break a request
+    console.error("[logEvent] Failed to log event in DB:", err);
   }
 }

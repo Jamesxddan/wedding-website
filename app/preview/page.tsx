@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
 const DEVICES = [
   {
@@ -38,6 +39,7 @@ const PHASES = [
 ];
 
 export default function PreviewPage() {
+  useTrackPageVisit("preview");
   const [deviceIdx, setDeviceIdx] = useState(0);
   const [phase, setPhase] = useState("FIRST_VISIT");
   const [visible, setVisible] = useState(false);

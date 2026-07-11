@@ -1,3 +1,14 @@
+import { createHmac } from "crypto";
+
+// Encode Drive file ID as an opaque HMAC-signed token so raw IDs are never
+// sent to the browser. The drive-image route verifies the signature before fetching.
+function signFileId(fileId: string): string {
+  const secret = process.env.DRIVE_TOKEN_SECRET;
+  if (!secret) return fileId; // dev fallback: no secret set
+  const sig = createHmac("sha256", secret).update(fileId).digest("hex").slice(0, 24);
+  return Buffer.from(`${fileId}.${sig}`).toString("base64url");
+}
+
 export interface DrivePhoto {
   id: string;
   name: string;
@@ -15,6 +26,19 @@ export interface DriveAlbum {
 }
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
+
+// In-memory cache for Drive API responses — avoids hammering the quota when
+// multiple components (hero + gallery) fetch simultaneously on the same server process.
+const driveCache = new Map<string, { data: unknown; expiresAt: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = driveCache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.data as T;
+  const data = await fn();
+  driveCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  return data;
+}
 
 type DriveFile = {
   id: string;
@@ -54,12 +78,13 @@ async function listFolderContents(
 function toPhoto(f: DriveFile, album?: string): DrivePhoto {
   const w = f.imageMediaMetadata?.width ?? 0;
   const h = f.imageMediaMetadata?.height ?? 0;
+  const token = signFileId(f.id);
   return {
-    id: f.id,
+    id: token,
     name: f.name,
-    thumbnailUrl: `/api/drive-image?id=${f.id}&sz=600`,
-    heroUrl: `/api/drive-image?id=${f.id}&sz=1600`,
-    fullUrl: `/api/drive-image?id=${f.id}&sz=2400`,
+    thumbnailUrl: `/api/drive-image?id=${token}&sz=600`,
+    heroUrl: `/api/drive-image?id=${token}&sz=1600`,
+    fullUrl: `/api/drive-image?id=${token}&sz=2400`,
     album,
     landscape: w > 0 && h > 0 ? w >= h : undefined,
   };
@@ -70,13 +95,14 @@ export async function fetchDrivePhotos(
   folderId: string,
   apiKey: string
 ): Promise<DrivePhoto[]> {
-  const photos = await collectAllImages(folderId, apiKey, "");
-  // Put landscape photos first, then portrait, then unknown
-  return [
-    ...photos.filter((p) => p.landscape === true),
-    ...photos.filter((p) => p.landscape === false),
-    ...photos.filter((p) => p.landscape === undefined),
-  ];
+  return withCache(`photos:${folderId}`, async () => {
+    const photos = await collectAllImages(folderId, apiKey, "");
+    return [
+      ...photos.filter((p) => p.landscape === true),
+      ...photos.filter((p) => p.landscape === false),
+      ...photos.filter((p) => p.landscape === undefined),
+    ];
+  });
 }
 
 // Recursively collect all images within a folder (for album contents)
@@ -105,26 +131,28 @@ export async function fetchDriveAlbums(
   folderId: string,
   apiKey: string
 ): Promise<{ albums: DriveAlbum[]; flat: DrivePhoto[] }> {
-  const files = await listFolderContents(folderId, apiKey);
+  return withCache(`albums:${folderId}`, async () => {
+    const files = await listFolderContents(folderId, apiKey);
 
-  const albums: DriveAlbum[] = [];
-  const topLevelPhotos: DrivePhoto[] = [];
+    const albums: DriveAlbum[] = [];
+    const topLevelPhotos: DrivePhoto[] = [];
 
-  for (const f of files) {
-    if (f.mimeType === "application/vnd.google-apps.folder") {
-      const photos = await collectAllImages(f.id, apiKey, f.name);
-      if (photos.length > 0) {
-        albums.push({ id: f.id, name: f.name, photos });
+    for (const f of files) {
+      if (f.mimeType === "application/vnd.google-apps.folder") {
+        const photos = await collectAllImages(f.id, apiKey, f.name);
+        if (photos.length > 0) {
+          albums.push({ id: f.id, name: f.name, photos });
+        }
+      } else if (f.mimeType?.startsWith("image/")) {
+        topLevelPhotos.push(toPhoto(f));
       }
-    } else if (f.mimeType?.startsWith("image/")) {
-      topLevelPhotos.push(toPhoto(f));
     }
-  }
 
-  if (topLevelPhotos.length > 0) {
-    albums.unshift({ id: folderId, name: "All", photos: topLevelPhotos });
-  }
+    if (topLevelPhotos.length > 0) {
+      albums.unshift({ id: folderId, name: "All", photos: topLevelPhotos });
+    }
 
-  const flat = albums.flatMap((a) => a.photos);
-  return { albums, flat };
+    const flat = albums.flatMap((a) => a.photos);
+    return { albums, flat };
+  });
 }

@@ -118,10 +118,25 @@ function Divider({ delay }: { delay: string }) {
 
 export default function OpeningScreen({ onComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   useParticles(canvasRef);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.zoom = "1";
+      const ratio = Math.min(1, (window.innerHeight - 4) / el.scrollHeight);
+      el.style.zoom = String(ratio);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
 
   return (
     <div
+      ref={containerRef}
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-10"
       style={{
         background: [
