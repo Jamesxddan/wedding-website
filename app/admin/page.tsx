@@ -266,8 +266,8 @@ export default function AdminPage() {
     await load("guests");
   }
 
-  async function clearGuestSession(g: Guest) {
-    if (!confirm(`Clear session for ${g.name}? They'll be asked to register again. Their data and logs are kept.`)) return;
+  async function deleteGuest(g: Guest) {
+    if (!confirm(`Delete ${g.name} completely?\n\nThis removes their guest record, all sessions, logs, breach flags, and gallery events. They will be treated as a brand new device.\n\nThis cannot be undone.`)) return;
     const res = await fetch("/api/admin/guests", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -275,9 +275,28 @@ export default function AdminPage() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(err.error ?? "Failed to clear session");
+      alert(err.error ?? "Failed to delete guest");
       return;
     }
+    await load("guests");
+  }
+
+  async function factoryReset() {
+    const first = confirm("💥 FACTORY RESET\n\nThis will permanently delete:\n• All guests\n• All sessions\n• All logs\n• All breach flags\n• All gallery events\n\nAdmin accounts and settings are kept.\n\nAre you absolutely sure?");
+    if (!first) return;
+    const second = confirm("Second confirmation required.\n\nThere is NO undo. All guest data will be gone forever.\n\nProceed with factory reset?");
+    if (!second) return;
+    const res = await fetch("/api/admin/guests", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ factory_reset: true }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Factory reset failed");
+      return;
+    }
+    await savePhase("FIRST_VISIT");
     await load("guests");
   }
 
@@ -540,6 +559,12 @@ export default function AdminPage() {
               >
                 🔄 Fresh Start (Reset + Open Form)
               </button>
+              <button
+                onClick={factoryReset}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 10, border: "none", color: "#fff", background: "#1a1a1a", cursor: "pointer", fontWeight: 600 }}
+              >
+                💥 Factory Reset
+              </button>
             </div>
           )}
           {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
@@ -570,10 +595,10 @@ export default function AdminPage() {
                     {isSuper && (
                       <td style={td}>
                         <button
-                          onClick={() => clearGuestSession(g)}
-                          style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #e67e22", color: "#e67e22", background: "transparent", cursor: "pointer" }}
+                          onClick={() => deleteGuest(g)}
+                          style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer" }}
                         >
-                          Clear session
+                          Delete guest
                         </button>
                       </td>
                     )}
