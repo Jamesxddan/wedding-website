@@ -22,6 +22,8 @@ export function usePhase(): PhaseState {
   });
   const [tick, setTick] = useState(0);
   const sessionChecked = useRef(false);
+  // Holds the DB phase_override so _runSessionCheck can respect it
+  const dbOverride = useRef<Phase | null>(null);
 
   useEffect(() => {
     const name = localStorage.getItem("guest_name");
@@ -29,25 +31,42 @@ export function usePhase(): PhaseState {
     const invitationSeen = localStorage.getItem("invitation_seen") === "true";
 
     const devOverride = localStorage.getItem("dev_phase");
-    const overridePhase =
+    const localOverride =
       devOverride && Object.values(Phase).includes(devOverride as Phase)
         ? (devOverride as Phase)
         : null;
 
+    // Show locally-computed phase immediately (no loading delay)
     setState((prev) => ({
       ...prev,
-      phase: overridePhase ?? getPhase(name, new Date(), invitationSeen),
+      phase: localOverride ?? dbOverride.current ?? getPhase(name, new Date(), invitationSeen),
       guestName: name,
       guestCity: city,
       isLoading: false,
     }));
+
+    // Fetch DB phase_override in the background (skip if dev_phase is set locally)
+    if (!localOverride) {
+      fetch("/api/settings")
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((settings: Record<string, string>) => {
+          const raw = settings.phase_override;
+          if (raw && raw !== "auto" && Object.values(Phase).includes(raw as Phase)) {
+            dbOverride.current = raw as Phase;
+            setState((prev) => ({ ...prev, phase: raw as Phase }));
+          } else {
+            dbOverride.current = null;
+          }
+        })
+        .catch(() => {});
+    }
 
     // Fire session check once per mount to validate the session_token is still
     // live in the DB. If the admin reset sessions, the fingerprint is gone and
     // the check auto-re-registers the guest using stored name/city.
     if (!sessionChecked.current) {
       sessionChecked.current = true;
-      _runSessionCheck(setState);
+      _runSessionCheck(setState, dbOverride);
     }
   }, [tick]);
 
@@ -55,7 +74,8 @@ export function usePhase(): PhaseState {
 }
 
 async function _runSessionCheck(
-  setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh">>>
+  setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh">>>,
+  dbOverride: React.MutableRefObject<Phase | null>
 ): Promise<void> {
   try {
     const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
@@ -78,7 +98,6 @@ async function _runSessionCheck(
     };
 
     // Device not in Supabase yet — auto-register using stored name/city
-    // so pre-Supabase visitors silently get a session_token
     if (data.status === "new") {
       const existingName = localStorage.getItem("guest_name");
       const existingCity = localStorage.getItem("guest_city");
@@ -104,13 +123,14 @@ async function _runSessionCheck(
     if (data.session_token) localStorage.setItem("session_token", data.session_token);
 
     const devOverride = localStorage.getItem("dev_phase");
-    const overridePhase =
+    const localOverride =
       devOverride && Object.values(Phase).includes(devOverride as Phase)
         ? (devOverride as Phase)
         : null;
 
     setState({
-      phase: overridePhase ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
+      // DB override takes priority over computed phase; dev_phase takes priority over all
+      phase: localOverride ?? dbOverride.current ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
       guestName: data.name,
       guestCity: data.city ?? null,
       isLoading: false,
