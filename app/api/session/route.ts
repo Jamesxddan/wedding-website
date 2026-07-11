@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   // Primary lookup: device_uuid
   const { data: fp } = await supabase
     .from("device_fingerprints")
-    .select(`session_token, guest_id, guests ( name, city, invitation_seen, is_owner )`)
+    .select(`session_token, guest_id, guests ( id, name, city, invitation_seen, is_owner )`)
     .eq("device_uuid", device_uuid)
     .maybeSingle();
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       .eq("device_uuid", device_uuid);
 
     const guest = fp.guests as unknown as {
-      name: string; city: string; invitation_seen: boolean; is_owner: boolean;
+      id: string; name: string; city: string; invitation_seen: boolean; is_owner: boolean;
     } | null;
     if (!guest) return NextResponse.json({ status: "new" });
 
@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
       name: guest.name,
       city: guest.city,
       invitation_seen: guest.invitation_seen,
+      is_owner: guest.is_owner,
+      guest_id: guest.id,
       session_token: fp.session_token,
     });
   }

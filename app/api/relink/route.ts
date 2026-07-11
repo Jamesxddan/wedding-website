@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
 
+  if (/miz/i.test(name.trim().split(/\s+/)[0])) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   // Check if device already has an active session
   const { data: existingFp } = await supabase
     .from("device_fingerprints")

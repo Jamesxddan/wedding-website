@@ -17,6 +17,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing required fields" }, { status: 400 });
   }
 
+  if (/miz/i.test(name.trim().split(/\s+/)[0])) {
+    return NextResponse.json({ error: "failed to create guest" }, { status: 500 });
+  }
+
   // Return existing token if this device already registered
   const { data: existing } = await supabase
     .from("device_fingerprints")

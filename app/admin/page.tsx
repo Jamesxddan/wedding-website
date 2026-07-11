@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit";
+type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments";
 
 interface Guest {
   id: string;
@@ -167,7 +167,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (t: Tab) => {
     if (t === "live" || t === "control") { await loadSettings(); return; }
-    if (t === "preview" || t === "audit") return;
+    if (t === "preview" || t === "audit" || t === "comments") return;
     if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
     try {
@@ -486,6 +486,7 @@ export default function AdminPage() {
     { key: "preview", label: "👁 Preview" },
     { key: "admins", label: "🔑 Admins" },
     { key: "audit", label: "📋 Audit Log" },
+    { key: "comments", label: "💬 Comments" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -997,6 +998,9 @@ export default function AdminPage() {
 
       {/* ── AUDIT LOG ── */}
       {tab === "audit" && isSuper && <AuditTab />}
+
+      {/* ── COMMENTS MODERATION ── */}
+      {tab === "comments" && isSuper && <CommentsTab />}
     </div>
   );
 }
@@ -1050,6 +1054,126 @@ function AuditTab() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function CommentsTab() {
+  const [data, setData] = useState<{ flagged: unknown[]; blocked: unknown[]; comments: unknown[] }>({ flagged: [], blocked: [], comments: [] });
+  const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState<"flagged" | "blocked" | "all">("flagged");
+
+  const load = async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/comments");
+    if (res.ok) setData(await res.json());
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const th: React.CSSProperties = { textAlign: "left", padding: "10px 14px", fontSize: 12, color: "#888", fontWeight: 600, borderBottom: "1px solid #eee", background: "#faf9f7" };
+  const td: React.CSSProperties = { padding: "10px 14px", fontSize: 13, color: "#333", borderBottom: "1px solid #f0ede9", verticalAlign: "top" };
+
+  async function release(flagged_id: string) {
+    await fetch("/api/admin/comments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flagged_id }) });
+    load();
+  }
+
+  async function deleteFlag(flagged_id: string) {
+    await fetch("/api/admin/comments", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flagged_id }) });
+    load();
+  }
+
+  async function deleteComment(comment_id: string) {
+    await fetch("/api/admin/comments", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ comment_id }) });
+    load();
+  }
+
+  async function unblock(block_id: string) {
+    await fetch("/api/admin/comments", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ block_id }) });
+    load();
+  }
+
+  type FlagRow = { id: string; guest_name: string; message: string; flag_reason: string; created_at: string };
+  type BlockRow = { id: string; guest_id: string; blocked_at: string; guests: { name: string; city: string } | null };
+  type CommentRow = { id: string; guest_name: string; message: string; created_at: string };
+
+  const flagged = data.flagged as FlagRow[];
+  const blocked = data.blocked as BlockRow[];
+  const comments = data.comments as CommentRow[];
+
+  return (
+    <div style={{ maxWidth: 900 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {(["flagged", "blocked", "all"] as const).map((s) => (
+          <button key={s} onClick={() => setSection(s)} style={{ padding: "6px 16px", borderRadius: 20, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", background: section === s ? "#8B4A6B" : "#ede8e2", color: section === s ? "#fff" : "#555" }}>
+            {s === "flagged" ? `🚩 Flagged (${flagged.length})` : s === "blocked" ? `🚫 Blocked (${blocked.length})` : `💬 All Comments (${comments.length})`}
+          </button>
+        ))}
+      </div>
+      {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
+
+      {section === "flagged" && (
+        <div style={{ overflowX: "auto", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 600 }}>
+            <thead><tr>{["Guest", "Message", "Reason", "When", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {flagged.map((r) => (
+                <tr key={r.id} style={{ background: "#fff9f5" }}>
+                  <td style={td}>{r.guest_name}</td>
+                  <td style={{ ...td, color: "#c0392b" }}>{r.message}</td>
+                  <td style={{ ...td, color: "#aaa", fontSize: 11 }}>{r.flag_reason}</td>
+                  <td style={{ ...td, color: "#aaa", whiteSpace: "nowrap" }}>{new Date(r.created_at).toLocaleString()}</td>
+                  <td style={{ ...td, display: "flex", gap: 6 }}>
+                    <button onClick={() => release(r.id)} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, border: "none", background: "#27ae60", color: "#fff", cursor: "pointer" }}>Release</button>
+                    <button onClick={() => deleteFlag(r.id)} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+              {!loading && flagged.length === 0 && <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No flagged comments</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {section === "blocked" && (
+        <div style={{ overflowX: "auto", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 500 }}>
+            <thead><tr>{["Guest", "City", "Blocked at", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {blocked.map((r) => (
+                <tr key={r.id}>
+                  <td style={td}>{(r.guests as { name: string } | null)?.name ?? "—"}</td>
+                  <td style={td}>{(r.guests as { city: string } | null)?.city ?? "—"}</td>
+                  <td style={{ ...td, color: "#aaa" }}>{new Date(r.blocked_at).toLocaleString()}</td>
+                  <td style={td}><button onClick={() => unblock(r.id)} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, border: "none", background: "#27ae60", color: "#fff", cursor: "pointer" }}>Unblock</button></td>
+                </tr>
+              ))}
+              {!loading && blocked.length === 0 && <tr><td colSpan={4} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No blocked guests</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {section === "all" && (
+        <div style={{ overflowX: "auto", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 500 }}>
+            <thead><tr>{["Guest", "Message", "When", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {comments.map((r) => (
+                <tr key={r.id}>
+                  <td style={td}>{r.guest_name}</td>
+                  <td style={td}>{r.message}</td>
+                  <td style={{ ...td, color: "#aaa", whiteSpace: "nowrap" }}>{new Date(r.created_at).toLocaleString()}</td>
+                  <td style={td}><button onClick={() => { if (confirm("Delete comment?")) deleteComment(r.id); }} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 8, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer" }}>Delete</button></td>
+                </tr>
+              ))}
+              {!loading && comments.length === 0 && <tr><td colSpan={4} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No comments yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

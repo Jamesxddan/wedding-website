@@ -90,7 +90,7 @@ function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 export default function Home() {
-  const { phase, guestName, isLoading, refresh, sessionRestored } = usePhase();
+  const { phase, guestName, guestId, isOwner, isLoading, refresh, sessionRestored } = usePhase();
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
@@ -129,7 +129,7 @@ export default function Home() {
           <Families />
           <Venue />
           <Itinerary />
-          <Comments />
+          <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
         </>
       )}

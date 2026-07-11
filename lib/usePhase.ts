@@ -7,6 +7,8 @@ export interface PhaseState {
   phase: Phase;
   guestName: string | null;
   guestCity: string | null;
+  guestId: string | null;
+  isOwner: boolean;
   isLoading: boolean;
   sessionRestored: boolean;
   refresh: () => void;
@@ -17,12 +19,13 @@ export function usePhase(): PhaseState {
     phase: Phase.FIRST_VISIT,
     guestName: null,
     guestCity: null,
+    guestId: null,
+    isOwner: false,
     isLoading: true,
     sessionRestored: false,
   });
   const [tick, setTick] = useState(0);
   const sessionChecked = useRef(false);
-  // Holds the DB phase_override so _runSessionCheck can respect it
   const dbOverride = useRef<Phase | null>(null);
 
   useEffect(() => {
@@ -36,7 +39,6 @@ export function usePhase(): PhaseState {
         ? (devOverride as Phase)
         : null;
 
-    // Show locally-computed phase immediately (no loading delay)
     setState((prev) => ({
       ...prev,
       phase: localOverride ?? dbOverride.current ?? getPhase(name, new Date(), invitationSeen),
@@ -45,7 +47,6 @@ export function usePhase(): PhaseState {
       isLoading: false,
     }));
 
-    // Fetch DB phase_override in the background (skip if dev_phase is set locally)
     if (!localOverride) {
       fetch("/api/settings")
         .then((r) => (r.ok ? r.json() : {}))
@@ -53,7 +54,12 @@ export function usePhase(): PhaseState {
           const raw = settings.phase_override;
           if (raw && raw !== "auto" && Object.values(Phase).includes(raw as Phase)) {
             dbOverride.current = raw as Phase;
-            setState((prev) => ({ ...prev, phase: raw as Phase }));
+            setState((prev) => {
+              // Never lock a guest who already has a valid session onto FIRST_VISIT —
+              // that would trap them on the registration form forever after registering.
+              if (raw === Phase.FIRST_VISIT && prev.guestName) return prev;
+              return { ...prev, phase: raw as Phase };
+            });
           } else {
             dbOverride.current = null;
           }
@@ -61,9 +67,6 @@ export function usePhase(): PhaseState {
         .catch(() => {});
     }
 
-    // Fire session check once per mount to validate the session_token is still
-    // live in the DB. If the admin reset sessions, the fingerprint is gone and
-    // the check auto-re-registers the guest using stored name/city.
     if (!sessionChecked.current) {
       sessionChecked.current = true;
       _runSessionCheck(setState, dbOverride);
@@ -95,23 +98,26 @@ async function _runSessionCheck(
       city?: string;
       invitation_seen?: boolean;
       session_token?: string;
+      guest_id?: string;
+      is_owner?: boolean;
     };
 
-    // Device not in Supabase yet — auto-register using stored name/city
+    // Session gone from DB — guest was deleted or factory reset.
+    // Clear all cached data so they register fresh as a new device.
     if (data.status === "new") {
-      const existingName = localStorage.getItem("guest_name");
-      const existingCity = localStorage.getItem("guest_city");
-      if (existingName && existingCity) {
-        const regRes = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: existingName, city: existingCity, device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
-        });
-        if (regRes.ok) {
-          const regData = (await regRes.json()) as { session_token?: string };
-          if (regData.session_token) localStorage.setItem("session_token", regData.session_token);
-        }
-      }
+      localStorage.removeItem("session_token");
+      localStorage.removeItem("guest_name");
+      localStorage.removeItem("guest_city");
+      localStorage.removeItem("invitation_seen");
+      setState((prev) => ({
+        ...prev,
+        phase: Phase.FIRST_VISIT,
+        guestName: null,
+        guestCity: null,
+        guestId: null,
+        isOwner: false,
+        sessionRestored: false,
+      }));
       return;
     }
 
@@ -128,11 +134,17 @@ async function _runSessionCheck(
         ? (devOverride as Phase)
         : null;
 
+    // Once the guest has a valid session, FIRST_VISIT override no longer applies —
+    // use the natural computed phase so they aren't trapped after registering.
+    const effectiveDbOverride =
+      dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
+
     setState({
-      // DB override takes priority over computed phase; dev_phase takes priority over all
-      phase: localOverride ?? dbOverride.current ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
+      phase: localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
       guestName: data.name,
       guestCity: data.city ?? null,
+      guestId: data.guest_id ?? null,
+      isOwner: data.is_owner ?? false,
       isLoading: false,
       sessionRestored: true,
     });
