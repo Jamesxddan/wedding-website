@@ -36,7 +36,9 @@ export default function OpeningScreen({ onComplete }: Props) {
     if (!el) return;
     const fit = () => {
       el.style.zoom = "1";
-      const ratio = Math.min(1, (window.innerHeight - 4) / el.scrollHeight);
+      // clientHeight accounts for iOS Safari URL bar; innerHeight does not
+      const vh = document.documentElement.clientHeight || window.innerHeight;
+      const ratio = Math.min(1, (vh - 4) / el.scrollHeight);
       el.style.zoom = String(ratio);
     };
     fit();

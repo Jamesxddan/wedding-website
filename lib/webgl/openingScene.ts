@@ -25,13 +25,13 @@ const fragBackground = /* glsl */ `
   void main() {
     vec2 uv = vUv + uOffset;
     vec4 sum = vec4(0.0);
-    for (float x = -2.0; x <= 2.0; x += 1.0) {
-      for (float y = -2.0; y <= 2.0; y += 1.0) {
+    // 9x9 box blur — heavy enough to dissolve texture into soft colour wash
+    for (float x = -4.0; x <= 4.0; x += 1.0) {
+      for (float y = -4.0; y <= 4.0; y += 1.0) {
         sum += texture2D(uTexture, uv + vec2(x, y) * uBlurStep);
       }
     }
-    vec4 color = sum / 25.0;
-    gl_FragColor = vec4(color.rgb, color.a * uOpacity);
+    gl_FragColor = vec4((sum / 81.0).rgb, uOpacity);
   }
 `;
 
@@ -80,7 +80,7 @@ export function createOpeningScene(
 
   // ── Particles ──────────────────────────────────────────────────────────
 
-  const COUNT = 400;
+  const COUNT = 550;
   const posArr = new Float32Array(COUNT * 3);
   const sizeArr = new Float32Array(COUNT);
   const colorArr = new Float32Array(COUNT * 3);
@@ -99,7 +99,7 @@ export function createOpeningScene(
     basePos.push({ x, y, z });
 
     const isGold = Math.random() < 0.55;
-    sizeArr[i] = isGold ? 2.0 + Math.random() * 2.0 : 5.0 + Math.random() * 4.0;
+    sizeArr[i] = isGold ? 1.5 + Math.random() * 3.5 : 4.0 + Math.random() * 8.0;
 
     if (isGold) {
       colorArr[i * 3] = 0.831; colorArr[i * 3 + 1] = 0.686; colorArr[i * 3 + 2] = 0.216;
@@ -134,15 +134,15 @@ export function createOpeningScene(
 
   const bokehUniforms: BgUniforms = {
     uTexture:  { value: null },
-    uOpacity:  { value: 0.42 },
+    uOpacity:  { value: 0.28 },
     uOffset:   { value: new THREE.Vector2() },
-    uBlurStep: { value: 0.006 },
+    uBlurStep: { value: 0.038 }, // ~180px blur on 600px image → pure colour wash
   };
   const ringsUniforms: BgUniforms = {
     uTexture:  { value: null },
-    uOpacity:  { value: 0.20 },
+    uOpacity:  { value: 0.11 },
     uOffset:   { value: new THREE.Vector2() },
-    uBlurStep: { value: 0.013 },
+    uBlurStep: { value: 0.055 }, // heavy — just warm tones, no shape
   };
 
   let bokehPlane: THREE.Mesh | null = null;
@@ -246,9 +246,9 @@ export function createOpeningScene(
       const pi = i * 3;
       const px = posArr[pi], py = posArr[pi + 1];
 
-      // Spring to base
-      velArr[pi]     += (basePos[i].x - px) * 0.0008;
-      velArr[pi + 1] += (basePos[i].y - py) * 0.0008;
+      // Spring to base (gentle, dreamy)
+      velArr[pi]     += (basePos[i].x - px) * 0.0005;
+      velArr[pi + 1] += (basePos[i].y - py) * 0.0005;
 
       // Mouse repulsion
       const dx = px - mwx, dy = py - mwy;
