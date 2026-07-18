@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   // 2. A valid gallery_token session cookie must be present.
   // If someone has a valid cookie but bad Referer (direct URL access while logged in),
   // immediately kill their session and ban them for 1 hour.
-  if (process.env.VERCEL_ENV) {
+  if (process.env.VERCEL_ENV === "production") {
     const referer = req.headers.get("referer") ?? "";
     const ownHost = req.nextUrl.hostname;
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
