@@ -98,7 +98,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
               alt="James & Sharon"
               className="w-full object-cover"
               style={{
-                height: 240,
+                height: 280,
+                objectPosition: "50% 40%",
                 opacity: open ? 1 : 0,
                 transition: "opacity 0.9s ease 500ms",
               }}
