@@ -63,16 +63,25 @@ async function listFolderContents(
   const origin = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
-  const res = await fetch(`${DRIVE_API}/files?${params}`, {
-    headers: { Referer: `${origin}/` },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Drive API error: ${res.status} — ${body}`);
+
+  const url = `${DRIVE_API}/files?${params}`;
+  const headers = { Referer: `${origin}/` };
+
+  // Retry up to 3 times with exponential backoff — Drive API occasionally returns
+  // transient 500s when cache is cold (e.g. after a server restart).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 500 * 2 ** (attempt - 1)));
+    const res = await fetch(url, { headers, cache: "no-store" });
+    if (res.ok) {
+      const data = (await res.json()) as { files: DriveFile[] };
+      return data.files ?? [];
+    }
+    if (attempt === 2 || res.status !== 500) {
+      const body = await res.text();
+      throw new Error(`Drive API error: ${res.status} — ${body}`);
+    }
   }
-  const data = (await res.json()) as { files: DriveFile[] };
-  return data.files ?? [];
+  throw new Error("Drive API: max retries exceeded");
 }
 
 function toPhoto(f: DriveFile, album?: string): DrivePhoto {
