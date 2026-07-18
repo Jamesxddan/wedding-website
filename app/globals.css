@@ -139,6 +139,12 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Invitation card rise ──────────────────────────────────────────────────── */
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(70px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* ── Section transitions ───────────────────────────────────────────────────── */
 .section-fade-in {
   opacity: 0;
