@@ -39,9 +39,13 @@ export function usePhase(): PhaseState {
         ? (devOverride as Phase)
         : null;
 
+    // Dev and staging: skip registration — default to RETURN_VISIT when no guest set
+    const isNonProd = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
+    const defaultPhase = isNonProd && !name ? Phase.RETURN_VISIT : getPhase(name, new Date(), invitationSeen);
+
     setState((prev) => ({
       ...prev,
-      phase: localOverride ?? dbOverride.current ?? getPhase(name, new Date(), invitationSeen),
+      phase: localOverride ?? dbOverride.current ?? defaultPhase,
       guestName: name,
       guestCity: city,
       isLoading: false,
@@ -67,7 +71,9 @@ export function usePhase(): PhaseState {
         .catch(() => {});
     }
 
-    if (!sessionChecked.current) {
+    // Skip session check on dev/staging — no DB records exist and it would wipe
+    // the phase back to FIRST_VISIT on every load.
+    if (!sessionChecked.current && !localOverride && !isNonProd) {
       sessionChecked.current = true;
       _runSessionCheck(setState, dbOverride);
     }

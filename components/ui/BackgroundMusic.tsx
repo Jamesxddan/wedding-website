@@ -30,10 +30,13 @@ export function startBackgroundMusic(src: string) {
   }
 }
 
+const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === "production";
+
 export default function BackgroundMusic({ src }: { src: string }) {
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
+    if (!isProd) return;
     const audio = getBackgroundAudio(src);
 
     // Try autoplay (desktop / Android without restrictions)
@@ -67,6 +70,8 @@ export default function BackgroundMusic({ src }: { src: string }) {
       setMuted(true);
     }
   };
+
+  if (!isProd) return null;
 
   return (
     <button
