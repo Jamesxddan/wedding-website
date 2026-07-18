@@ -127,29 +127,42 @@ export default function FirstVisitForm({ onComplete }: Props) {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="guest-email" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
-          Your Email
-        </label>
-        <input
-          id="guest-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Your email address (optional if mobile is filled)"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
-          autoComplete="off"
-        />
-      </div>
-
+      {/* Hide email when mobile is typed (but not if both are filled via autofill) */}
       <div
         style={{
-          maxHeight: email.trim() ? "0px" : "120px",
-          opacity: email.trim() ? 0 : 1,
+          maxHeight: mobile.trim() && !email.trim() ? "0px" : "120px",
+          opacity: mobile.trim() && !email.trim() ? 0 : 1,
           overflow: "hidden",
-          pointerEvents: email.trim() ? "none" : "auto",
+          pointerEvents: mobile.trim() && !email.trim() ? "none" : "auto",
           transition: "max-height 0.45s ease, opacity 0.35s ease",
-          marginBottom: email.trim() ? "-24px" : "0px",
+          marginBottom: mobile.trim() && !email.trim() ? "-24px" : "0px",
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <label htmlFor="guest-email" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+            Your Email
+          </label>
+          <input
+            id="guest-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email address (optional if mobile is filled)"
+            className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      {/* Hide mobile when email is typed (but not if both are filled via autofill) */}
+      <div
+        style={{
+          maxHeight: email.trim() && !mobile.trim() ? "0px" : "120px",
+          opacity: email.trim() && !mobile.trim() ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: email.trim() && !mobile.trim() ? "none" : "auto",
+          transition: "max-height 0.45s ease, opacity 0.35s ease",
+          marginBottom: email.trim() && !mobile.trim() ? "-24px" : "0px",
         }}
       >
         <div className="flex flex-col gap-2">
