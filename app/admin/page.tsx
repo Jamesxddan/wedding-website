@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments";
+type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
 
 interface Guest {
   id: string;
@@ -167,7 +167,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (t: Tab) => {
     if (t === "live" || t === "control") { await loadSettings(); return; }
-    if (t === "preview" || t === "audit" || t === "comments") return;
+    if (t === "preview" || t === "audit" || t === "comments" || t === "content") return;
     if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
     try {
@@ -487,6 +487,7 @@ export default function AdminPage() {
     { key: "admins", label: "🔑 Admins" },
     { key: "audit", label: "📋 Audit Log" },
     { key: "comments", label: "💬 Comments" },
+    { key: "content", label: "✏️ Site Content" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -1001,6 +1002,9 @@ export default function AdminPage() {
 
       {/* ── COMMENTS MODERATION ── */}
       {tab === "comments" && isSuper && <CommentsTab />}
+
+      {/* ── SITE CONTENT ── */}
+      {tab === "content" && isSuper && <ContentTab />}
     </div>
   );
 }
@@ -1174,6 +1178,273 @@ function CommentsTab() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+import type { SiteContent, Milestone, PersonFact, FamilyMember, ItineraryItem } from "@/lib/content";
+import { DEFAULT_CONTENT, mergeSiteContent } from "@/lib/content";
+
+function ContentTab() {
+  const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [openSection, setOpenSection] = useState<string | null>("opening");
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.site_content) {
+          try { setContent(mergeSiteContent(DEFAULT_CONTENT, JSON.parse(data.site_content))); } catch { /* use default */ }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  function patch<K extends keyof SiteContent>(section: K, updates: Partial<SiteContent[K]>) {
+    setContent((prev) => ({ ...prev, [section]: { ...(prev[section] as object), ...(updates as object) } }));
+    setSaved(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "site_content", value: JSON.stringify(content) }),
+    });
+    setSaving(false);
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    else setError("Failed to save.");
+  }
+
+  const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", borderRadius: 7, border: "1px solid #e0dbd4", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };
+  const ta: React.CSSProperties = { ...inp, resize: "vertical", minHeight: 72, fontFamily: "inherit", lineHeight: 1.5 };
+  const btn: React.CSSProperties = { padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 };
+  const sectionHead = (key: string, label: string) => (
+    <button
+      onClick={() => setOpenSection(openSection === key ? null : key)}
+      style={{ width: "100%", textAlign: "left", padding: "14px 18px", background: openSection === key ? "#f5eef4" : "#faf9f7", border: "1px solid #e8e0d8", borderRadius: openSection === key ? "10px 10px 0 0" : 10, fontSize: 14, fontWeight: 700, color: "#1a1a1a", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+    >
+      {label}
+      <span style={{ fontSize: 11, color: "#aaa" }}>{openSection === key ? "▲" : "▼"}</span>
+    </button>
+  );
+  const sectionBody: React.CSSProperties = { border: "1px solid #e8e0d8", borderTop: "none", borderRadius: "0 0 10px 10px", padding: "18px 18px 20px", background: "#fff", display: "flex", flexDirection: "column", gap: 12 };
+  const label = (text: string) => <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#aaa", display: "block", marginBottom: 4 }}>{text}</label>;
+
+  return (
+    <div style={{ maxWidth: 860 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#1a1a1a" }}>Site Content</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#aaa" }}>Changes go live immediately after saving.</p>
+        </div>
+        <button onClick={save} disabled={saving} style={{ ...btn, background: saved ? "#2ecc71" : "#8B4A6B", color: "#fff", padding: "9px 22px", fontSize: 13, opacity: saving ? 0.6 : 1 }}>
+          {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+        </button>
+      </div>
+      {error && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+        {/* ── Opening Screen ── */}
+        <div>
+          {sectionHead("opening", "🌸 Opening Screen")}
+          {openSection === "opening" && (
+            <div style={sectionBody}>
+              <div>{label("Tagline")}<input style={inp} value={content.opening.tagline} onChange={(e) => patch("opening", { tagline: e.target.value })} /></div>
+              <div>{label("Invited label")}<input style={inp} value={content.opening.invited_label} onChange={(e) => patch("opening", { invited_label: e.target.value })} /></div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Date")}<input style={inp} value={content.opening.date} onChange={(e) => patch("opening", { date: e.target.value })} /></div>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Venue (short)")}<input style={inp} value={content.opening.venue_short} onChange={(e) => patch("opening", { venue_short: e.target.value })} /></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Invitation Card ── */}
+        <div>
+          {sectionHead("invitation", "💌 Invitation Card")}
+          {openSection === "invitation" && (
+            <div style={sectionBody}>
+              <div>{label("Opening body text")}<textarea style={ta} value={content.invitation.body} onChange={(e) => patch("invitation", { body: e.target.value })} /></div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Couple name")}<input style={inp} value={content.invitation.couple_name} onChange={(e) => patch("invitation", { couple_name: e.target.value })} /></div>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Quote")}<input style={inp} value={content.invitation.quote} onChange={(e) => patch("invitation", { quote: e.target.value })} /></div>
+              </div>
+              <div>{label("Date line")}<input style={inp} value={content.invitation.date} onChange={(e) => patch("invitation", { date: e.target.value })} /></div>
+              <div>{label("Ceremony line")}<input style={inp} value={content.invitation.ceremony_line} onChange={(e) => patch("invitation", { ceremony_line: e.target.value })} /></div>
+              <div>{label("Reception line")}<input style={inp} value={content.invitation.reception_line} onChange={(e) => patch("invitation", { reception_line: e.target.value })} /></div>
+              <div>{label("Presence line")}<input style={inp} value={content.invitation.presence_line} onChange={(e) => patch("invitation", { presence_line: e.target.value })} /></div>
+              <div>{label("Explore button text")}<input style={inp} value={content.invitation.explore_btn} onChange={(e) => patch("invitation", { explore_btn: e.target.value })} /></div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Our Story ── */}
+        <div>
+          {sectionHead("story", "📖 Our Story")}
+          {openSection === "story" && (
+            <div style={sectionBody}>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Heading")}<input style={inp} value={content.story.heading} onChange={(e) => patch("story", { heading: e.target.value })} /></div>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Subtitle")}<input style={inp} value={content.story.subtitle} onChange={(e) => patch("story", { subtitle: e.target.value })} /></div>
+              </div>
+              <div>
+                {label("Milestones")}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {content.story.milestones.map((m: Milestone, i: number) => (
+                    <div key={i} style={{ background: "#faf9f7", borderRadius: 8, padding: 12, border: "1px solid #ede8e2" }}>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                        <input style={{ ...inp, width: 60 }} value={m.emoji} placeholder="emoji" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, emoji: e.target.value } : x); patch("story", { milestones: ms }); }} />
+                        <input style={{ ...inp, width: 80 }} value={m.year} placeholder="Year" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, year: e.target.value } : x); patch("story", { milestones: ms }); }} />
+                        <input style={{ ...inp, flex: 1 }} value={m.title} placeholder="Title" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, title: e.target.value } : x); patch("story", { milestones: ms }); }} />
+                        <button onClick={() => patch("story", { milestones: content.story.milestones.filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
+                      </div>
+                      <textarea style={{ ...ta, minHeight: 54 }} value={m.description} placeholder="Description" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, description: e.target.value } : x); patch("story", { milestones: ms }); }} />
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => patch("story", { milestones: [...content.story.milestones, { year: "", title: "", description: "", emoji: "✨" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", marginTop: 10 }}>+ Add milestone</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── About James ── */}
+        <div>
+          {sectionHead("james", "👤 About James")}
+          {openSection === "james" && (
+            <div style={sectionBody}>
+              <div>{label("Name")}<input style={inp} value={content.james.name} onChange={(e) => patch("james", { name: e.target.value })} /></div>
+              <div>{label("Bio")}<textarea style={ta} value={content.james.bio} onChange={(e) => patch("james", { bio: e.target.value })} /></div>
+              <div>
+                {label("Facts")}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {content.james.facts.map((f: PersonFact, i: number) => (
+                    <div key={i} style={{ display: "flex", gap: 8 }}>
+                      <input style={{ ...inp, width: 130 }} value={f.label} placeholder="Label" onChange={(e) => { const fs = content.james.facts.map((x, j) => j === i ? { ...x, label: e.target.value } : x); patch("james", { facts: fs }); }} />
+                      <input style={{ ...inp, flex: 1 }} value={f.value} placeholder="Value" onChange={(e) => { const fs = content.james.facts.map((x, j) => j === i ? { ...x, value: e.target.value } : x); patch("james", { facts: fs }); }} />
+                      <button onClick={() => patch("james", { facts: content.james.facts.filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => patch("james", { facts: [...content.james.facts, { label: "", value: "" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", alignSelf: "flex-start" }}>+ Add fact</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── About Sharon ── */}
+        <div>
+          {sectionHead("sharon", "👤 About Sharon")}
+          {openSection === "sharon" && (
+            <div style={sectionBody}>
+              <div>{label("Name")}<input style={inp} value={content.sharon.name} onChange={(e) => patch("sharon", { name: e.target.value })} /></div>
+              <div>{label("Bio")}<textarea style={ta} value={content.sharon.bio} onChange={(e) => patch("sharon", { bio: e.target.value })} /></div>
+              <div>
+                {label("Facts")}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {content.sharon.facts.map((f: PersonFact, i: number) => (
+                    <div key={i} style={{ display: "flex", gap: 8 }}>
+                      <input style={{ ...inp, width: 130 }} value={f.label} placeholder="Label" onChange={(e) => { const fs = content.sharon.facts.map((x, j) => j === i ? { ...x, label: e.target.value } : x); patch("sharon", { facts: fs }); }} />
+                      <input style={{ ...inp, flex: 1 }} value={f.value} placeholder="Value" onChange={(e) => { const fs = content.sharon.facts.map((x, j) => j === i ? { ...x, value: e.target.value } : x); patch("sharon", { facts: fs }); }} />
+                      <button onClick={() => patch("sharon", { facts: content.sharon.facts.filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => patch("sharon", { facts: [...content.sharon.facts, { label: "", value: "" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", alignSelf: "flex-start" }}>+ Add fact</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Venue ── */}
+        <div>
+          {sectionHead("venue", "📍 Venue & Details")}
+          {openSection === "venue" && (
+            <div style={sectionBody}>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Heading")}<input style={inp} value={content.venue.heading} onChange={(e) => patch("venue", { heading: e.target.value })} /></div>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Subtitle")}<input style={inp} value={content.venue.subtitle} onChange={(e) => patch("venue", { subtitle: e.target.value })} /></div>
+              </div>
+              {(["ceremony", "reception"] as const).map((side) => (
+                <div key={side} style={{ background: "#faf9f7", borderRadius: 8, padding: 12, border: "1px solid #ede8e2" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8B4A6B" }}>{side}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 130 }}>{label("Tag")}<input style={inp} value={content.venue[side].tag} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], tag: e.target.value } })} /></div>
+                      <div style={{ flex: 2, minWidth: 160 }}>{label("Name")}<input style={inp} value={content.venue[side].name} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], name: e.target.value } })} /></div>
+                    </div>
+                    <div>{label("Address")}<input style={inp} value={content.venue[side].address} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], address: e.target.value } })} /></div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 130 }}>{label("Time")}<input style={inp} value={content.venue[side].time} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], time: e.target.value } })} /></div>
+                      <div style={{ flex: 1, minWidth: 130 }}>{label("Dress code")}<input style={inp} value={content.venue[side].dress} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], dress: e.target.value } })} /></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Itinerary ── */}
+        <div>
+          {sectionHead("itinerary", "🕐 Day Itinerary")}
+          {openSection === "itinerary" && (
+            <div style={sectionBody}>
+              <div>{label("Heading")}<input style={inp} value={content.itinerary.heading} onChange={(e) => patch("itinerary", { heading: e.target.value })} /></div>
+              <div>
+                {label("Items")}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {content.itinerary.items.map((item: ItineraryItem, i: number) => (
+                    <div key={i} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <input style={{ ...inp, width: 90 }} value={item.time} placeholder="Time" onChange={(e) => { const items = content.itinerary.items.map((x, j) => j === i ? { ...x, time: e.target.value } : x); patch("itinerary", { items }); }} />
+                      <input style={{ ...inp, flex: 1, minWidth: 100 }} value={item.label} placeholder="Label" onChange={(e) => { const items = content.itinerary.items.map((x, j) => j === i ? { ...x, label: e.target.value } : x); patch("itinerary", { items }); }} />
+                      <input style={{ ...inp, flex: 1, minWidth: 100 }} value={item.venue} placeholder="Venue" onChange={(e) => { const items = content.itinerary.items.map((x, j) => j === i ? { ...x, venue: e.target.value } : x); patch("itinerary", { items }); }} />
+                      <button onClick={() => patch("itinerary", { items: content.itinerary.items.filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => patch("itinerary", { items: [...content.itinerary.items, { time: "", label: "", venue: "" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", alignSelf: "flex-start" }}>+ Add item</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Families ── */}
+        <div>
+          {sectionHead("families", "👨‍👩‍👧 The Families")}
+          {openSection === "families" && (
+            <div style={sectionBody}>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Heading")}<input style={inp} value={content.families.heading} onChange={(e) => patch("families", { heading: e.target.value })} /></div>
+                <div style={{ flex: 1, minWidth: 180 }}>{label("Subtitle")}<input style={inp} value={content.families.subtitle} onChange={(e) => patch("families", { subtitle: e.target.value })} /></div>
+              </div>
+              {(["james", "sharon"] as const).map((side) => (
+                <div key={side} style={{ background: "#faf9f7", borderRadius: 8, padding: 12, border: "1px solid #ede8e2" }}>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8B4A6B" }}>{side === "james" ? "James's Family" : "Sharon's Family"}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {content.families[side].map((m: FamilyMember, i: number) => (
+                      <div key={i} style={{ display: "flex", gap: 8 }}>
+                        <input style={{ ...inp, flex: 1 }} value={m.name} placeholder="Full name" onChange={(e) => { const members = content.families[side].map((x, j) => j === i ? { ...x, name: e.target.value } : x); patch("families", { [side]: members }); }} />
+                        <input style={{ ...inp, flex: 1 }} value={m.role} placeholder="Role" onChange={(e) => { const members = content.families[side].map((x, j) => j === i ? { ...x, role: e.target.value } : x); patch("families", { [side]: members }); }} />
+                        <button onClick={() => patch("families", { [side]: content.families[side].filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => patch("families", { [side]: [...content.families[side], { name: "", role: "" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", alignSelf: "flex-start" }}>+ Add member</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }

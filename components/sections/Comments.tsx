@@ -120,8 +120,9 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     setPosting(false);
     if (res.ok) { await load(); }
     else {
-      const d = await res.json();
-      if (d.error === "blocked") setError("You are temporarily blocked from commenting.");
+      const d = await res.json().catch(() => ({}));
+      if (d.error === "blocked_peace") setError(d.message);
+      else if (d.error === "blocked") setError("You are temporarily blocked from commenting.");
       else setError("Something went wrong.");
     }
   }
@@ -139,7 +140,8 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     if (res.ok) { setMessage(""); await load(); }
     else {
       const d = await res.json();
-      if (d.error === "flagged") setError("Your message was flagged for review. You've been temporarily blocked from commenting pending review.");
+      if (d.error === "blocked_peace") setError(d.message);
+      else if (d.error === "flagged") setError("Your message was flagged for review. You've been temporarily blocked from commenting pending review.");
       else if (d.error === "blocked") setError("You are temporarily blocked from commenting. Please contact James & Sharon.");
       else setError("Something went wrong. Please try again.");
     }
@@ -155,7 +157,8 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     if (res.ok) { setEditingId(null); await load(); }
     else {
       const d = await res.json();
-      if (d.error === "edit_expired") setError("Edit window has closed.");
+      if (d.error === "blocked_peace") setError(d.message);
+      else if (d.error === "edit_expired") setError("Edit window has closed.");
       else if (d.error === "flagged") setError("Edit flagged for review.");
       else setError("Failed to save.");
     }

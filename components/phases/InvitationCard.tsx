@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import PetalScene from "@/components/webgl/PetalScene";
+import { useSiteContent } from "@/lib/SiteContentContext";
 
 interface Props {
   guestName: string;
@@ -11,6 +12,7 @@ interface Props {
 
 export default function InvitationCard({ guestName, onExplore }: Props) {
   const [open, setOpen] = useState(false);
+  const { invitation } = useSiteContent();
 
   useEffect(() => {
     const t = setTimeout(() => setOpen(true), 300);
@@ -97,18 +99,17 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
               className="font-body text-deep-rose/80 leading-relaxed"
               style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "650ms" }}
             >
-              We greet you in the name of the Lord Jesus Christ. With great joy
-              in our hearts, we invite you to celebrate the wedding of
+              {invitation.body}
             </p>
 
             <div
               style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "1s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "800ms" }}
             >
               <h1 className="font-heading text-4xl text-deep-rose">
-                James Daniel &amp; Sharon
+                {invitation.couple_name}
               </h1>
               <p className="font-script italic text-sage text-xl mt-1">
-                &ldquo;God&apos;s will was on our marriage&rdquo;
+                &ldquo;{invitation.quote}&rdquo;
               </p>
             </div>
 
@@ -117,13 +118,13 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
               style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "1000ms" }}
             >
               <p className="font-heading text-deep-rose tracking-widest text-sm uppercase">
-                October 8th, 2026
+                {invitation.date}
               </p>
               <p className="font-body text-deep-rose/70 text-sm">
-                St Andrews Kirk, Chennai &mdash; Ceremony
+                {invitation.ceremony_line}
               </p>
               <p className="font-body text-deep-rose/70 text-sm">
-                BKN Auditorium, Chennai &mdash; Reception
+                {invitation.reception_line}
               </p>
             </div>
 
@@ -131,7 +132,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
               className="font-body text-deep-rose/80 text-sm"
               style={{ animationName: open ? "blur-reveal" : "none", animationDuration: "0.9s", animationTimingFunction: "ease", animationFillMode: "both", animationDelay: "1150ms" }}
             >
-              Your presence is greatly needed and deeply cherished. 🌸
+              {invitation.presence_line}
             </p>
 
             <div className="flex flex-col gap-3">
@@ -161,7 +162,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
               onClick={handleExplore}
               className="mt-2 px-8 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity"
             >
-              Explore the wedding website
+              {invitation.explore_btn}
             </button>
           </div>
         </div>

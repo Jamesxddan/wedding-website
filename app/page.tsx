@@ -22,6 +22,7 @@ import Marquee from "@/components/ui/Marquee";
 import Reveal from "@/components/ui/Reveal";
 import BackgroundMusic from "@/components/ui/BackgroundMusic";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
+import { SiteContentProvider } from "@/lib/SiteContentContext";
 
 function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
@@ -91,6 +92,7 @@ function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
 
 export default function Home() {
   const { phase, guestName, guestId, isOwner, isLoading, refresh, sessionRestored } = usePhase();
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
@@ -106,6 +108,7 @@ export default function Home() {
   }
 
   return (
+    <SiteContentProvider>
     <main className="min-h-screen bg-cream">
       <BackgroundMusic src="/song.mp3" />
 
@@ -119,7 +122,7 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && (
         <>
-          <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} />
+          <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
           {!guestName && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={refresh} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
@@ -135,12 +138,40 @@ export default function Home() {
       )}
 
       {phase === Phase.WEDDING_DAY && (
-        <WeddingDayBanner guestName={guestName ?? "Friend"} />
+        <WeddingDayBanner guestName={guestName ?? "Friend"} onViewInvitation={() => setShowInvitationModal(true)} />
       )}
 
       {phase === Phase.POST_WEDDING && (
         <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
+      {showInvitationModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(20,10,8,0.72)", backdropFilter: "blur(10px)",
+            overflowY: "auto", display: "flex", flexDirection: "column",
+          }}
+        >
+          <button
+            onClick={() => setShowInvitationModal(false)}
+            style={{
+              position: "fixed", top: 16, left: 20, zIndex: 1001,
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)",
+              color: "rgba(255,255,255,0.85)", borderRadius: 24,
+              padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              backdropFilter: "blur(8px)", letterSpacing: "0.03em",
+            }}
+          >
+            ← Back
+          </button>
+          <InvitationCard
+            guestName={guestName ?? "Friend"}
+            onExplore={() => setShowInvitationModal(false)}
+          />
+        </div>
+      )}
     </main>
+    </SiteContentProvider>
   );
 }

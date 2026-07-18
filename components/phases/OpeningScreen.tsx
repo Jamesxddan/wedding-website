@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import FirstVisitForm from "./FirstVisitForm";
 import GradientText from "@/components/ui/GradientText";
+import { useSiteContent } from "@/lib/SiteContentContext";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -119,6 +120,7 @@ function Divider({ delay }: { delay: string }) {
 export default function OpeningScreen({ onComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { opening } = useSiteContent();
   useParticles(canvasRef);
 
   useEffect(() => {
@@ -209,7 +211,7 @@ export default function OpeningScreen({ onComplete }: Props) {
             margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
-          Together with their families
+          {opening.tagline}
         </p>
 
         {/* Names */}
@@ -269,13 +271,13 @@ export default function OpeningScreen({ onComplete }: Props) {
             className="block"
             style={{ fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
           >
-            October 8th, 2026
+            {opening.date}
           </span>
           <span
             className="block"
             style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
           >
-            St Andrews Kirk, Chennai
+            {opening.venue_short}
           </span>
         </div>
 
@@ -302,7 +304,7 @@ export default function OpeningScreen({ onComplete }: Props) {
               marginBottom: 14,
             }}
           >
-            — You are invited —
+            {opening.invited_label}
           </span>
           <FirstVisitForm onComplete={onComplete} />
         </div>

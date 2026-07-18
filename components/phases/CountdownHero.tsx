@@ -87,9 +87,10 @@ async function analyzeImageLuminance(src: string): Promise<number> {
 interface Props {
   guestName: string;
   sessionRestored?: boolean;
+  onViewInvitation?: () => void;
 }
 
-export default function CountdownHero({ guestName, sessionRestored = false }: Props) {
+export default function CountdownHero({ guestName, sessionRestored = false, onViewInvitation }: Props) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft(new Date()));
   const [photos, setPhotos] = useState<DrivePhoto[]>([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -450,22 +451,27 @@ export default function CountdownHero({ guestName, sessionRestored = false }: Pr
             Counting down with you, {guestName} 🌸
           </p>
 
-          {sessionRestored && (
+          {onViewInvitation && (
             <button
-              onClick={() => {
-                localStorage.removeItem("guest_name");
-                localStorage.removeItem("guest_city");
-                localStorage.removeItem("invitation_seen");
-                localStorage.removeItem("session_token");
-                window.location.reload();
-              }}
-              className={`font-body text-[11px] underline underline-offset-4 transition-colors ${fadeIn(5)}`}
+              onClick={onViewInvitation}
+              className={`font-body ${fadeIn(5)}`}
               style={{
                 transitionDelay: "1000ms",
-                color: cMuted,
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                padding: "9px 22px",
+                borderRadius: 24,
+                border: `1px solid ${cPillBorder}`,
+                background: cPillBg,
+                color: cSecondary,
+                textShadow: cHalo,
+                backdropFilter: "blur(6px)",
+                cursor: "pointer",
+                transition: `color ${CT}, border-color ${CT}, background-color ${CT}`,
               }}
             >
-              ↩ Replay the invitation
+              💌 View Invitation Again
             </button>
           )}
         </div>

@@ -12,11 +12,12 @@ import Comments from "@/components/sections/Comments";
 
 interface Props {
   guestName: string;
+  onViewInvitation?: () => void;
 }
 
 const STREAM_DELAY = 4;
 
-export default function WeddingDayBanner({ guestName }: Props) {
+export default function WeddingDayBanner({ guestName, onViewInvitation }: Props) {
   const [cabMode, setCabMode] = useState<CabMode>(null);
   const [kirkUrl, setKirkUrl] = useState(KIRK_STREAM_URL);
   const [bknUrl, setBknUrl] = useState(BKN_STREAM_URL);
@@ -83,6 +84,15 @@ export default function WeddingDayBanner({ guestName }: Props) {
             </button>
           </div>
         </div>
+
+        {onViewInvitation && (
+          <button
+            onClick={onViewInvitation}
+            className="relative font-body text-sm font-semibold tracking-widest px-6 py-2.5 rounded-full border border-deep-rose/30 text-deep-rose/70 hover:border-deep-rose/60 hover:text-deep-rose transition-colors"
+          >
+            💌 View the Invitation
+          </button>
+        )}
       </section>
 
       {/* Live streams */}
