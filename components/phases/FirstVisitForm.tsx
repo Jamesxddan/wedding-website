@@ -142,19 +142,30 @@ export default function FirstVisitForm({ onComplete }: Props) {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="guest-mobile" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
-          Your Mobile Number
-        </label>
-        <input
-          id="guest-mobile"
-          type="tel"
-          value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
-          placeholder="Your mobile number (optional if email is filled)"
-          className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
-          autoComplete="off"
-        />
+      <div
+        style={{
+          maxHeight: email.trim() ? "0px" : "120px",
+          opacity: email.trim() ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: email.trim() ? "none" : "auto",
+          transition: "max-height 0.45s ease, opacity 0.35s ease",
+          marginBottom: email.trim() ? "-24px" : "0px",
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <label htmlFor="guest-mobile" className="font-heading text-deep-rose text-sm tracking-widest uppercase">
+            Your Mobile Number
+          </label>
+          <input
+            id="guest-mobile"
+            type="tel"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="Your mobile number (optional if email is filled)"
+            className="border border-champagne rounded-lg px-4 py-3 bg-white text-deep-rose font-body placeholder:text-deep-rose/40 focus:outline-none focus:ring-2 focus:ring-blush"
+            autoComplete="off"
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 relative" ref={dropdownRef}>
