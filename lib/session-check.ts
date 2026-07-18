@@ -14,8 +14,8 @@ export async function validateSession(
   eventType: string,
   eventData: Record<string, unknown>
 ): Promise<SessionInfo | NextResponse> {
-  // In local dev (no VERCEL_ENV), skip all checks
-  if (!process.env.VERCEL_ENV) {
+  // In local dev (no VERCEL_ENV) or staging (VERCEL_ENV=preview), skip all checks
+  if (process.env.VERCEL_ENV !== "production") {
     return { ok: true, guest_id: null, device_uuid: "dev", is_owner: true };
   }
 
