@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import PetalScene from "@/components/webgl/PetalScene";
 import { useSiteContent } from "@/lib/SiteContentContext";
+import { useSelectPhotos } from "@/lib/useSelectPhotos";
 
 interface Props {
   guestName: string;
@@ -13,6 +14,8 @@ interface Props {
 export default function InvitationCard({ guestName, onExplore }: Props) {
   const [open, setOpen] = useState(false);
   const { invitation } = useSiteContent();
+  const photos = useSelectPhotos();
+  const couplePhoto = photos.byName("main", "10.JPG");
 
   useEffect(() => {
     const t = setTimeout(() => setOpen(true), 300);
@@ -86,6 +89,21 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
           }}
         >
           <div className="h-2 bg-gradient-to-r from-blush via-champagne to-sage" />
+
+          {/* Couple hero photo */}
+          {couplePhoto && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={couplePhoto.heroUrl}
+              alt="James & Sharon"
+              className="w-full object-cover"
+              style={{
+                height: 240,
+                opacity: open ? 1 : 0,
+                transition: "opacity 0.9s ease 500ms",
+              }}
+            />
+          )}
 
           <div className="p-10 flex flex-col gap-6 text-center">
             <p

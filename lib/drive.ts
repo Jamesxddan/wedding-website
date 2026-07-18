@@ -135,6 +135,53 @@ async function collectAllImages(
   return photos;
 }
 
+// Public variant — returns direct Google Drive thumbnail URLs (no HMAC proxy).
+// Safe to use for pre-session photos (opening screen, invitation backdrop)
+// where the guest hasn't registered yet and the folder is publicly shared.
+export async function fetchDriveAlbumsPublic(
+  folderId: string,
+  apiKey: string
+): Promise<{ albums: DriveAlbum[]; flat: DrivePhoto[] }> {
+  return withCache(`albums-public:${folderId}`, async () => {
+    const files = await listFolderContents(folderId, apiKey);
+    const albums: DriveAlbum[] = [];
+    const topLevelPhotos: DrivePhoto[] = [];
+
+    for (const f of files) {
+      if (f.mimeType === "application/vnd.google-apps.folder") {
+        const subFiles = await listFolderContents(f.id, apiKey);
+        const photos = subFiles
+          .filter(sf => sf.mimeType?.startsWith("image/"))
+          .map(sf => toPhotoPublic(sf, f.name));
+        if (photos.length > 0) albums.push({ id: f.id, name: f.name, photos });
+      } else if (f.mimeType?.startsWith("image/")) {
+        topLevelPhotos.push(toPhotoPublic(f));
+      }
+    }
+
+    if (topLevelPhotos.length > 0) {
+      albums.unshift({ id: folderId, name: "All", photos: topLevelPhotos });
+    }
+
+    const flat = albums.flatMap(a => a.photos);
+    return { albums, flat };
+  });
+}
+
+function toPhotoPublic(f: DriveFile, album?: string): DrivePhoto {
+  const w = f.imageMediaMetadata?.width ?? 0;
+  const h = f.imageMediaMetadata?.height ?? 0;
+  return {
+    id: f.id,
+    name: f.name,
+    thumbnailUrl: `/api/select-image?id=${f.id}&sz=600`,
+    heroUrl: `/api/select-image?id=${f.id}&sz=1200`,
+    fullUrl: `/api/select-image?id=${f.id}&sz=2400`,
+    album,
+    landscape: w > 0 && h > 0 ? w >= h : undefined,
+  };
+}
+
 // Returns photos grouped into albums by top-level subfolder
 export async function fetchDriveAlbums(
   folderId: string,

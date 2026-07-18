@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import FirstVisitForm from "./FirstVisitForm";
 import GradientText from "@/components/ui/GradientText";
 import { useSiteContent } from "@/lib/SiteContentContext";
+import { useSelectPhotos } from "@/lib/useSelectPhotos";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -121,6 +122,9 @@ export default function OpeningScreen({ onComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { opening } = useSiteContent();
+  const photos = useSelectPhotos();
+  const bokehPhoto = photos.byName("sub", "2.JPG");
+  const ringsPhoto = photos.byName("sub", "4.JPG");
   useParticles(canvasRef);
 
   useEffect(() => {
@@ -149,6 +153,18 @@ export default function OpeningScreen({ onComplete }: Props) {
         ].join(", "),
       }}
     >
+      {/* Bokeh photo backdrop — fades in once loaded */}
+      {bokehPhoto && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={bokehPhoto.thumbnailUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          style={{ zIndex: 0, opacity: 0.13, filter: "blur(12px)", transform: "scale(1.05)" }}
+        />
+      )}
+
       {/* Canvas particles */}
       <canvas
         ref={canvasRef}
@@ -189,14 +205,20 @@ export default function OpeningScreen({ onComplete }: Props) {
       {/* Main content */}
       <div className="relative flex flex-col items-center gap-0" style={{ zIndex: 4 }}>
 
-        {/* Interlocking wedding rings */}
+        {/* Rings photo — real engagement rings, falls back to illustration */}
         <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 22 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/rings.png"
+            src={ringsPhoto ? ringsPhoto.heroUrl : "/rings.png"}
             alt="Wedding rings"
             width={200}
-            style={{ mixBlendMode: "multiply", animation: "pulse-glow 3s ease-in-out 2s infinite" }}
+            style={{
+              borderRadius: ringsPhoto ? 16 : 0,
+              mixBlendMode: ringsPhoto ? "normal" : "multiply",
+              objectFit: "cover",
+              boxShadow: ringsPhoto ? "0 4px 32px rgba(90,31,46,0.15)" : undefined,
+              animation: "pulse-glow 3s ease-in-out 2s infinite",
+            }}
           />
         </div>
 
