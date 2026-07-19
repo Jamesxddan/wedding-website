@@ -126,6 +126,7 @@ export function createOpeningScene(
   // ── Background planes ──────────────────────────────────────────────────
 
   interface BgUniforms {
+    [uniform: string]: THREE.IUniform;
     uTexture: { value: THREE.Texture | null };
     uOpacity: { value: number };
     uOffset:  { value: THREE.Vector2 };

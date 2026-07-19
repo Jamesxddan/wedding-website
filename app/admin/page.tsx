@@ -45,6 +45,14 @@ interface Admin {
   created_at: string;
 }
 
+interface DeviceRow {
+  id: string;
+  device_uuid: string;
+  user_agent: string | null;
+  created_at: string;
+  last_seen_at: string | null;
+}
+
 type Settings = Record<string, string>;
 
 const PHASES = [
@@ -122,6 +130,10 @@ export default function AdminPage() {
   const [annoSaved, setAnnoSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
 
+  const [expandedGuest, setExpandedGuest] = useState<string | null>(null);
+  const [deviceMap, setDeviceMap] = useState<Record<string, DeviceRow[]>>({});
+  const [devicesLoading, setDevicesLoading] = useState<string | null>(null);
+
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -145,6 +157,7 @@ export default function AdminPage() {
         setIsSuper(is_super);
         setTab(is_super ? "guests" : "live");
         setAuthed(true);
+        localStorage.setItem("admin_dev_mode", "1");
       }
       setSessionChecked(true);
     }).catch(() => setSessionChecked(true));
@@ -207,6 +220,7 @@ export default function AdminPage() {
       setIsSuper(data.is_super);
       setTab(data.is_super ? "guests" : "live");
       setAuthed(true);
+      localStorage.setItem("admin_dev_mode", "1");
     } else {
       const err = await res.json().catch(() => ({}));
       setAuthError(err.error ?? "Wrong email or password");
@@ -215,6 +229,7 @@ export default function AdminPage() {
 
   async function signOut() {
     await fetch("/api/admin/auth", { method: "DELETE" });
+    localStorage.removeItem("admin_dev_mode");
     setAuthed(false);
     setIsSuper(false);
     setAdminEmail("");
@@ -256,6 +271,34 @@ export default function AdminPage() {
     setPhaseSaving(true);
     await saveSetting("phase_override", value);
     setPhaseSaving(false);
+  }
+
+  async function toggleDevices(g: Guest) {
+    if (expandedGuest === g.id) { setExpandedGuest(null); return; }
+    setExpandedGuest(g.id);
+    if (deviceMap[g.id]) return;
+    setDevicesLoading(g.id);
+    const res = await fetch(`/api/admin/devices?guest_id=${g.id}`);
+    if (res.ok) {
+      const data: DeviceRow[] = await res.json();
+      setDeviceMap((prev) => ({ ...prev, [g.id]: data }));
+    }
+    setDevicesLoading(null);
+  }
+
+  async function resetDevice(fingerprintId: string, guestId: string, guestName: string) {
+    if (!confirm(`Reset this device? It will need to re-register as a new guest.`)) return;
+    const res = await fetch("/api/admin/devices", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fingerprint_id: fingerprintId, guest_name: guestName }),
+    });
+    if (!res.ok) { alert("Failed to reset device"); return; }
+    setDeviceMap((prev) => ({
+      ...prev,
+      [guestId]: (prev[guestId] ?? []).filter((d) => d.id !== fingerprintId),
+    }));
+    await load("guests");
   }
 
   async function toggleOwner(g: Guest) {
@@ -591,36 +634,101 @@ export default function AdminPage() {
                 <tr>{["Name", "City", "Device", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
               <tbody>
-                {guests.map((g) => (
-                  <tr key={g.id}>
-                    <td style={td}>{g.name}</td>
-                    <td style={td}>{g.city}</td>
-                    <td style={{ ...td, fontSize: 12, color: "#888" }}>{parseUA(g.last_device_ua)}</td>
-                    <td style={td}>{g.device_count}</td>
-                    <td style={td}>{new Date(g.created_at).toLocaleDateString()}</td>
-                    <td style={td}>{new Date(g.last_seen_at).toLocaleDateString()}</td>
-                    <td style={td}>{g.invitation_seen ? "✓" : "—"}</td>
-                    <td style={td}>{g.photo_downloads > 0 ? g.photo_downloads : "—"}</td>
-                    <td style={td}>
-                      <button
-                        onClick={() => toggleOwner(g)}
-                        style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #8B4A6B", background: g.is_owner ? "#8B4A6B" : "transparent", color: g.is_owner ? "#fff" : "#8B4A6B", cursor: "pointer" }}
-                      >
-                        {g.is_owner ? "Owner ✓" : "Set owner"}
-                      </button>
-                    </td>
-                    {isSuper && (
-                      <td style={td}>
-                        <button
-                          onClick={() => deleteGuest(g)}
-                          style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer" }}
-                        >
-                          Delete guest
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                {guests.map((g) => {
+                  const isExpanded = expandedGuest === g.id;
+                  const colSpan = isSuper ? 10 : 9;
+                  const devices = deviceMap[g.id] ?? [];
+                  return (
+                    <>
+                      <tr key={g.id}>
+                        <td style={td}>{g.name}</td>
+                        <td style={td}>{g.city}</td>
+                        <td style={{ ...td, fontSize: 12, color: "#888" }}>{parseUA(g.last_device_ua)}</td>
+                        <td style={td}>
+                          <button
+                            onClick={() => toggleDevices(g)}
+                            title="Show devices"
+                            style={{ fontSize: 12, padding: "3px 8px", borderRadius: 10, border: "1px solid #bbb", background: isExpanded ? "#1a1a1a" : "transparent", color: isExpanded ? "#fff" : "#555", cursor: "pointer" }}
+                          >
+                            {g.device_count} {isExpanded ? "▲" : "▼"}
+                          </button>
+                        </td>
+                        <td style={td}>{new Date(g.created_at).toLocaleDateString()}</td>
+                        <td style={td}>{new Date(g.last_seen_at).toLocaleDateString()}</td>
+                        <td style={td}>{g.invitation_seen ? "✓" : "—"}</td>
+                        <td style={td}>{g.photo_downloads > 0 ? g.photo_downloads : "—"}</td>
+                        <td style={td}>
+                          <button
+                            onClick={() => toggleOwner(g)}
+                            style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #8B4A6B", background: g.is_owner ? "#8B4A6B" : "transparent", color: g.is_owner ? "#fff" : "#8B4A6B", cursor: "pointer" }}
+                          >
+                            {g.is_owner ? "Owner ✓" : "Set owner"}
+                          </button>
+                        </td>
+                        {isSuper && (
+                          <td style={td}>
+                            <button
+                              onClick={() => deleteGuest(g)}
+                              style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer" }}
+                            >
+                              Delete guest
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${g.id}-devices`}>
+                          <td colSpan={colSpan} style={{ padding: "0 12px 14px", background: "#f7f5f2", borderBottom: "1px solid #ede8e2" }}>
+                            {devicesLoading === g.id ? (
+                              <p style={{ fontSize: 12, color: "#bbb", margin: "10px 0" }}>Loading devices…</p>
+                            ) : (
+                              <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+                                <thead>
+                                  <tr>
+                                    {["UUID", "Device", "First seen", "Last seen", ""].map((h) => (
+                                      <th key={h} style={{ textAlign: "left", padding: "5px 10px", fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {devices.map((d) => (
+                                    <tr key={d.id} style={{ background: "#fff", borderRadius: 6 }}>
+                                      <td style={{ padding: "7px 10px", fontFamily: "monospace", fontSize: 12, color: "#555" }}>
+                                        {d.device_uuid.slice(0, 8)}
+                                        <span style={{ color: "#ccc" }}>…</span>
+                                        <button
+                                          onClick={() => navigator.clipboard.writeText(d.device_uuid)}
+                                          title="Copy full UUID"
+                                          style={{ marginLeft: 6, fontSize: 10, padding: "1px 5px", borderRadius: 4, border: "1px solid #ddd", background: "#f5f5f5", cursor: "pointer", color: "#888" }}
+                                        >
+                                          copy
+                                        </button>
+                                      </td>
+                                      <td style={{ padding: "7px 10px", fontSize: 12, color: "#555" }}>{parseUA(d.user_agent)}</td>
+                                      <td style={{ padding: "7px 10px", fontSize: 12, color: "#aaa" }}>{new Date(d.created_at).toLocaleDateString()}</td>
+                                      <td style={{ padding: "7px 10px", fontSize: 12, color: "#aaa" }}>{d.last_seen_at ? new Date(d.last_seen_at).toLocaleDateString() : "—"}</td>
+                                      <td style={{ padding: "7px 10px" }}>
+                                        <button
+                                          onClick={() => resetDevice(d.id, g.id, g.name)}
+                                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, border: "1px solid #c0392b", color: "#c0392b", background: "transparent", cursor: "pointer", fontWeight: 600 }}
+                                        >
+                                          Reset
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                  {devices.length === 0 && (
+                                    <tr><td colSpan={5} style={{ padding: "10px", color: "#ccc", fontSize: 12 }}>No devices</td></tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
                 {guests.length === 0 && (
                   <tr><td colSpan={isSuper ? 10 : 9} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No guests yet</td></tr>
                 )}
