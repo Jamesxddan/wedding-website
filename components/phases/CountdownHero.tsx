@@ -437,11 +437,30 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
             ))}
           </div>
 
+          {/* Live-day teaser */}
+          <p
+            className={`font-body ${fadeIn(4)}`}
+            style={{
+              transitionDelay: "750ms",
+              fontSize: "clamp(11px, 1.8vw, 13px)",
+              fontStyle: "italic",
+              letterSpacing: "0.03em",
+              color: cMuted,
+              textShadow: cHalo,
+              transition: `color ${CT}, text-shadow ${CT}`,
+              maxWidth: 340,
+              textAlign: "center",
+              lineHeight: 1.6,
+            }}
+          >
+            On October 8th, return here to watch the ceremony &amp; reception live ✨
+          </p>
+
           {/* Greeting */}
           <p
-            className={`font-script italic ${fadeIn(4)}`}
+            className={`font-script italic ${fadeIn(5)}`}
             style={{
-              transitionDelay: "800ms",
+              transitionDelay: "900ms",
               fontSize: "clamp(1.1rem, 2vw, 1.45rem)",
               color: cSecondary,
               textShadow: cHalo,
