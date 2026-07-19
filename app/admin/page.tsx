@@ -1001,7 +1001,7 @@ export default function AdminPage() {
             ← Back to Admin
           </button>
           <iframe
-            src="/preview"
+            src="/preview?dev=1"
             style={{ width: "100%", height: "100vh", border: "none", display: "block" }}
             title="Site preview"
           />
