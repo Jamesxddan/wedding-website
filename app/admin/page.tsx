@@ -1329,6 +1329,20 @@ function ContentTab() {
     else setError("Failed to save.");
   }
 
+  async function resetToDefaults() {
+    if (!confirm("Reset ALL site content to built-in defaults? Your customisations will be lost.")) return;
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "site_content", value: JSON.stringify(DEFAULT_CONTENT) }),
+    });
+    setSaving(false);
+    if (res.ok) { setContent(DEFAULT_CONTENT); setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    else setError("Failed to reset.");
+  }
+
   const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", borderRadius: 7, border: "1px solid #e0dbd4", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };
   const ta: React.CSSProperties = { ...inp, resize: "vertical", minHeight: 72, fontFamily: "inherit", lineHeight: 1.5 };
   const btn: React.CSSProperties = { padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 };
@@ -1349,11 +1363,16 @@ function ContentTab() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, color: "#1a1a1a" }}>Site Content</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#aaa" }}>Changes go live immediately after saving.</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#aaa" }}>Saved changes go live instantly — guests see them on next page refresh.</p>
         </div>
-        <button onClick={save} disabled={saving} style={{ ...btn, background: saved ? "#2ecc71" : "#8B4A6B", color: "#fff", padding: "9px 22px", fontSize: 13, opacity: saving ? 0.6 : 1 }}>
-          {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={resetToDefaults} disabled={saving} style={{ ...btn, background: "transparent", color: "#aaa", border: "1px solid #ddd", padding: "9px 16px", fontSize: 13 }}>
+            Reset to defaults
+          </button>
+          <button onClick={save} disabled={saving} style={{ ...btn, background: saved ? "#2ecc71" : "#8B4A6B", color: "#fff", padding: "9px 22px", fontSize: 13, opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+          </button>
+        </div>
       </div>
       {error && <p style={{ color: "#c0392b", fontSize: 13, marginBottom: 12 }}>{error}</p>}
 
