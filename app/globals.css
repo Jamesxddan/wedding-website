@@ -139,6 +139,18 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Explore button outline glow ───────────────────────────────────────────── */
+@keyframes btn-glow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(90,31,46,0.3), 0 0 0 2px rgba(212,175,55,0.3), 0 0 14px rgba(212,175,55,0.15); }
+  50%       { box-shadow: 0 4px 28px rgba(90,31,46,0.45), 0 0 0 4px rgba(212,175,55,0.72), 0 0 32px rgba(212,175,55,0.38); }
+}
+
+/* ── Invitation card rise ──────────────────────────────────────────────────── */
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(70px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* ── Section transitions ───────────────────────────────────────────────────── */
 .section-fade-in {
   opacity: 0;

@@ -8,12 +8,12 @@ weddingDay.setHours(10, 0, 0, 0);
 const dayAfter = new Date(WEDDING_DATE.getTime() + 24 * 60 * 60 * 1000);
 
 describe("getPhase", () => {
-  it("returns FIRST_VISIT when no guest name provided", () => {
-    expect(getPhase(null, dayBefore)).toBe(Phase.FIRST_VISIT);
+  it("returns RETURN_VISIT when no guest name provided", () => {
+    expect(getPhase(null, dayBefore)).toBe(Phase.RETURN_VISIT);
   });
 
-  it("returns FIRST_VISIT on wedding day with no guest name", () => {
-    expect(getPhase(null, weddingDay)).toBe(Phase.FIRST_VISIT);
+  it("returns RETURN_VISIT on wedding day with no guest name", () => {
+    expect(getPhase(null, weddingDay)).toBe(Phase.RETURN_VISIT);
   });
 
   it("returns INVITATION when name exists but invitation not seen", () => {
@@ -24,9 +24,9 @@ describe("getPhase", () => {
     expect(getPhase("James", dayBefore, true)).toBe(Phase.RETURN_VISIT);
   });
 
-  it("returns FIRST_VISIT when no name regardless of invitationSeen", () => {
-    expect(getPhase(null, dayBefore, true)).toBe(Phase.FIRST_VISIT);
-    expect(getPhase(null, dayBefore, false)).toBe(Phase.FIRST_VISIT);
+  it("returns RETURN_VISIT when no name regardless of invitationSeen", () => {
+    expect(getPhase(null, dayBefore, true)).toBe(Phase.RETURN_VISIT);
+    expect(getPhase(null, dayBefore, false)).toBe(Phase.RETURN_VISIT);
   });
 
   it("returns WEDDING_DAY when name set, invitation seen, and date is wedding day", () => {

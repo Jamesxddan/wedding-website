@@ -4,101 +4,10 @@ import { useEffect, useRef } from "react";
 import FirstVisitForm from "./FirstVisitForm";
 import GradientText from "@/components/ui/GradientText";
 import { useSiteContent } from "@/lib/SiteContentContext";
-import { useSelectPhotos } from "@/lib/useSelectPhotos";
+import OpeningScene from "@/components/webgl/OpeningScene";
 
 interface Props {
   onComplete: (name: string) => void;
-}
-
-function useParticles(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    type Particle = {
-      x: number; y: number;
-      vx: number; vy: number; drift: number;
-      angle: number; spin: number;
-      size: number; opacity: number;
-      life: number; decay: number; isGold: boolean;
-    };
-
-    const particles: Particle[] = [];
-    let lastSpawn = 0;
-    let animId = 0;
-
-    function spawn(): Particle {
-      const isGold = Math.random() > 0.45;
-      return {
-        x: Math.random() * canvas!.width,
-        y: -8,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: 0.5 + Math.random() * 1.0,
-        drift: (Math.random() - 0.5) * 0.01,
-        angle: Math.random() * Math.PI * 2,
-        spin: (Math.random() - 0.5) * 0.04,
-        size: isGold ? 2 + Math.random() * 2.5 : 4 + Math.random() * 6,
-        opacity: 0.4 + Math.random() * 0.5,
-        life: 1, decay: 0.001 + Math.random() * 0.0008, isGold,
-      };
-    }
-
-    function draw(p: Particle) {
-      ctx!.save();
-      ctx!.globalAlpha = p.opacity * p.life;
-      ctx!.translate(p.x, p.y);
-      ctx!.rotate(p.angle);
-      if (p.isGold) {
-        const s = p.size, t = s * 0.3;
-        ctx!.beginPath();
-        ctx!.moveTo(0, -s); ctx!.lineTo(t, -t); ctx!.lineTo(s, 0);
-        ctx!.lineTo(t, t); ctx!.lineTo(0, s); ctx!.lineTo(-t, t);
-        ctx!.lineTo(-s, 0); ctx!.lineTo(-t, -t); ctx!.closePath();
-        ctx!.fillStyle = `rgba(212,175,55,${p.opacity})`;
-        ctx!.fill();
-      } else {
-        ctx!.beginPath();
-        ctx!.ellipse(0, 0, p.size * 1.4, p.size * 0.6, 0, 0, Math.PI * 2);
-        const g = ctx!.createRadialGradient(0, 0, 0, 0, 0, p.size * 1.4);
-        g.addColorStop(0, `rgba(244,194,194,${p.opacity})`);
-        g.addColorStop(1, `rgba(244,194,194,0)`);
-        ctx!.fillStyle = g;
-        ctx!.fill();
-      }
-      ctx!.restore();
-    }
-
-    function tick(ts: number) {
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-      if (ts - lastSpawn > 130) {
-        particles.push(spawn());
-        if (Math.random() > 0.35) particles.push(spawn());
-        lastSpawn = ts;
-      }
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx; p.vx += p.drift;
-        p.y += p.vy; p.angle += p.spin;
-        p.life -= p.decay;
-        if (p.life <= 0 || p.y > canvas!.height + 10) particles.splice(i, 1);
-        else draw(p);
-      }
-      animId = requestAnimationFrame(tick);
-    }
-
-    animId = requestAnimationFrame(tick);
-    return () => { ro.disconnect(); cancelAnimationFrame(animId); };
-  }, [canvasRef]);
 }
 
 const GOLD = "#D4AF37";
@@ -119,25 +28,29 @@ function Divider({ delay }: { delay: string }) {
 }
 
 export default function OpeningScreen({ onComplete }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { opening } = useSiteContent();
-  const photos = useSelectPhotos();
-  const bokehPhoto = photos.byName("sub", "2.JPG");
-  const ringsPhoto = photos.byName("sub", "4.JPG");
-  useParticles(canvasRef);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const fit = () => {
       el.style.zoom = "1";
-      const ratio = Math.min(1, (window.innerHeight - 4) / el.scrollHeight);
+      // clientHeight accounts for iOS Safari URL bar; innerHeight does not
+      const vh = document.documentElement.clientHeight || window.innerHeight;
+      const ratio = Math.min(1, (vh - 4) / el.scrollHeight);
       el.style.zoom = String(ratio);
     };
     fit();
+    // Re-fit after fonts/images/form fields settle
+    const t1 = setTimeout(fit, 150);
+    const t2 = setTimeout(fit, 500);
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", fit);
+    };
   }, []);
 
   return (
@@ -153,24 +66,8 @@ export default function OpeningScreen({ onComplete }: Props) {
         ].join(", "),
       }}
     >
-      {/* Bokeh photo backdrop — fades in once loaded */}
-      {bokehPhoto && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={bokehPhoto.thumbnailUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{ zIndex: 0, opacity: 0.13, filter: "blur(12px)", transform: "scale(1.05)" }}
-        />
-      )}
-
-      {/* Canvas particles */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 2 }}
-      />
+      {/* Three.js scene: blurred photo backdrops + interactive gold & rose particles */}
+      <OpeningScene />
 
       {/* Gold border frame */}
       <div
@@ -205,18 +102,15 @@ export default function OpeningScreen({ onComplete }: Props) {
       {/* Main content */}
       <div className="relative flex flex-col items-center gap-0" style={{ zIndex: 4 }}>
 
-        {/* Rings photo — real engagement rings, falls back to illustration */}
+        {/* Rings illustration */}
         <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 22 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={ringsPhoto ? ringsPhoto.heroUrl : "/rings.png"}
+            src="/rings.png"
             alt="Wedding rings"
             width={200}
             style={{
-              borderRadius: ringsPhoto ? 16 : 0,
-              mixBlendMode: ringsPhoto ? "normal" : "multiply",
-              objectFit: "cover",
-              boxShadow: ringsPhoto ? "0 4px 32px rgba(90,31,46,0.15)" : undefined,
+              mixBlendMode: "multiply",
               animation: "pulse-glow 3s ease-in-out 2s infinite",
             }}
           />
@@ -224,7 +118,6 @@ export default function OpeningScreen({ onComplete }: Props) {
 
         <Divider delay="1.5s" />
 
-        {/* Together with their families */}
         <p
           className="font-body"
           style={{
@@ -236,7 +129,6 @@ export default function OpeningScreen({ onComplete }: Props) {
           {opening.tagline}
         </p>
 
-        {/* Names */}
         <div className="text-center" style={{ marginBottom: 8 }}>
           <span
             className="block"
@@ -284,7 +176,6 @@ export default function OpeningScreen({ onComplete }: Props) {
           }} />
         </div>
 
-        {/* Date & venue */}
         <div
           className="text-center"
           style={{ animation: "fade-up 0.8s ease 3.7s both", marginBottom: 0 }}

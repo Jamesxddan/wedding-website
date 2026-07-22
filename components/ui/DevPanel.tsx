@@ -83,7 +83,8 @@ export default function DevPanel() {
     const isDev = process.env.NODE_ENV !== "production";
     const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
     const hasFlag = window.location.search.includes("dev=1");
-    setVisible(isDev || isPreview || hasFlag);
+    const isAdmin = localStorage.getItem("admin_dev_mode") === "1";
+    setVisible(isDev || isPreview || hasFlag || isAdmin);
   }, []);
 
   if (!visible) return null;

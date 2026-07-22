@@ -17,11 +17,18 @@ export interface SiteContent {
     venue_short: string;
   };
   invitation: {
+    scripture: string;
+    scripture_ref: string;
+    hosts_groom: string;
+    hosts_bride: string;
     body: string;
     couple_name: string;
     quote: string;
     date: string;
+    time: string;
+    ceremony_label: string;
     ceremony_line: string;
+    reception_label: string;
     reception_line: string;
     presence_line: string;
     explore_btn: string;
@@ -67,13 +74,20 @@ export const DEFAULT_CONTENT: SiteContent = {
     venue_short: "St Andrews Kirk, Chennai",
   },
   invitation: {
-    body: "We greet you in the name of the Lord Jesus Christ. With great joy in our hearts, we invite you to celebrate the wedding of",
+    scripture: "He has made everything beautiful in His time.",
+    scripture_ref: "Ecclesiastes 3:11",
+    hosts_groom: "Mr. Joseph Washington & Mrs. Sophia Joseph",
+    hosts_bride: "Mr. Yesurathinam & Mrs. Singapogu Rizma",
+    body: "We greet you in the name of the Lord Jesus Christ. With great joy in our hearts, we invite you to celebrate the wedding of our children",
     couple_name: "James Daniel & Sharon",
     quote: "God's will was on our marriage",
-    date: "October 8th, 2026",
-    ceremony_line: "St Andrews Kirk, Chennai — Ceremony",
-    reception_line: "BKN Auditorium, Chennai — Reception",
-    presence_line: "Your presence is greatly needed and deeply cherished. 🌸",
+    date: "October 8th (Thursday), 2026",
+    time: "4:30 P.M.",
+    ceremony_label: "Holy Matrimony",
+    ceremony_line: "St. Andrew's Kirk, Egmore, Chennai",
+    reception_label: "Wedding Reception",
+    reception_line: "BKN Auditorium, Ritherdon Road, Vepery, Chennai",
+    presence_line: "Your gracious presence and blessings will make this joyous occasion truly memorable.",
     explore_btn: "Explore the wedding website",
   },
   story: {

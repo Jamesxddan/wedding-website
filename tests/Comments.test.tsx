@@ -1,30 +1,28 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-
-vi.mock("@giscus/react", () => ({
-  default: () => <div data-testid="giscus-widget" />,
-}));
-
-// YoutubeComments fetches on mount — mock fetch so it doesn't hang
-vi.mock("@/components/sections/YoutubeComments", () => ({
-  default: () => null,
-}));
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import Comments from "@/components/sections/Comments";
 
 describe("Comments", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+  });
+
   it("renders the section heading", () => {
     render(<Comments />);
-    expect(screen.getByText("Leave a Blessing")).toBeInTheDocument();
+    expect(screen.getByText("Wishes & Messages")).toBeInTheDocument();
   });
 
-  it("renders the Giscus widget (config is live)", () => {
+  it("renders empty state when no comments", async () => {
     render(<Comments />);
-    expect(screen.getByTestId("giscus-widget")).toBeInTheDocument();
+    expect(await screen.findByText("Be the first to leave a wish! 💌")).toBeInTheDocument();
   });
 
-  it("renders the tagline", () => {
+  it("renders the subtitle", () => {
     render(<Comments />);
-    expect(screen.getByText(/your words mean the world/i)).toBeInTheDocument();
+    expect(screen.getByText(/Leave a message for James & Sharon/)).toBeInTheDocument();
   });
 });
