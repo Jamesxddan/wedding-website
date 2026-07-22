@@ -33,13 +33,13 @@ describe("usePhase", () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("no network in test"));
   });
 
-  it("returns FIRST_VISIT when localStorage has no guest_name", async () => {
+  it("returns RETURN_VISIT when localStorage has no guest_name", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(DAY_BEFORE);
     const { usePhase } = await import("@/lib/usePhase");
     const { result } = renderHook(() => usePhase());
     await act(async () => { await vi.runAllTimersAsync(); });
-    expect(result.current.phase).toBe(Phase.FIRST_VISIT);
+    expect(result.current.phase).toBe(Phase.RETURN_VISIT);
     expect(result.current.guestName).toBeNull();
     expect(result.current.sessionRestored).toBe(false);
   });
@@ -79,6 +79,8 @@ describe("usePhase", () => {
 
   it("silently restores session when /api/session returns 'known'", async () => {
     // No guest_name in localStorage — simulates cleared storage
+    // Must run as production so the session check is not skipped
+    process.env.NEXT_PUBLIC_VERCEL_ENV = "production";
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -91,14 +93,18 @@ describe("usePhase", () => {
     });
     vi.useFakeTimers();
     vi.setSystemTime(DAY_BEFORE);
-    const { usePhase } = await import("@/lib/usePhase");
-    const { result } = renderHook(() => usePhase());
-    await act(async () => { await vi.runAllTimersAsync(); });
-    expect(localStorageMock.getItem("guest_name")).toBe("Sharon");
-    expect(localStorageMock.getItem("session_token")).toBe("tok-abc");
-    expect(result.current.sessionRestored).toBe(true);
-    expect(result.current.phase).toBe(Phase.RETURN_VISIT);
-    expect(result.current.guestName).toBe("Sharon");
+    try {
+      const { usePhase } = await import("@/lib/usePhase");
+      const { result } = renderHook(() => usePhase());
+      await act(async () => { await vi.runAllTimersAsync(); });
+      expect(localStorageMock.getItem("guest_name")).toBe("Sharon");
+      expect(localStorageMock.getItem("session_token")).toBe("tok-abc");
+      expect(result.current.sessionRestored).toBe(true);
+      expect(result.current.phase).toBe(Phase.RETURN_VISIT);
+      expect(result.current.guestName).toBe("Sharon");
+    } finally {
+      delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+    }
   });
 
   it("does not fire session check when guest_name is already in localStorage", async () => {
@@ -110,6 +116,7 @@ describe("usePhase", () => {
     const { usePhase } = await import("@/lib/usePhase");
     renderHook(() => usePhase());
     await act(async () => { await vi.runAllTimersAsync(); });
-    expect(global.fetch).not.toHaveBeenCalled();
+    // Settings fetch may be called, but the session check (/api/session POST) must not be
+    expect(global.fetch).not.toHaveBeenCalledWith("/api/session", expect.anything());
   });
 });

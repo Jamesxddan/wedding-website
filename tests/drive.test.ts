@@ -3,10 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchMock = vi.fn();
 global.fetch = fetchMock;
 
-import { fetchDrivePhotos } from "@/lib/drive";
+import { fetchDrivePhotos, clearDriveCache } from "@/lib/drive";
 
 describe("fetchDrivePhotos", () => {
-  beforeEach(() => fetchMock.mockClear());
+  beforeEach(() => { fetchMock.mockClear(); clearDriveCache(); });
 
   it("returns mapped photo objects", async () => {
     fetchMock.mockResolvedValue({

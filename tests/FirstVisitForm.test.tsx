@@ -34,8 +34,10 @@ import FirstVisitForm from "@/components/phases/FirstVisitForm";
 async function fillAndSubmit(onComplete = vi.fn()) {
   render(<FirstVisitForm onComplete={onComplete} />);
   await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
-  await userEvent.type(screen.getByPlaceholderText(/your email address/i), "james@example.com");
-  await userEvent.type(screen.getByPlaceholderText(/your mobile number/i), "+919876543210");
+  // Use fireEvent.change for email/mobile to bypass pointer-events:none on the
+  // collapsing wrapper (the fields hide each other when one is filled).
+  fireEvent.change(screen.getByPlaceholderText(/your email address/i), { target: { value: "james@example.com" } });
+  fireEvent.change(screen.getByPlaceholderText(/your mobile number/i), { target: { value: "+919876543210" } });
   await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
   await waitFor(() => screen.getByText("Chennai"));
   fireEvent.mouseDown(screen.getByText("Chennai"));
