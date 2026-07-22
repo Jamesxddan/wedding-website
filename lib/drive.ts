@@ -31,6 +31,7 @@ const DRIVE_API = "https://www.googleapis.com/drive/v3";
 // multiple components (hero + gallery) fetch simultaneously on the same server process.
 const driveCache = new Map<string, { data: unknown; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export function clearDriveCache() { driveCache.clear(); }
 
 async function withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const hit = driveCache.get(key);

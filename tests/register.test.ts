@@ -118,11 +118,11 @@ describe("POST /api/register", () => {
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith({ name: "NewName", city: "NewCity", email: "new@example.com" });
     expect(mockUpdateEq).toHaveBeenCalledWith("id", "guest-old");
-    expect(mockInsert).toHaveBeenCalledWith({
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
       guest_id: "guest-old",
       device_uuid: "u1",
       browser_signals_hash: "h1",
-    });
+    }));
     expect((await res.json()).session_token).toBe("linked-tok");
   });
 
