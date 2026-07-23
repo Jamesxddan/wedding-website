@@ -249,7 +249,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
         <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
-      <PetalScene />
+      {/* Skip WebGL petals on mobile — video + WebGL simultaneously causes stutter */}
+      {!isMobile && <PetalScene />}
 
       {/* ── ENVELOPE SCENE ───────────────────────────────────────────────── */}
       {stage !== "card" && (
