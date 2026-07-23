@@ -46,7 +46,7 @@ describe("Home routing shell", () => {
   it("renders loading state when isLoading is true", () => {
     mockUsePhase.mockReturnValue({ phase: Phase.FIRST_VISIT, guestName: null, guestCity: null, isLoading: true, refresh: vi.fn(), sessionRestored: false });
     render(<Home />);
-    expect(screen.getByText(/Loading/)).toBeInTheDocument();
+    expect(screen.getByText(/preparing your invitation/i)).toBeInTheDocument();
   });
 
   it("renders first visit form when FIRST_VISIT", () => {

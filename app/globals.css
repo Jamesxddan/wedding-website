@@ -151,6 +151,22 @@ body {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ── Falling petals (wedding day + post-wedding) ───────────────────────────── */
+@keyframes petal-fall {
+  0%   { transform: translateY(-20px) rotate(0deg);   opacity: 0; }
+  8%   { opacity: 0.9; }
+  92%  { opacity: 0.65; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ── Loading ring ──────────────────────────────────────────────────────────── */
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-loading-ring {
+  animation: loading-spin 1.4s linear infinite;
+}
+
 /* ── Section transitions ───────────────────────────────────────────────────── */
 .section-fade-in {
   opacity: 0;

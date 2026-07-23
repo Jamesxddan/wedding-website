@@ -100,8 +100,25 @@ export default function Home() {
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
-        <div className="text-deep-rose font-script italic text-2xl animate-pulse">
-          Loading...
+        <div className="flex flex-col items-center gap-5">
+          {/* Animated rings */}
+          <div className="relative w-16 h-16">
+            <div
+              className="absolute inset-0 rounded-full border-2 border-blush animate-loading-ring"
+              style={{ animationDuration: "1.4s" }}
+            />
+            <div
+              className="absolute inset-2 rounded-full border border-deep-rose/25 animate-loading-ring"
+              style={{ animationDuration: "2.1s", animationDirection: "reverse" }}
+            />
+            <div
+              className="absolute inset-[18px] rounded-full"
+              style={{ background: "radial-gradient(circle, rgba(181,101,118,0.2), transparent)" }}
+            />
+          </div>
+          <p className="font-script italic text-deep-rose/50 text-lg">
+            preparing your invitation…
+          </p>
         </div>
       </main>
     );
