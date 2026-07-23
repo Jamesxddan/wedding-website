@@ -32,9 +32,9 @@ function Divider() {
 
 // ── Video crossfade backdrop ─────────────────────────────────────────────────
 const VIDEO_SRCS = [
-  "/videos/video-1.mp4", // Start
-  "/videos/video-2.mp4", // Second
-  "/videos/video-3.mp4", // Third
+  "/videos/Video-1.mp4", // Start
+  "/videos/Video-2.mp4", // Second
+  "/videos/Video-3.mp4", // Third
 ];
 const FADE_MS = 1500;
 const PRE_END_S = 2.5;
