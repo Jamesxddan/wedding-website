@@ -51,13 +51,6 @@ function VideoBackdrop() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (srcs.length === 0) return;
-    refs.current[0]?.play().catch(() => {});
-    const id = setInterval(goNext, INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [srcs, goNext]);
-
   const goNext = useCallback(() => {
     if (fadingRef.current) return;
     const nxt = (curRef.current + 1) % srcs.length;
@@ -74,6 +67,13 @@ function VideoBackdrop() {
       fadingRef.current = false;
     }, FADE_MS);
   }, [srcs]);
+
+  useEffect(() => {
+    if (srcs.length === 0) return;
+    refs.current[0]?.play().catch(() => {});
+    const id = setInterval(goNext, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [srcs, goNext]);
 
   if (srcs.length === 0) return null;
 
