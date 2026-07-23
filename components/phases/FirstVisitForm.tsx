@@ -115,7 +115,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-md">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="guest-name" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
+        <label htmlFor="guest-name" className="font-heading text-[12px] text-deep-rose/60 tracking-[0.3em] uppercase">
           Your Name
         </label>
         <input
@@ -141,7 +141,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="guest-email" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
+          <label htmlFor="guest-email" className="font-heading text-[12px] text-deep-rose/60 tracking-[0.3em] uppercase">
             Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
           </label>
           <input
@@ -168,7 +168,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="guest-mobile" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
+          <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/60 tracking-[0.3em] uppercase">
             Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
           </label>
           <input
@@ -184,7 +184,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       </div>
 
       <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
-        <label htmlFor="guest-city" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
+        <label htmlFor="guest-city" className="font-heading text-[12px] text-deep-rose/60 tracking-[0.3em] uppercase">
           Your City
         </label>
         <div className="relative">

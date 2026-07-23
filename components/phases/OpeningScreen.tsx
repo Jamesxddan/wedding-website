@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import FirstVisitForm from "./FirstVisitForm";
 import GradientText from "@/components/ui/GradientText";
 import { useSiteContent } from "@/lib/SiteContentContext";
@@ -28,35 +27,11 @@ function Divider({ delay }: { delay: string }) {
 }
 
 export default function OpeningScreen({ onComplete }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const { opening, invitation } = useSiteContent();
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const fit = () => {
-      el.style.zoom = "1";
-      // clientHeight accounts for iOS Safari URL bar; innerHeight does not
-      const vh = document.documentElement.clientHeight || window.innerHeight;
-      const ratio = Math.min(1, (vh - 4) / el.scrollHeight);
-      el.style.zoom = String(ratio);
-    };
-    fit();
-    // Re-fit after fonts/images/form fields settle
-    const t1 = setTimeout(fit, 150);
-    const t2 = setTimeout(fit, 500);
-    window.addEventListener("resize", fit);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      window.removeEventListener("resize", fit);
-    };
-  }, []);
 
   return (
     <div
-      ref={containerRef}
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-10"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 py-10"
       style={{
         background: [
           "radial-gradient(ellipse at 50% -10%, rgba(212,175,55,0.22) 0%, transparent 60%)",
@@ -139,7 +114,7 @@ export default function OpeningScreen({ onComplete }: Props) {
         <p
           className="font-script italic"
           style={{
-            fontSize: 13, letterSpacing: 1.5, color: `rgba(107,42,58,0.55)`,
+            fontSize: 15, letterSpacing: 1.5, color: `rgba(107,42,58,0.55)`,
             margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
@@ -198,13 +173,13 @@ export default function OpeningScreen({ onComplete }: Props) {
         >
           <span
             className="font-heading block"
-            style={{ fontSize: 11, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
+            style={{ fontSize: 13, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
           >
             {opening.date}
           </span>
           <span
             className="font-script italic block"
-            style={{ fontSize: 12, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
+            style={{ fontSize: 14, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
           >
             {opening.venue_short}
           </span>
@@ -217,13 +192,13 @@ export default function OpeningScreen({ onComplete }: Props) {
         >
           <p
             className="font-script italic"
-            style={{ fontSize: 11.5, color: GOLD_RGBA(0.72), letterSpacing: "0.02em" }}
+            style={{ fontSize: 14, color: GOLD_RGBA(0.72), letterSpacing: "0.02em" }}
           >
             &ldquo;{invitation.scripture}&rdquo;
           </p>
           <p
             className="font-heading"
-            style={{ fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: GOLD_RGBA(0.45), marginTop: 3 }}
+            style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: GOLD_RGBA(0.45), marginTop: 3 }}
           >
             {invitation.scripture_ref}
           </p>
@@ -248,7 +223,7 @@ export default function OpeningScreen({ onComplete }: Props) {
           <span
             className="font-script italic block text-center"
             style={{
-              fontSize: 11, letterSpacing: 1.5,
+              fontSize: 13, letterSpacing: 1.5,
               color: GOLD_RGBA(0.75),
               marginBottom: 14,
             }}
