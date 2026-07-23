@@ -29,7 +29,7 @@ function Divider({ delay }: { delay: string }) {
 
 export default function OpeningScreen({ onComplete }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { opening } = useSiteContent();
+  const { opening, invitation } = useSiteContent();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -211,7 +211,26 @@ export default function OpeningScreen({ onComplete }: Props) {
           </span>
         </div>
 
-        <div style={{ margin: "14px 0 16px" }}>
+        {/* Bible verse */}
+        <div
+          className="text-center"
+          style={{ margin: "12px 0 4px", animation: "fade-up 0.7s ease 4.0s both" }}
+        >
+          <p
+            className="font-script italic"
+            style={{ fontSize: 11.5, color: GOLD_RGBA(0.72), letterSpacing: "0.02em" }}
+          >
+            &ldquo;{invitation.scripture}&rdquo;
+          </p>
+          <p
+            className="font-heading"
+            style={{ fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: GOLD_RGBA(0.45), marginTop: 3 }}
+          >
+            {invitation.scripture_ref}
+          </p>
+        </div>
+
+        <div style={{ margin: "10px 0 16px" }}>
           <Divider delay="4.2s" />
         </div>
 

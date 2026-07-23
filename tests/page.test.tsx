@@ -54,7 +54,7 @@ describe("Home routing shell", () => {
     render(<Home />);
     // "James" and "Sharon" are split across separate elements — check each individually
     expect(screen.getByText("James")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
   });
 
   it("renders Phase 2 placeholder with guest name when RETURN_VISIT", () => {

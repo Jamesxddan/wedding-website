@@ -123,7 +123,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Full name"
+          placeholder="Your name"
           className={inputCls}
           autoComplete="off"
         />
@@ -142,7 +142,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-email" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
-            Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">(or mobile below)</span>
+            Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
           </label>
           <input
             id="guest-email"
@@ -169,7 +169,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-mobile" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
-            Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">(or email above)</span>
+            Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
           </label>
           <input
             id="guest-mobile"

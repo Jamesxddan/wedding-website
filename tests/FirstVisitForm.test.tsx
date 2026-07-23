@@ -33,7 +33,7 @@ import FirstVisitForm from "@/components/phases/FirstVisitForm";
 
 async function fillAndSubmit(onComplete = vi.fn()) {
   render(<FirstVisitForm onComplete={onComplete} />);
-  await userEvent.type(screen.getByPlaceholderText(/full name/i), "James");
+  await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
   // Use fireEvent.change for email/mobile to bypass pointer-events:none on the
   // collapsing wrapper (the fields hide each other when one is filled).
   fireEvent.change(screen.getByPlaceholderText(/your@email/i), { target: { value: "james@example.com" } });
@@ -59,7 +59,7 @@ describe("FirstVisitForm", () => {
 
   it("renders name, email, mobile, and city inputs", () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/your@email/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/\+91/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search city/i)).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("FirstVisitForm", () => {
 
   it("submit is disabled when city is typed but not selected from dropdown", async () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    await userEvent.type(screen.getByPlaceholderText(/full name/i), "James");
+    await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
     await userEvent.type(screen.getByPlaceholderText(/your@email/i), "james@example.com");
     await userEvent.type(screen.getByPlaceholderText(/search city/i), "Chen");
     expect(screen.getByRole("button", { name: /open your invitation/i })).toBeDisabled();
