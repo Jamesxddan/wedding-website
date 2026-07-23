@@ -36,7 +36,7 @@ function Divider() {
 const FADE_MS = 1500;
 const INTERVAL_MS = 10000;
 
-function VideoBackdrop() {
+function VideoBackdrop({ onLoaded }: { onLoaded?: () => void }) {
   const [srcs, setSrcs]       = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
@@ -49,6 +49,7 @@ function VideoBackdrop() {
       .then(r => r.json())
       .then((files: string[]) => {
         setSrcs(files.map(f => `/videos/${f}`));
+        if (files.length > 0) onLoaded?.();
       })
       .catch(() => {});
   }, []);
@@ -190,6 +191,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   const [ready, setReady]             = useState(false);
   const [guestCity, setGuestCity]     = useState("");
   const [isMobile, setIsMobile]       = useState(false);
+  const [hasVideo, setHasVideo]       = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const { invitation } = useSiteContent();
@@ -241,7 +243,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
       style={{ background: "#0f0a08" }}>
 
       {/* Video backdrop — desktop-optimised, gracefully hides on small screens if videos absent */}
-      <VideoBackdrop />
+      <VideoBackdrop onLoaded={() => setHasVideo(true)} />
 
       {/* Aurora blobs — subtle warmth over video */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -249,8 +251,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
         <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
-      {/* Skip WebGL petals on mobile — video + WebGL simultaneously causes stutter */}
-      {!isMobile && <PetalScene />}
+      {/* Skip WebGL petals when video is available — GPU contention causes stutter */}
+      {!hasVideo && !isMobile && <PetalScene />}
 
       {/* ── ENVELOPE SCENE ───────────────────────────────────────────────── */}
       {stage !== "card" && (
