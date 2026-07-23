@@ -33,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${cormorant.variable} ${inter.variable}`}>
-      <body className="min-h-screen bg-cream text-deep-rose font-body">
+    <html lang="en" className={`${playfair.variable} ${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen bg-cream text-deep-rose font-body" suppressHydrationWarning>
         <DevViewportFrame>{children}</DevViewportFrame>
         <DevPanel />
       </body>
