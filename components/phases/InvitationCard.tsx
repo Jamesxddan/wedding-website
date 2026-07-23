@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
-import PetalScene from "@/components/webgl/PetalScene";
 import { useSiteContent } from "@/lib/SiteContentContext";
+
+const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
 interface Props {
   guestName: string;
@@ -51,6 +53,13 @@ function VideoBackdrop() {
       .catch(() => {});
   }, []);
 
+  const preloadVideo = useCallback((idx: number) => {
+    const vid = refs.current[idx];
+    if (!vid || vid.preload !== "none") return;
+    vid.preload = "auto";
+    vid.load();
+  }, []);
+
   const goNext = useCallback(() => {
     if (fadingRef.current) return;
     const nxt = (curRef.current + 1) % srcs.length;
@@ -65,15 +74,19 @@ function VideoBackdrop() {
       setCurrent(nxt);
       setNext(null);
       fadingRef.current = false;
+      // Preload the video after next so it's ready in time
+      preloadVideo((nxt + 1) % srcs.length);
     }, FADE_MS);
-  }, [srcs]);
+  }, [srcs, preloadVideo]);
 
   useEffect(() => {
     if (srcs.length === 0) return;
     refs.current[0]?.play().catch(() => {});
+    // Preload video 1 after a short delay so video 0 gets bandwidth priority
+    const preloadTimer = setTimeout(() => preloadVideo(1), 4000);
     const id = setInterval(goNext, INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [srcs, goNext]);
+    return () => { clearInterval(id); clearTimeout(preloadTimer); };
+  }, [srcs, goNext, preloadVideo]);
 
   if (srcs.length === 0) return null;
 
@@ -93,7 +106,7 @@ function VideoBackdrop() {
             playsInline
             autoPlay={i === 0}
             loop={i === 0}
-            preload="auto"
+            preload={i === 0 ? "auto" : "none"}
             style={{
               position: "absolute", inset: 0,
               width: "100%", height: "100%",
