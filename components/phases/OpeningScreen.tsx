@@ -114,7 +114,7 @@ export default function OpeningScreen({ onComplete }: Props) {
         <p
           className="font-script italic"
           style={{
-            fontSize: 15, letterSpacing: 1.5, color: `rgba(107,42,58,0.55)`,
+            fontSize: 15, letterSpacing: 1.5, color: `rgba(90,31,46,0.80)`,
             margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
@@ -179,7 +179,7 @@ export default function OpeningScreen({ onComplete }: Props) {
           </span>
           <span
             className="font-script italic block"
-            style={{ fontSize: 14, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
+            style={{ fontSize: 14, color: "rgba(90,31,46,0.78)", marginTop: 3 }}
           >
             {opening.venue_short}
           </span>
@@ -192,13 +192,13 @@ export default function OpeningScreen({ onComplete }: Props) {
         >
           <p
             className="font-script italic"
-            style={{ fontSize: 14, color: GOLD_RGBA(0.72), letterSpacing: "0.02em" }}
+            style={{ fontSize: 14, color: "rgba(90,31,46,0.72)", letterSpacing: "0.02em" }}
           >
             &ldquo;{invitation.scripture}&rdquo;
           </p>
           <p
             className="font-heading"
-            style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: GOLD_RGBA(0.45), marginTop: 3 }}
+            style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#9C4A5A", marginTop: 3 }}
           >
             {invitation.scripture_ref}
           </p>
@@ -224,7 +224,7 @@ export default function OpeningScreen({ onComplete }: Props) {
             className="font-script italic block text-center"
             style={{
               fontSize: 13, letterSpacing: 1.5,
-              color: GOLD_RGBA(0.75),
+              color: "rgba(90,31,46,0.65)",
               marginBottom: 14,
             }}
           >
