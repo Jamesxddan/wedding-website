@@ -1,28 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
-import InvitationCard from "@/components/phases/InvitationCard";
-import OpeningScreen from "@/components/phases/OpeningScreen";
-import CountdownHero from "@/components/phases/CountdownHero";
-import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
-import PostWeddingHero from "@/components/phases/PostWeddingHero";
-import Gallery from "@/components/sections/Gallery";
-import OurStory from "@/components/sections/OurStory";
-import AboutJames from "@/components/sections/AboutJames";
-import AboutSharon from "@/components/sections/AboutSharon";
-import Families from "@/components/sections/Families";
-import Venue from "@/components/sections/Venue";
-import Itinerary from "@/components/sections/Itinerary";
-import Comments from "@/components/sections/Comments";
-import Footer from "@/components/ui/Footer";
-import Marquee from "@/components/ui/Marquee";
-import Reveal from "@/components/ui/Reveal";
-import BackgroundMusic from "@/components/ui/BackgroundMusic";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
+
+// Statically loaded — shown immediately on first/return visit
+import OpeningScreen from "@/components/phases/OpeningScreen";
+import InvitationCard from "@/components/phases/InvitationCard";
+
+// Lazy-loaded — only needed after phase resolves or user explores
+const CountdownHero   = dynamic(() => import("@/components/phases/CountdownHero"),   { ssr: false });
+const WeddingDayBanner = dynamic(() => import("@/components/phases/WeddingDayBanner"), { ssr: false });
+const PostWeddingHero  = dynamic(() => import("@/components/phases/PostWeddingHero"),  { ssr: false });
+const Gallery     = dynamic(() => import("@/components/sections/Gallery"),     { ssr: false });
+const OurStory    = dynamic(() => import("@/components/sections/OurStory"),    { ssr: false });
+const AboutJames  = dynamic(() => import("@/components/sections/AboutJames"),  { ssr: false });
+const AboutSharon = dynamic(() => import("@/components/sections/AboutSharon"), { ssr: false });
+const Families    = dynamic(() => import("@/components/sections/Families"),    { ssr: false });
+const Venue       = dynamic(() => import("@/components/sections/Venue"),       { ssr: false });
+const Itinerary   = dynamic(() => import("@/components/sections/Itinerary"),   { ssr: false });
+const Comments    = dynamic(() => import("@/components/sections/Comments"),    { ssr: false });
+const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
+const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
+const Reveal      = dynamic(() => import("@/components/ui/Reveal"),            { ssr: false });
+const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 
 function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
