@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import PetalScene from "@/components/webgl/PetalScene";
 import { useSiteContent } from "@/lib/SiteContentContext";
-import { useSelectPhotos } from "@/lib/useSelectPhotos";
 
 interface Props {
   guestName: string;
@@ -92,8 +91,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const { invitation } = useSiteContent();
-  const photos = useSelectPhotos();
-  const couplePhoto = photos.byName("main", "DSC03987.JPG");
+  const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
 
   useEffect(() => {
     setGuestCity(localStorage.getItem("guest_city") ?? "");
@@ -184,10 +182,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                 boxShadow: `0 20px 60px rgba(0,0,0,0.22), 0 0 0 1px ${GA(0.2)}`,
                 overflow: "hidden",
               }}>
-                {couplePhoto && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={couplePhoto.heroUrl} alt="" style={{ width: "100%", height: 130, objectFit: "cover", objectPosition: "50% 35%", display: "block" }} />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={couplePhotoSrc(600)} alt="" style={{ width: "100%", height: 130, objectFit: "cover", objectPosition: "50% 20%", display: "block" }} />
                 <div style={{ padding: "10px 14px 12px", textAlign: "center" }}>
                   <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 16, color: ROSE, margin: 0 }}>{invitation.couple_name}</p>
                   <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2px", textTransform: "uppercase", color: RA(0.5), margin: "4px 0 0" }}>{invitation.date}</p>
@@ -377,13 +373,9 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
           animation: "card-rise 0.88s cubic-bezier(0.22,1,0.36,1) both",
         }}>
           {/* Couple photo */}
-          {couplePhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={couplePhoto.heroUrl} alt="couple photo"
-              style={{ width: "100%", height: 260, objectFit: "cover", objectPosition: "50% 35%", display: "block", borderRadius: "14px 14px 0 0" }} />
-          ) : (
-            <div style={{ height: 180, borderRadius: "14px 14px 0 0", background: `linear-gradient(135deg, ${GA(0.2)}, ${RA(0.1)})` }} />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={couplePhotoSrc(1600)} alt="couple photo"
+            style={{ width: "100%", height: 260, objectFit: "cover", objectPosition: "50% 20%", display: "block", borderRadius: "14px 14px 0 0" }} />
 
           <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
 
