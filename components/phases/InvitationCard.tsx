@@ -31,28 +31,29 @@ function Divider() {
 }
 
 // ── Video crossfade backdrop ─────────────────────────────────────────────────
-const VIDEO_SRCS = [
-  "/videos/video-1.mp4", // Start
-  "/videos/video-2.mp4", // Second
-  "/videos/video-3.mp4", // Third
-];
 const FADE_MS = 1500;
-const PRE_END_S = 2.5;
+const INTERVAL_MS = 10000;
 
 function VideoBackdrop() {
+  const [srcs, setSrcs]       = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
-  const refs        = useRef<(HTMLVideoElement | null)[]>([null, null, null]);
+  const refs        = useRef<(HTMLVideoElement | null)[]>([]);
   const curRef      = useRef(0);
   const fadingRef   = useRef(false);
 
   useEffect(() => {
-    refs.current[0]?.play().catch(() => {});
+    fetch("/videos/manifest.json")
+      .then(r => r.json())
+      .then((files: string[]) => {
+        setSrcs(files.map(f => `/videos/${f}`));
+      })
+      .catch(() => {});
   }, []);
 
   const goNext = useCallback(() => {
     if (fadingRef.current) return;
-    const nxt = (curRef.current + 1) % VIDEO_SRCS.length;
+    const nxt = (curRef.current + 1) % srcs.length;
     const vid = refs.current[nxt];
     if (!vid) return;
     vid.currentTime = 0;
@@ -65,18 +66,20 @@ function VideoBackdrop() {
       setNext(null);
       fadingRef.current = false;
     }, FADE_MS);
-  }, []);
+  }, [srcs]);
 
-  const handleTimeUpdate = useCallback((i: number) => {
-    if (i !== curRef.current) return;
-    const vid = refs.current[i];
-    if (!vid || !vid.duration) return;
-    if (vid.currentTime >= vid.duration - PRE_END_S) goNext();
-  }, [goNext]);
+  useEffect(() => {
+    if (srcs.length === 0) return;
+    refs.current[0]?.play().catch(() => {});
+    const id = setInterval(goNext, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [srcs, goNext]);
+
+  if (srcs.length === 0) return null;
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      {VIDEO_SRCS.map((src, i) => {
+      {srcs.map((src, i) => {
         const opacity = (i === current && next === null) ? 1
                       : (i === next)                    ? 1
                       : 0;
@@ -88,8 +91,9 @@ function VideoBackdrop() {
             src={src}
             muted
             playsInline
+            autoPlay={i === 0}
+            loop={i === 0}
             preload="auto"
-            onTimeUpdate={() => handleTimeUpdate(i)}
             style={{
               position: "absolute", inset: 0,
               width: "100%", height: "100%",
@@ -104,7 +108,7 @@ function VideoBackdrop() {
       {/* Cinematic overlay — darkens edges, keeps card readable */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.62) 100%)",
+        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)",
       }} />
       {/* Subtle warm tint to harmonise with cream card */}
       <div style={{
