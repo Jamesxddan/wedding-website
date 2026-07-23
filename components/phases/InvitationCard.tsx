@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import PetalScene from "@/components/webgl/PetalScene";
 import { useSiteContent } from "@/lib/SiteContentContext";
@@ -26,6 +26,91 @@ function Divider() {
       <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${GA(0.45)})` }} />
       <span style={{ fontSize: 8, color: GA(0.6) }}>✦</span>
       <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${GA(0.45)}, transparent)` }} />
+    </div>
+  );
+}
+
+// ── Video crossfade backdrop ─────────────────────────────────────────────────
+const VIDEO_SRCS = [
+  "/videos/video-1.mp4", // Start
+  "/videos/video-2.mp4", // Second
+  "/videos/video-3.mp4", // Third
+];
+const FADE_MS = 1500;
+const PRE_END_S = 2.5;
+
+function VideoBackdrop() {
+  const [current, setCurrent] = useState(0);
+  const [next, setNext]       = useState<number | null>(null);
+  const refs        = useRef<(HTMLVideoElement | null)[]>([null, null, null]);
+  const curRef      = useRef(0);
+  const fadingRef   = useRef(false);
+
+  useEffect(() => {
+    refs.current[0]?.play().catch(() => {});
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (fadingRef.current) return;
+    const nxt = (curRef.current + 1) % VIDEO_SRCS.length;
+    const vid = refs.current[nxt];
+    if (!vid) return;
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+    fadingRef.current = true;
+    setNext(nxt);
+    setTimeout(() => {
+      curRef.current = nxt;
+      setCurrent(nxt);
+      setNext(null);
+      fadingRef.current = false;
+    }, FADE_MS);
+  }, []);
+
+  const handleTimeUpdate = useCallback((i: number) => {
+    if (i !== curRef.current) return;
+    const vid = refs.current[i];
+    if (!vid || !vid.duration) return;
+    if (vid.currentTime >= vid.duration - PRE_END_S) goNext();
+  }, [goNext]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+      {VIDEO_SRCS.map((src, i) => {
+        const opacity = (i === current && next === null) ? 1
+                      : (i === next)                    ? 1
+                      : 0;
+        return (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video
+            key={src}
+            ref={el => { refs.current[i] = el; }}
+            src={src}
+            muted
+            playsInline
+            preload="auto"
+            onTimeUpdate={() => handleTimeUpdate(i)}
+            style={{
+              position: "absolute", inset: 0,
+              width: "100%", height: "100%",
+              objectFit: "cover",
+              opacity,
+              transition: `opacity ${FADE_MS}ms ease-in-out`,
+              pointerEvents: "none",
+            }}
+          />
+        );
+      })}
+      {/* Cinematic overlay — darkens edges, keeps card readable */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.62) 100%)",
+      }} />
+      {/* Subtle warm tint to harmonise with cream card */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "linear-gradient(to bottom, rgba(20,8,5,0.25) 0%, rgba(20,8,5,0.1) 50%, rgba(20,8,5,0.3) 100%)",
+      }} />
     </div>
   );
 }
@@ -136,13 +221,16 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #fdf6ec 0%, #f5e8d8 60%, #f0ddd0 100%)" }}>
+      style={{ background: "#0f0a08" }}>
 
-      {/* Aurora blobs */}
+      {/* Video backdrop — desktop-optimised, gracefully hides on small screens if videos absent */}
+      <VideoBackdrop />
+
+      {/* Aurora blobs — subtle warmth over video */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute rounded-full" style={{ width: 520, height: 320, top: "5%", left: "-10%", background: "radial-gradient(ellipse,rgba(244,194,194,0.45) 0%,transparent 70%)", filter: "blur(60px)", animation: "aurora-1 12s ease-in-out infinite" }} />
-        <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.3) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
-        <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(196,165,130,0.35) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 520, height: 320, top: "5%", left: "-10%", background: "radial-gradient(ellipse,rgba(244,194,194,0.18) 0%,transparent 70%)", filter: "blur(60px)", animation: "aurora-1 12s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
       <PetalScene />
 
