@@ -119,10 +119,9 @@ export default function OpeningScreen({ onComplete }: Props) {
         <Divider delay="1.5s" />
 
         <p
-          className="font-body"
+          className="font-script italic"
           style={{
-            fontFamily: "Georgia, serif", fontStyle: "italic",
-            fontSize: 12, letterSpacing: 2, color: `rgba(107,42,58,0.5)`,
+            fontSize: 13, letterSpacing: 1.5, color: `rgba(107,42,58,0.55)`,
             margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
@@ -131,9 +130,9 @@ export default function OpeningScreen({ onComplete }: Props) {
 
         <div className="text-center" style={{ marginBottom: 8 }}>
           <span
-            className="block"
+            className="font-heading block"
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
+              fontStyle: "italic",
               fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               whiteSpace: "nowrap",
@@ -148,19 +147,18 @@ export default function OpeningScreen({ onComplete }: Props) {
             animation: "underline-grow 0.7s ease 3.1s both",
           }} />
           <span
-            className="block"
+            className="shimmer-text font-heading block"
             style={{
-              fontFamily: "Georgia, serif", fontStyle: "italic",
-              fontSize: 22, color: GOLD, margin: "4px 0",
-              textShadow: `0 0 16px ${GOLD_RGBA(0.5)}`,
+              fontStyle: "italic",
+              fontSize: 24, margin: "4px 0",
             }}
           >
             &amp;
           </span>
           <span
-            className="block"
+            className="font-heading block"
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
+              fontStyle: "italic",
               fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               whiteSpace: "nowrap",
@@ -181,14 +179,14 @@ export default function OpeningScreen({ onComplete }: Props) {
           style={{ animation: "fade-up 0.8s ease 3.7s both", marginBottom: 0 }}
         >
           <span
-            className="block"
-            style={{ fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
+            className="font-heading block"
+            style={{ fontSize: 11, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
           >
             {opening.date}
           </span>
           <span
-            className="block"
-            style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
+            className="font-script italic block"
+            style={{ fontSize: 12, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
           >
             {opening.venue_short}
           </span>
@@ -201,19 +199,19 @@ export default function OpeningScreen({ onComplete }: Props) {
         {/* Form card */}
         <div
           style={{
-            background: "rgba(255,255,255,0.88)",
-            border: `1px solid ${GOLD_RGBA(0.3)}`,
-            borderRadius: 16, padding: "18px 24px", width: 280,
-            boxShadow: `0 6px 40px rgba(90,31,46,0.08), 0 0 0 1px ${GOLD_RGBA(0.08)}`,
-            backdropFilter: "blur(8px)",
+            background: "rgba(255,255,255,0.9)",
+            border: `1px solid ${GOLD_RGBA(0.28)}`,
+            borderRadius: 18, padding: "20px 24px 22px", width: 288,
+            boxShadow: `0 8px 48px rgba(90,31,46,0.1), 0 0 0 1px ${GOLD_RGBA(0.07)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
+            backdropFilter: "blur(12px)",
             animation: "form-rise 1s cubic-bezier(0.22,1,0.36,1) 4.7s both",
           }}
         >
           <span
-            className="block text-center"
+            className="font-script italic block text-center"
             style={{
-              fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: 3,
-              textTransform: "uppercase", color: "rgba(107,42,58,0.4)",
+              fontSize: 11, letterSpacing: 1.5,
+              color: GOLD_RGBA(0.75),
               marginBottom: 14,
             }}
           >

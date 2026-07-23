@@ -33,16 +33,16 @@ import FirstVisitForm from "@/components/phases/FirstVisitForm";
 
 async function fillAndSubmit(onComplete = vi.fn()) {
   render(<FirstVisitForm onComplete={onComplete} />);
-  await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
+  await userEvent.type(screen.getByPlaceholderText(/full name/i), "James");
   // Use fireEvent.change for email/mobile to bypass pointer-events:none on the
   // collapsing wrapper (the fields hide each other when one is filled).
-  fireEvent.change(screen.getByPlaceholderText(/your email address/i), { target: { value: "james@example.com" } });
-  fireEvent.change(screen.getByPlaceholderText(/your mobile number/i), { target: { value: "+919876543210" } });
-  await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
+  fireEvent.change(screen.getByPlaceholderText(/your@email/i), { target: { value: "james@example.com" } });
+  fireEvent.change(screen.getByPlaceholderText(/\+91/i), { target: { value: "+919876543210" } });
+  await userEvent.type(screen.getByPlaceholderText(/search city/i), "ch");
   await waitFor(() => screen.getByText("Chennai"));
   fireEvent.mouseDown(screen.getByText("Chennai"));
   await waitFor(() => {
-    expect((screen.getByPlaceholderText(/search your city/i) as HTMLInputElement).value).toBe("Chennai");
+    expect((screen.getByPlaceholderText(/search city/i) as HTMLInputElement).value).toBe("Chennai");
   });
   return onComplete;
 }
@@ -59,10 +59,10 @@ describe("FirstVisitForm", () => {
 
   it("renders name, email, mobile, and city inputs", () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/your email address/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/your mobile number/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/search your city/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/your@email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/\+91/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search city/i)).toBeInTheDocument();
   });
 
   it("submit button is disabled when name is empty", () => {
@@ -72,17 +72,17 @@ describe("FirstVisitForm", () => {
 
   it("shows city dropdown suggestions when typing", async () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
+    await userEvent.type(screen.getByPlaceholderText(/search city/i), "ch");
     await waitFor(() => expect(screen.getByText("Chennai")).toBeInTheDocument());
   });
 
   it("fills city input when suggestion is clicked", async () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    await userEvent.type(screen.getByPlaceholderText(/search your city/i), "ch");
+    await userEvent.type(screen.getByPlaceholderText(/search city/i), "ch");
     await waitFor(() => screen.getByText("Chennai"));
     fireEvent.mouseDown(screen.getByText("Chennai"));
     await waitFor(() => {
-      expect((screen.getByPlaceholderText(/search your city/i) as HTMLInputElement).value).toBe("Chennai");
+      expect((screen.getByPlaceholderText(/search city/i) as HTMLInputElement).value).toBe("Chennai");
     });
   });
 
@@ -102,9 +102,9 @@ describe("FirstVisitForm", () => {
 
   it("submit is disabled when city is typed but not selected from dropdown", async () => {
     render(<FirstVisitForm onComplete={() => {}} />);
-    await userEvent.type(screen.getByPlaceholderText(/your name/i), "James");
-    await userEvent.type(screen.getByPlaceholderText(/your email address/i), "james@example.com");
-    await userEvent.type(screen.getByPlaceholderText(/search your city/i), "Chen");
+    await userEvent.type(screen.getByPlaceholderText(/full name/i), "James");
+    await userEvent.type(screen.getByPlaceholderText(/your@email/i), "james@example.com");
+    await userEvent.type(screen.getByPlaceholderText(/search city/i), "Chen");
     expect(screen.getByRole("button", { name: /open your invitation/i })).toBeDisabled();
   });
 
