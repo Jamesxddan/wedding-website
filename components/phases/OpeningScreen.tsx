@@ -129,7 +129,6 @@ export default function OpeningScreen({ onComplete }: Props) {
             alt="Wedding rings"
             width={200}
             style={{
-              mixBlendMode: "multiply",
               animation: "pulse-glow 3s ease-in-out 2s infinite",
             }}
           />
