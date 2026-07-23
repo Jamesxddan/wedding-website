@@ -164,8 +164,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         }}>
           {/* Context line */}
           <p style={{
-            fontFamily: "Georgia, serif", fontStyle: "italic",
-            fontSize: 12, color: RA(0.38), letterSpacing: "1px",
+            fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic",
+            fontSize: 15, color: RA(0.75), letterSpacing: "1px",
             animation: "fade-in 0.5s ease both",
           }}>
             {stage === "front" ? "You have received a letter" : "Sealed with love"}
@@ -265,8 +265,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                       <>
                         {/* Return address — top left */}
                         <div style={{ position: "absolute", top: 10, left: 14, zIndex: 2 }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 6.5, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.3), margin: "0 0 3px" }}>From</p>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 8, color: RA(0.48), margin: 0, lineHeight: 1.5 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: "#9C4A5A", margin: "0 0 3px" }}>From</p>
+                          <p style={{ fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.8), margin: 0, lineHeight: 1.5 }}>
                             The family of<br />{invitation.couple_name}
                           </p>
                         </div>
@@ -289,14 +289,14 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                           display: "flex", flexDirection: "column",
                           alignItems: "center", justifyContent: "center", gap: 5,
                         }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 7.5, letterSpacing: "3.5px", textTransform: "uppercase", color: RA(0.32), margin: 0 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 10, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A", margin: 0 }}>
                             To
                           </p>
-                          <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 22, color: ROSE, lineHeight: 1, margin: 0 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontStyle: "italic", fontSize: 26, color: ROSE, lineHeight: 1, margin: 0 }}>
                             {guestName}
                           </p>
                           {guestCity ? (
-                            <p style={{ fontFamily: "Georgia, serif", fontSize: 7.5, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.38), margin: 0 }}>
+                            <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.75), margin: 0 }}>
                               {guestCity}
                             </p>
                           ) : null}
@@ -304,7 +304,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
                         {/* Tap/click prompt — bottom */}
                         <div style={{ position: "absolute", bottom: 9, left: 0, right: 0, textAlign: "center", zIndex: 2 }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 7.5, letterSpacing: "2px", color: RA(0.26), margin: 0, animation: "fade-up 0.5s ease 0.6s both" }}>
+                          <p style={{ fontFamily: "var(--font-body), Georgia, serif", fontSize: 11, letterSpacing: "2px", color: RA(0.65), margin: 0, animation: "fade-up 0.5s ease 0.6s both" }}>
                             {isMobile ? "tap" : "click"} to open
                           </p>
                         </div>
@@ -363,7 +363,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
           {/* Bottom cue text */}
           {stage === "front" && ready && (
-            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 10.5, color: RA(0.32), animation: "fade-up 0.5s ease 0.5s both" }}>
+            <p style={{ fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic", fontSize: 14, color: RA(0.65), animation: "fade-up 0.5s ease 0.5s both" }}>
               ✦ your letter awaits ✦
             </p>
           )}
