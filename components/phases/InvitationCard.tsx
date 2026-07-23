@@ -32,9 +32,8 @@ function Divider() {
 
 // ── Video crossfade backdrop ─────────────────────────────────────────────────
 const VIDEO_SRCS = [
-  "/videos/Video-2.mp4?v=2", // Start (most reliable)
-  "/videos/Video-3.mp4?v=2", // Second
-  "/videos/Video-1.mp4?v=2", // Third
+  "/videos/Video-2.mp4?v=2",
+  "/videos/Video-3.mp4?v=2",
 ];
 const FADE_MS = 1500;
 const PRE_END_S = 2.5;
@@ -42,7 +41,7 @@ const PRE_END_S = 2.5;
 function VideoBackdrop() {
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
-  const refs        = useRef<(HTMLVideoElement | null)[]>([null, null, null]);
+  const refs        = useRef<(HTMLVideoElement | null)[]>([null, null]);
   const curRef      = useRef(0);
   const fadingRef   = useRef(false);
 
