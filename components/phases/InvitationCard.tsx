@@ -32,7 +32,7 @@ function Divider() {
 
 // ── Video crossfade backdrop ─────────────────────────────────────────────────
 const FADE_MS = 1500;
-const PRE_END_S = 2.5;
+const INTERVAL_MS = 10000;
 
 function VideoBackdrop() {
   const [srcs, setSrcs]       = useState<string[]>([]);
@@ -52,8 +52,11 @@ function VideoBackdrop() {
   }, []);
 
   useEffect(() => {
-    if (srcs.length > 0) refs.current[0]?.play().catch(() => {});
-  }, [srcs]);
+    if (srcs.length === 0) return;
+    refs.current[0]?.play().catch(() => {});
+    const id = setInterval(goNext, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [srcs, goNext]);
 
   const goNext = useCallback(() => {
     if (fadingRef.current) return;
@@ -71,13 +74,6 @@ function VideoBackdrop() {
       fadingRef.current = false;
     }, FADE_MS);
   }, [srcs]);
-
-  const handleTimeUpdate = useCallback((i: number) => {
-    if (i !== curRef.current) return;
-    const vid = refs.current[i];
-    if (!vid || !vid.duration) return;
-    if (vid.currentTime >= vid.duration - PRE_END_S) goNext();
-  }, [goNext]);
 
   if (srcs.length === 0) return null;
 
@@ -98,7 +94,6 @@ function VideoBackdrop() {
             autoPlay={i === 0}
             loop={i === 0}
             preload="auto"
-            onTimeUpdate={() => handleTimeUpdate(i)}
             style={{
               position: "absolute", inset: 0,
               width: "100%", height: "100%",
