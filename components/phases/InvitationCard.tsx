@@ -88,6 +88,8 @@ function VideoBackdrop() {
             src={src}
             muted
             playsInline
+            autoPlay={i === 0}
+            loop={i === 0}
             preload="auto"
             onTimeUpdate={() => handleTimeUpdate(i)}
             style={{
@@ -104,7 +106,7 @@ function VideoBackdrop() {
       {/* Cinematic overlay — darkens edges, keeps card readable */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.62) 100%)",
+        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)",
       }} />
       {/* Subtle warm tint to harmonise with cream card */}
       <div style={{
