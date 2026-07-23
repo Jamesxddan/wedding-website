@@ -93,7 +93,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
   const { invitation } = useSiteContent();
   const photos = useSelectPhotos();
-  const couplePhoto = photos.byName("main", "10.JPG");
+  const couplePhoto = photos.byName("main", "DSC03987.JPG");
 
   useEffect(() => {
     setGuestCity(localStorage.getItem("guest_city") ?? "");
