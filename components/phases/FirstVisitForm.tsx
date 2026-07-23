@@ -110,12 +110,12 @@ export default function FirstVisitForm({ onComplete }: Props) {
 
   const canSubmit = name.trim().length > 0 && selectedCity !== null && isFormValid && !isSubmitting;
 
-  const inputCls = "border border-champagne rounded-lg px-4 py-3 bg-white/90 text-deep-rose font-body placeholder:text-deep-rose/35 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[rgba(212,175,55,0.25)] transition-all duration-200";
+  const inputCls = "border border-champagne rounded-lg px-4 py-3 bg-[rgba(253,246,236,0.85)] text-deep-rose font-body placeholder:text-deep-rose/35 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[rgba(212,175,55,0.25)] transition-all duration-200";
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-md">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="guest-name" className="font-heading text-[10px] text-deep-rose/60 tracking-[0.3em] uppercase">
+        <label htmlFor="guest-name" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
           Your Name
         </label>
         <input
@@ -141,7 +141,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="guest-email" className="font-heading text-[10px] text-deep-rose/60 tracking-[0.3em] uppercase">
+          <label htmlFor="guest-email" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
             Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">(or mobile below)</span>
           </label>
           <input
@@ -168,7 +168,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="guest-mobile" className="font-heading text-[10px] text-deep-rose/60 tracking-[0.3em] uppercase">
+          <label htmlFor="guest-mobile" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
             Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">(or email above)</span>
           </label>
           <input
@@ -184,18 +184,29 @@ export default function FirstVisitForm({ onComplete }: Props) {
       </div>
 
       <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
-        <label htmlFor="guest-city" className="font-heading text-[10px] text-deep-rose/60 tracking-[0.3em] uppercase">
+        <label htmlFor="guest-city" className="font-heading text-[11px] text-deep-rose/60 tracking-[0.3em] uppercase">
           Your City
         </label>
-        <input
-          id="guest-city"
-          type="text"
-          value={cityQuery}
-          onChange={(e) => handleCityChange(e.target.value)}
-          placeholder="Search city…"
-          className={inputCls}
-          autoComplete="off"
-        />
+        <div className="relative">
+          <input
+            id="guest-city"
+            type="text"
+            value={cityQuery}
+            onChange={(e) => handleCityChange(e.target.value)}
+            placeholder="Search city…"
+            className={inputCls + " w-full"}
+            autoComplete="off"
+          />
+          {selectedCity && (
+            <span
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+              style={{ color: "#D4AF37" }}
+              aria-label="City selected"
+            >
+              ✦
+            </span>
+          )}
+        </div>
         {showDropdown && (
           <ul className="absolute top-full mt-1 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border border-champagne rounded-xl shadow-xl max-h-48 overflow-y-auto">
             {suggestions.map((city) => (
@@ -225,7 +236,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
         className="mt-1 px-8 py-3 rounded-full font-heading tracking-widest uppercase text-sm text-cream disabled:opacity-40 hover:scale-[1.02] active:scale-95 transition-transform duration-200"
         style={{
           background: "linear-gradient(135deg, rgba(90,31,46,0.95) 0%, rgba(140,50,75,0.9) 100%)",
-          boxShadow: "0 4px 20px rgba(90,31,46,0.3)",
+          boxShadow: canSubmit ? "0 4px 20px rgba(90,31,46,0.3)" : "0 2px 8px rgba(90,31,46,0.12)",
           animation: canSubmit ? "btn-glow 2.5s ease-in-out infinite" : "none",
         }}
       >

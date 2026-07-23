@@ -66,6 +66,25 @@ export default function OpeningScreen({ onComplete }: Props) {
         ].join(", "),
       }}
     >
+      {/* Aurora blobs — living background colour shifts, below WebGL canvas */}
+      <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
+        <div style={{
+          position: "absolute", width: 520, height: 520, top: "-10%", right: "-15%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,175,55,0.09) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-1 18s ease-in-out infinite",
+        }} />
+        <div style={{
+          position: "absolute", width: 480, height: 480, bottom: "-5%", left: "-10%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(244,194,194,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-2 22s ease-in-out infinite",
+        }} />
+        <div style={{
+          position: "absolute", width: 400, height: 400, top: "30%", left: "20%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(245,230,195,0.08) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-3 26s ease-in-out infinite",
+        }} />
+      </div>
+
       {/* Three.js scene: blurred photo backdrops + interactive gold & rose particles */}
       <OpeningScene />
 
@@ -198,11 +217,12 @@ export default function OpeningScreen({ onComplete }: Props) {
 
         {/* Form card */}
         <div
+          className="w-full max-w-[300px]"
           style={{
-            background: "rgba(255,255,255,0.9)",
+            background: "rgba(253,246,236,0.92)",
             border: `1px solid ${GOLD_RGBA(0.28)}`,
-            borderRadius: 18, padding: "20px 24px 22px", width: 288,
-            boxShadow: `0 8px 48px rgba(90,31,46,0.1), 0 0 0 1px ${GOLD_RGBA(0.07)}, inset 0 1px 0 rgba(255,255,255,0.9)`,
+            borderRadius: 18, padding: "20px 24px 22px",
+            boxShadow: `0 8px 48px rgba(90,31,46,0.1), 0 0 0 1px ${GOLD_RGBA(0.07)}, inset 0 1px 0 rgba(255,255,255,0.85)`,
             backdropFilter: "blur(12px)",
             animation: "form-rise 1s cubic-bezier(0.22,1,0.36,1) 4.7s both",
           }}
