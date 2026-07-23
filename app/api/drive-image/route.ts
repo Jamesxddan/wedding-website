@@ -43,11 +43,10 @@ function verifyToken(token: string): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
   const token = req.nextUrl.searchParams.get("id");
   const sz = req.nextUrl.searchParams.get("sz") ?? "600";
 
-  if (!apiKey || !token) {
+  if (!token) {
     return new NextResponse("Not found", { status: 404 });
   }
 
