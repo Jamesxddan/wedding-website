@@ -23,7 +23,7 @@ function rand(min: number, max: number) {
 }
 
 function createParticle(w: number, h: number, type?: "petal" | "sparkle" | "orb"): Particle {
-  const t = type ?? (Math.random() < 0.45 ? "petal" : Math.random() < 0.6 ? "sparkle" : "orb");
+  const t = type ?? (Math.random() < 0.6 ? "petal" : Math.random() < 0.6 ? "sparkle" : "orb");
   const maxLife = t === "petal" ? rand(220, 400) : t === "sparkle" ? rand(80, 160) : rand(300, 500);
   return {
     x: rand(0, w),
@@ -88,9 +88,9 @@ function drawOrb(ctx: CanvasRenderingContext2D, p: Particle) {
   ctx.translate(p.x, p.y);
   ctx.globalAlpha = p.opacity * 0.45;
   const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
-  grad.addColorStop(0, "rgba(255,245,235,0.9)");
-  grad.addColorStop(0.5, "rgba(244,194,194,0.4)");
-  grad.addColorStop(1, "rgba(245,230,200,0)");
+  grad.addColorStop(0, "rgba(244,194,194,0.85)");
+  grad.addColorStop(0.5, "rgba(244,194,194,0.35)");
+  grad.addColorStop(1, "rgba(245,220,200,0)");
   ctx.beginPath();
   ctx.arc(0, 0, p.size, 0, Math.PI * 2);
   ctx.fillStyle = grad;
@@ -117,7 +117,7 @@ export default function ParticleCanvas({ mouseX, mouseY }: { mouseX: number; mou
     canvas.width = w;
     canvas.height = h;
 
-    const TARGET_COUNT = 65;
+    const TARGET_COUNT = 85;
     const particles: Particle[] = Array.from({ length: TARGET_COUNT }, () =>
       createParticle(w, h)
     );
