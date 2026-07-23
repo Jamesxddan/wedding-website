@@ -257,13 +257,13 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
           </p>
 
           {/* Envelope + rising card container */}
-          <div style={{ position: "relative", width: "min(340px, calc(100vw - 40px))" }}>
+          <div style={{ position: "relative", width: "min(460px, calc(100vw - 24px))" }}>
 
             {/* Card that rises from INSIDE envelope (z:2 < envelope z:3) */}
             <div style={{
               position: "absolute", left: "50%", bottom: 0,
               transform: cardVisible
-                ? "translateX(-50%) translateY(-215px)"
+                ? "translateX(-50%) translateY(-295px)"
                 : "translateX(-50%) translateY(20px)",
               transition: "transform 0.95s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease",
               opacity: cardVisible ? 1 : 0,
@@ -457,7 +457,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
       {stage === "card" && (
         <div style={{
           position: "relative", zIndex: 20,
-          width: "min(360px, calc(100vw - 24px))",
+          width: "min(480px, calc(100vw - 24px))",
           maxHeight: "calc(100dvh - 24px)",
           overflowY: "auto", borderRadius: 14,
           background: "#fffdf9",
