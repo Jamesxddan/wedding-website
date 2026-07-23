@@ -31,83 +31,49 @@ function Divider() {
   );
 }
 
-// ── Wax seal SVG (inline — no image load) ───────────────────────────────────
-function WaxSealSVG({ uid }: { uid: string }) {
-  const ticks = Array.from({ length: 24 }, (_, i) => {
-    const angle = (i / 24) * Math.PI * 2;
-    return {
-      x1: 45 + 39 * Math.cos(angle), y1: 45 + 39 * Math.sin(angle),
-      x2: 45 + 44 * Math.cos(angle), y2: 45 + 44 * Math.sin(angle),
-    };
-  });
-  return (
-    <svg width={S} height={S} viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
-      <defs>
-        <radialGradient id={`wg-${uid}`} cx="42%" cy="36%" r="64%">
-          <stop offset="0%" stopColor="#C5395A" />
-          <stop offset="55%" stopColor="#8B1A2C" />
-          <stop offset="100%" stopColor="#5A0F1C" />
-        </radialGradient>
-        <radialGradient id={`ws-${uid}`} cx="38%" cy="28%" r="52%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </radialGradient>
-      </defs>
-      {/* Base circle */}
-      <circle cx="45" cy="45" r="44" fill={`url(#wg-${uid})`} />
-      {/* Edge ticks */}
-      {ticks.map((t, i) => (
-        <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-          stroke="rgba(255,210,160,0.3)" strokeWidth="1" />
-      ))}
-      {/* Decorative rings */}
-      <circle cx="45" cy="45" r="37" fill="none" stroke="rgba(255,210,160,0.35)" strokeWidth="1.2" />
-      <circle cx="45" cy="45" r="31" fill="none" stroke="rgba(255,210,160,0.2)" strokeWidth="0.8" />
-      {/* Cross lines */}
-      {[0, 45, 90, 135].map((deg, i) => {
-        const r = (deg * Math.PI) / 180;
-        return <line key={i}
-          x1={45 + 29 * Math.cos(r)} y1={45 + 29 * Math.sin(r)}
-          x2={45 - 29 * Math.cos(r)} y2={45 - 29 * Math.sin(r)}
-          stroke="rgba(255,210,160,0.1)" strokeWidth="0.8" />;
-      })}
-      {/* Monogram */}
-      <text x="45" y="48" textAnchor="middle" dominantBaseline="middle"
-        fontFamily="Georgia, 'Times New Roman', serif"
-        fontStyle="italic" fontSize="17" fontWeight="bold"
-        fill="rgba(255,235,205,0.92)" letterSpacing="2.5">J &amp; S</text>
-      {/* Shine */}
-      <circle cx="45" cy="45" r="44" fill={`url(#ws-${uid})`} />
-    </svg>
-  );
-}
-
+// ── Wax seal that splits in half ────────────────────────────────────────────
 function WaxSeal({ breaking }: { breaking: boolean }) {
   const half = S / 2;
-  const base: React.CSSProperties = {
+  const imgBase: React.CSSProperties = {
     position: "absolute", top: 0, left: 0,
     width: S, height: S,
-    userSelect: "none", pointerEvents: "none",
+    objectFit: "cover", objectPosition: "center",
+    display: "block", userSelect: "none", pointerEvents: "none",
   };
   return (
     <div style={{ position: "relative", width: S, height: S }}>
-      <div style={{
-        ...base,
+      {/* Left half */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/wax-seal.png" alt="" draggable={false} style={{
+        ...imgBase,
         clipPath: "polygon(0 0, 50% 0, 50% 100%, 0 100%)",
         transform: breaking ? `translateX(-${half + 14}px) translateY(14px) rotate(-26deg)` : "none",
         opacity: breaking ? 0 : 1,
         transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
-      }}>
-        <WaxSealSVG uid="L" />
-      </div>
-      <div style={{
-        ...base,
+      }} />
+      {/* Right half */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/wax-seal.png" alt="" draggable={false} style={{
+        ...imgBase,
         clipPath: "polygon(50% 0, 100% 0, 100% 100%, 50% 100%)",
         transform: breaking ? `translateX(${half + 14}px) translateY(14px) rotate(26deg)` : "none",
         opacity: breaking ? 0 : 1,
         transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
+      }} />
+      {/* J & S monogram */}
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        pointerEvents: "none", zIndex: 2,
+        opacity: breaking ? 0 : 1,
+        transition: "opacity 0.15s ease",
       }}>
-        <WaxSealSVG uid="R" />
+        <span style={{
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontStyle: "italic", fontSize: 12,
+          fontWeight: "bold", color: "rgba(45,22,0,0.45)",
+          letterSpacing: 1.5, userSelect: "none",
+        }}>J &amp; S</span>
       </div>
     </div>
   );
