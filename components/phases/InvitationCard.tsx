@@ -31,27 +31,33 @@ function Divider() {
 }
 
 // ── Video crossfade backdrop ─────────────────────────────────────────────────
-const VIDEO_SRCS = [
-  "/videos/Video-2.mp4?v=2",
-  "/videos/Video-3.mp4?v=2",
-];
 const FADE_MS = 1500;
 const PRE_END_S = 2.5;
 
 function VideoBackdrop() {
+  const [srcs, setSrcs]       = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
-  const refs        = useRef<(HTMLVideoElement | null)[]>([null, null]);
+  const refs        = useRef<(HTMLVideoElement | null)[]>([]);
   const curRef      = useRef(0);
   const fadingRef   = useRef(false);
 
   useEffect(() => {
-    refs.current[0]?.play().catch(() => {});
+    fetch("/videos/manifest.json")
+      .then(r => r.json())
+      .then((files: string[]) => {
+        setSrcs(files.map(f => `/videos/${f}`));
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (srcs.length > 0) refs.current[0]?.play().catch(() => {});
+  }, [srcs]);
 
   const goNext = useCallback(() => {
     if (fadingRef.current) return;
-    const nxt = (curRef.current + 1) % VIDEO_SRCS.length;
+    const nxt = (curRef.current + 1) % srcs.length;
     const vid = refs.current[nxt];
     if (!vid) return;
     vid.currentTime = 0;
@@ -64,7 +70,7 @@ function VideoBackdrop() {
       setNext(null);
       fadingRef.current = false;
     }, FADE_MS);
-  }, []);
+  }, [srcs]);
 
   const handleTimeUpdate = useCallback((i: number) => {
     if (i !== curRef.current) return;
@@ -73,9 +79,11 @@ function VideoBackdrop() {
     if (vid.currentTime >= vid.duration - PRE_END_S) goNext();
   }, [goNext]);
 
+  if (srcs.length === 0) return null;
+
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-      {VIDEO_SRCS.map((src, i) => {
+      {srcs.map((src, i) => {
         const opacity = (i === current && next === null) ? 1
                       : (i === next)                    ? 1
                       : 0;
