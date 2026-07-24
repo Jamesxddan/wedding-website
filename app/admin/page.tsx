@@ -568,8 +568,9 @@ export default function AdminPage() {
 
   const regularTabs: { key: Tab; label: string }[] = [
     { key: "live", label: "🔴 Live Stream" },
-    { key: "control", label: "⚙️ Site Control" },
+    { key: "control", label: "📢 Announcement" },
     { key: "preview", label: "👁 Preview" },
+    { key: "audit", label: "📋 Audit Log" },
   ];
 
   const visibleTabs = isSuper ? superTabs : regularTabs;
@@ -947,11 +948,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── SITE CONTROL ── */}
+      {/* ── SITE CONTROL / ANNOUNCEMENT ── */}
       {tab === "control" && (
         <div style={{ maxWidth: 680 }}>
 
-          <div style={card}>
+          {isSuper && <div style={card}>
             <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Phase Override</h3>
             <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
               Force all guests into a specific phase of the site — useful to flip everyone to the live stream at the right moment on the wedding day. Set back to <strong>Auto-detect</strong> when done.
@@ -982,7 +983,7 @@ export default function AdminPage() {
                 ⚠️ Site is currently forced to <strong>{settings.phase_override}</strong> for all guests.
               </p>
             )}
-          </div>
+          </div>}
 
           <div style={card}>
             <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Announcement Banner</h3>
@@ -1198,7 +1199,7 @@ export default function AdminPage() {
       )}
 
       {/* ── AUDIT LOG ── */}
-      {tab === "audit" && isSuper && <AuditTab />}
+      {tab === "audit" && <AuditTab />}
 
       {/* ── COMMENTS MODERATION ── */}
       {tab === "comments" && isSuper && <CommentsTab />}
@@ -1387,6 +1388,7 @@ import { DEFAULT_CONTENT, mergeSiteContent } from "@/lib/content";
 
 function ContentTab() {
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
+  const [rawAdminOverrides, setRawAdminOverrides] = useState<Partial<SiteContent> | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -1397,10 +1399,16 @@ function ContentTab() {
       .then((r) => r.json())
       .then((data: Record<string, string>) => {
         if (data.site_content) {
-          try { setContent(mergeSiteContent(DEFAULT_CONTENT, JSON.parse(data.site_content))); } catch { /* use default */ }
+          try {
+            const parsed = JSON.parse(data.site_content) as Partial<SiteContent>;
+            setRawAdminOverrides(parsed);
+            setContent(mergeSiteContent(DEFAULT_CONTENT, parsed));
+          } catch { /* use default */ }
+        } else {
+          setRawAdminOverrides({});
         }
       })
-      .catch(() => {});
+      .catch(() => { setRawAdminOverrides({}); });
   }, []);
 
   function patch<K extends keyof SiteContent>(section: K, updates: Partial<SiteContent[K]>) {
@@ -1417,8 +1425,12 @@ function ContentTab() {
       body: JSON.stringify({ key: "site_content", value: JSON.stringify(content) }),
     });
     setSaving(false);
-    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
-    else setError("Failed to save.");
+    if (res.ok) {
+      // Update rawAdminOverrides to reflect what was just saved (content is now the source of truth)
+      setRawAdminOverrides(content as Partial<SiteContent>);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } else setError("Failed to save.");
   }
 
   async function resetToDefaults() {
@@ -1431,22 +1443,43 @@ function ContentTab() {
       body: JSON.stringify({ key: "site_content", value: JSON.stringify(DEFAULT_CONTENT) }),
     });
     setSaving(false);
-    if (res.ok) { setContent(DEFAULT_CONTENT); setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    if (res.ok) { setContent(DEFAULT_CONTENT); setRawAdminOverrides({}); setSaved(true); setTimeout(() => setSaved(false), 3000); }
     else setError("Failed to reset.");
+  }
+
+  // Count fields in a section that differ from DEFAULT_CONTENT (i.e., admin-customised)
+  function countSectionOverrides(sectionKey: keyof SiteContent): number {
+    if (!rawAdminOverrides) return 0;
+    const adminSection = (rawAdminOverrides as Record<string, unknown>)[sectionKey];
+    if (!adminSection || typeof adminSection !== "object") return 0;
+    const defaultSection = DEFAULT_CONTENT[sectionKey] as Record<string, unknown>;
+    return Object.entries(adminSection as Record<string, unknown>).filter(
+      ([k, v]) => JSON.stringify(v) !== JSON.stringify(defaultSection[k])
+    ).length;
   }
 
   const inp: React.CSSProperties = { width: "100%", padding: "8px 11px", borderRadius: 7, border: "1px solid #e0dbd4", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };
   const ta: React.CSSProperties = { ...inp, resize: "vertical", minHeight: 72, fontFamily: "inherit", lineHeight: 1.5 };
   const btn: React.CSSProperties = { padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 };
-  const sectionHead = (key: string, label: string) => (
-    <button
-      onClick={() => setOpenSection(openSection === key ? null : key)}
-      style={{ width: "100%", textAlign: "left", padding: "14px 18px", background: openSection === key ? "#f5eef4" : "#faf9f7", border: "1px solid #e8e0d8", borderRadius: openSection === key ? "10px 10px 0 0" : 10, fontSize: 14, fontWeight: 700, color: "#1a1a1a", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-    >
-      {label}
-      <span style={{ fontSize: 11, color: "#aaa" }}>{openSection === key ? "▲" : "▼"}</span>
-    </button>
-  );
+  const sectionHead = (key: string, labelText: string) => {
+    const overrides = countSectionOverrides(key as keyof SiteContent);
+    return (
+      <button
+        onClick={() => setOpenSection(openSection === key ? null : key)}
+        style={{ width: "100%", textAlign: "left", padding: "14px 18px", background: openSection === key ? "#f5eef4" : "#faf9f7", border: "1px solid #e8e0d8", borderRadius: openSection === key ? "10px 10px 0 0" : 10, fontSize: 14, fontWeight: 700, color: "#1a1a1a", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {labelText}
+          {overrides > 0 && (
+            <span title={`${overrides} field${overrides === 1 ? "" : "s"} customised by admin`} style={{ fontSize: 10, fontWeight: 700, background: "#e8f5e9", color: "#2e7d32", border: "1px solid #c8e6c9", borderRadius: 10, padding: "1px 7px", letterSpacing: "0.04em" }}>
+              {overrides} custom
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: 11, color: "#aaa" }}>{openSection === key ? "▲" : "▼"}</span>
+      </button>
+    );
+  };
   const sectionBody: React.CSSProperties = { border: "1px solid #e8e0d8", borderTop: "none", borderRadius: "0 0 10px 10px", padding: "18px 18px 20px", background: "#fff", display: "flex", flexDirection: "column", gap: 12 };
   const label = (text: string) => <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#aaa", display: "block", marginBottom: 4 }}>{text}</label>;
 

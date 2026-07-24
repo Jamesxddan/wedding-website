@@ -68,8 +68,8 @@ export interface SiteContent {
 
 export const DEFAULT_CONTENT: SiteContent = {
   opening: {
-    tagline: "Together with their families",
-    invited_label: "— You are invited —",
+    tagline: "request the joy of your presence",
+    invited_label: "with love & joy",
     date: "October 8th, 2026",
     venue_short: "St Andrews Kirk, Chennai",
   },
