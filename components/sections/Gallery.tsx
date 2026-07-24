@@ -515,28 +515,44 @@ function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
 
 // ─── Slideshow ────────────────────────────────────────────────────────────────
 
-function SlideshowWatermark({ text }: { text: string }) {
+function SlideshowWatermark({ line1, line2 }: { line1: string; line2?: string }) {
   return (
     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" style={{ zIndex: 10 }}>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}
           style={{
             position: "absolute",
             left: "-40%", right: "-40%",
-            top: `${2 + i * 18}%`,
+            top: `${3 + i * 20}%`,
             transform: "rotate(-28deg)",
             textAlign: "center",
-            fontFamily: "Georgia, serif",
-            fontSize: "clamp(0.55rem, 1.3vw, 0.78rem)",
-            fontWeight: "700",
-            color: "rgba(255,255,255,0.22)",
-            letterSpacing: "0.28em",
-            whiteSpace: "nowrap",
             userSelect: "none",
           }}
         >
-          {text}
+          <div style={{
+            fontFamily: "Georgia, serif",
+            fontSize: "clamp(0.55rem, 1.3vw, 0.78rem)",
+            fontWeight: "700",
+            color: "rgba(255,255,255,0.26)",
+            letterSpacing: "0.28em",
+            whiteSpace: "nowrap",
+          }}>
+            {line1}
+          </div>
+          {line2 && (
+            <div style={{
+              fontFamily: "Georgia, serif",
+              fontSize: "clamp(0.42rem, 0.9vw, 0.58rem)",
+              fontWeight: "400",
+              color: "rgba(255,255,255,0.16)",
+              letterSpacing: "0.22em",
+              whiteSpace: "nowrap",
+              marginTop: 2,
+            }}>
+              {line2}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -545,15 +561,13 @@ function SlideshowWatermark({ text }: { text: string }) {
 
 interface SlotProps {
   photo: DrivePhoto;
-  portraitCache: React.MutableRefObject<Map<string, boolean>>;
-  wmText: string;
-  onPortraitDetected: (url: string, isPortrait: boolean) => void;
+  isPortrait: boolean;
+  wmLine1: string;
+  wmLine2: string;
+  onLoad: (url: string, portrait: boolean) => void;
 }
 
-function SlideshowSlot({ photo, portraitCache, wmText, onPortraitDetected }: SlotProps) {
-  const cached = portraitCache.current.get(photo.fullUrl);
-  const [isPortrait, setIsPortrait] = useState(cached ?? false);
-
+function SlideshowSlot({ photo, isPortrait, wmLine1, wmLine2, onLoad }: SlotProps) {
   return (
     <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
       <img
@@ -562,9 +576,7 @@ function SlideshowSlot({ photo, portraitCache, wmText, onPortraitDetected }: Slo
         draggable={false}
         onLoad={(e) => {
           const img = e.currentTarget;
-          const portrait = img.naturalHeight > img.naturalWidth;
-          setIsPortrait(portrait);
-          onPortraitDetected(photo.fullUrl, portrait);
+          onLoad(photo.fullUrl, img.naturalHeight > img.naturalWidth);
         }}
         style={{
           maxWidth: isPortrait ? "100vh" : "100%",
@@ -572,13 +584,12 @@ function SlideshowSlot({ photo, portraitCache, wmText, onPortraitDetected }: Slo
           width: "auto",
           height: "auto",
           transform: isPortrait ? "rotate(90deg)" : "none",
-          transition: "transform 0.3s ease",
           objectFit: "contain",
           userSelect: "none",
           WebkitUserDrag: "none",
         } as React.CSSProperties}
       />
-      <SlideshowWatermark text={wmText} />
+      <SlideshowWatermark line1={wmLine1} line2={wmLine2} />
     </div>
   );
 }
@@ -592,7 +603,7 @@ function SlideshowPlayer({
   onClose: () => void;
   folder: "engagement" | "wedding";
 }) {
-  void folder; // used for event context in future
+  void folder;
   const [slotA, setSlotA] = useState(startIndex);
   const [slotB, setSlotB] = useState<number | null>(null);
   const [showB, setShowB] = useState(false);
@@ -601,16 +612,25 @@ function SlideshowPlayer({
   const [speed, setSpeed] = useState(3000);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  // Portrait status per URL — parent owns this so SlotA/B never have stale orientation
+  const [portraitByUrl, setPortraitByUrl] = useState<Record<string, boolean>>({});
+  // Timestamp shown on watermark
+  const [slideTime] = useState(() =>
+    new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit", minute: "2-digit", hour12: true,
+      day: "numeric", month: "short", year: "numeric",
+    }).format(new Date())
+  );
 
-  const timerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const controlsTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pausedMedia    = useRef<HTMLMediaElement[]>([]);
-  const transitioning  = useRef(false);
-  const portraitCache  = useRef<Map<string, boolean>>(new Map());
-  const isPlayingRef   = useRef(isPlaying);
-  const currentIdxRef  = useRef(currentIdx);
-  isPlayingRef.current  = isPlaying;
+  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pausedMedia   = useRef<HTMLMediaElement[]>([]);
+  const transitioning = useRef(false);
+  const currentIdxRef = useRef(currentIdx);
   currentIdxRef.current = currentIdx;
+
+  const wmLine2 = `PRIVATE · ${slideTime} IST`;
 
   useEffect(() => {
     setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
@@ -643,8 +663,7 @@ function SlideshowPlayer({
   const showControls = useCallback(() => {
     setControlsVisible(true);
     if (controlsTimer.current) clearTimeout(controlsTimer.current);
-    const timeout = isMobile ? 5000 : 3000;
-    controlsTimer.current = setTimeout(() => setControlsVisible(false), timeout);
+    controlsTimer.current = setTimeout(() => setControlsVisible(false), isMobile ? 5000 : 3000);
   }, [isMobile]);
 
   useEffect(() => {
@@ -653,22 +672,44 @@ function SlideshowPlayer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
 
+  const onSlotLoad = useCallback((url: string, portrait: boolean) => {
+    setPortraitByUrl((prev) => prev[url] === portrait ? prev : { ...prev, [url]: portrait });
+  }, []);
+
+  // Preload next image → detect portrait → then crossfade. This eliminates the
+  // layout jump caused by isPortrait flipping after the image appears.
   const advanceTo = useCallback((idx: number) => {
     if (transitioning.current) return;
     transitioning.current = true;
-    setSlotB(idx);
-    // Small tick to let React render slotB at opacity 0 before fade-in
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setShowB(true));
-    });
-    setTimeout(() => {
-      setCurrentIdx(idx);
-      setSlotA(idx);
-      setSlotB(null);
-      setShowB(false);
-      transitioning.current = false;
-    }, 720);
-  }, []);
+
+    const photo = photos[idx];
+    let done = false;
+
+    const startCrossfade = (portrait?: boolean) => {
+      if (done) return;
+      done = true;
+      if (portrait !== undefined) {
+        setPortraitByUrl((prev) => ({ ...prev, [photo.fullUrl]: portrait }));
+      }
+      setSlotB(idx);
+      // Two-frame delay so slotB renders at opacity:0 before the fade-in starts
+      requestAnimationFrame(() => requestAnimationFrame(() => setShowB(true)));
+      setTimeout(() => {
+        setCurrentIdx(idx);
+        setSlotA(idx);
+        setSlotB(null);
+        setShowB(false);
+        transitioning.current = false;
+      }, 740);
+    };
+
+    // Give the preload 600ms; if it hasn't resolved, start anyway
+    const fallback = setTimeout(() => startCrossfade(), 600);
+    const img = new window.Image();
+    img.onload = () => { clearTimeout(fallback); startCrossfade(img.naturalHeight > img.naturalWidth); };
+    img.onerror = () => { clearTimeout(fallback); startCrossfade(); };
+    img.src = photo.fullUrl;
+  }, [photos]);
 
   const goNext = useCallback(() => {
     advanceTo((currentIdxRef.current + 1) % photos.length);
@@ -716,10 +757,6 @@ function SlideshowPlayer({
     return () => document.removeEventListener("keydown", onKey);
   }, [goNext, goPrev, handleClose, showControls]);
 
-  const onPortraitDetected = useCallback((url: string, portrait: boolean) => {
-    portraitCache.current.set(url, portrait);
-  }, []);
-
   const closeVisible = isMobile ? 1 : (controlsVisible ? 1 : 0);
 
   return (
@@ -737,9 +774,10 @@ function SlideshowPlayer({
       >
         <SlideshowSlot
           photo={photos[slotA]}
-          portraitCache={portraitCache}
-          wmText={wmText}
-          onPortraitDetected={onPortraitDetected}
+          isPortrait={portraitByUrl[photos[slotA]?.fullUrl] ?? false}
+          wmLine1={wmText}
+          wmLine2={wmLine2}
+          onLoad={onSlotLoad}
         />
       </div>
       {slotB !== null && (
@@ -749,9 +787,10 @@ function SlideshowPlayer({
         >
           <SlideshowSlot
             photo={photos[slotB]}
-            portraitCache={portraitCache}
-            wmText={wmText}
-            onPortraitDetected={onPortraitDetected}
+            isPortrait={portraitByUrl[photos[slotB]?.fullUrl] ?? false}
+            wmLine1={wmText}
+            wmLine2={wmLine2}
+            onLoad={onSlotLoad}
           />
         </div>
       )}
