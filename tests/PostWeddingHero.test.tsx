@@ -5,9 +5,12 @@ vi.mock("@/components/sections/Gallery", () => ({ default: () => <div>Gallery</d
 vi.mock("@/components/sections/Comments", () => ({ default: () => <div>Comments</div> }));
 vi.mock("@giscus/react", () => ({ default: () => null }));
 vi.mock("@/components/sections/YoutubeComments", () => ({ default: () => null }));
-global.fetch = vi.fn().mockResolvedValue({ json: async () => ({ photos: [], configured: false }) });
 
 describe("PostWeddingHero — no highlights video", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ json: async () => ({}) });
+  });
+
   it("renders the couple title", async () => {
     const { default: PostWeddingHero } = await import("@/components/phases/PostWeddingHero");
     render(<PostWeddingHero guestName="James" />);
@@ -40,15 +43,15 @@ describe("PostWeddingHero — no highlights video", () => {
 });
 
 describe("PostWeddingHero — with highlights video", () => {
-  it("renders iframe when HIGHLIGHTS_VIDEO_URL is set", async () => {
-    vi.doMock("@/lib/constants", () => ({
-      HIGHLIGHTS_VIDEO_URL: "https://www.youtube.com/watch?v=test123",
-      GISCUS_CONFIG: { repo: "Jamesxddan/wedding-website", repoId: "R_kgDOTNgUhA", category: "General", categoryId: "DIC_kwDOTNgUhM4DAe_R" },
-      YOUTUBE_COMMENT_VIDEO_ID: "",
-    }));
-    const { default: PostWeddingHero } = await import("@/components/phases/PostWeddingHero?v=highlights");
-    render(<PostWeddingHero guestName="James" />);
-    expect(screen.getByTitle("Wedding Highlights")).toBeInTheDocument();
+  it("renders iframe when highlights_video_url is set via settings", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ highlights_video_url: "https://www.youtube.com/watch?v=test123" }),
+    });
+    const { default: PostWeddingHero } = await import("@/components/phases/PostWeddingHero");
+    const { rerender } = render(<PostWeddingHero guestName="James" />);
+    // Wait for the fetch to resolve and state to update
+    await vi.waitFor(() => expect(screen.queryByTitle("Wedding Highlights")).toBeInTheDocument());
+    rerender(<PostWeddingHero guestName="James" />);
     expect(screen.getByText("Wedding Highlights")).toBeInTheDocument();
   });
 });

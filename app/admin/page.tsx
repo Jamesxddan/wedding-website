@@ -128,6 +128,15 @@ export default function AdminPage() {
   const [annoInput, setAnnoInput] = useState("");
   const [annoSaving, setAnnoSaving] = useState(false);
   const [annoSaved, setAnnoSaved] = useState(false);
+  const [highlightsInput, setHighlightsInput] = useState("");
+  const [highlightsSaving, setHighlightsSaving] = useState(false);
+  const [highlightsSaved, setHighlightsSaved] = useState(false);
+  const [photosInput, setPhotosInput] = useState("");
+  const [photosSaving, setPhotosSaving] = useState(false);
+  const [photosSaved, setPhotosSaved] = useState(false);
+  const [videosInput, setVideosInput] = useState("");
+  const [videosSaving, setVideosSaving] = useState(false);
+  const [videosSaved, setVideosSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
 
   const [expandedGuest, setExpandedGuest] = useState<string | null>(null);
@@ -171,6 +180,9 @@ export default function AdminPage() {
     setYtCeremonyInput(data.youtube_ceremony_url ?? "");
     setYtReceptionInput(data.youtube_reception_url ?? "");
     setAnnoInput(data.announcement ?? "");
+    setHighlightsInput(data.highlights_video_url ?? "");
+    setPhotosInput(data.post_wedding_photos_url ?? "");
+    setVideosInput(data.post_wedding_videos_url ?? "");
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -258,6 +270,27 @@ export default function AdminPage() {
     await saveSetting("youtube_reception_url", ytReceptionInput.trim());
     setYtReceptionSaving(false); setYtReceptionSaved(true);
     setTimeout(() => setYtReceptionSaved(false), 2500);
+  }
+
+  async function saveHighlightsUrl() {
+    setHighlightsSaving(true);
+    await saveSetting("highlights_video_url", highlightsInput.trim());
+    setHighlightsSaving(false); setHighlightsSaved(true);
+    setTimeout(() => setHighlightsSaved(false), 2500);
+  }
+
+  async function savePhotosUrl() {
+    setPhotosSaving(true);
+    await saveSetting("post_wedding_photos_url", photosInput.trim());
+    setPhotosSaving(false); setPhotosSaved(true);
+    setTimeout(() => setPhotosSaved(false), 2500);
+  }
+
+  async function saveVideosUrl() {
+    setVideosSaving(true);
+    await saveSetting("post_wedding_videos_url", videosInput.trim());
+    setVideosSaving(false); setVideosSaved(true);
+    setTimeout(() => setVideosSaved(false), 2500);
   }
 
   async function saveAnnouncement() {
@@ -973,6 +1006,65 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Post-Wedding Links</h3>
+              <p style={{ margin: "0 0 20px", fontSize: 13, color: "#888" }}>
+                Links shown to guests on the post-wedding page. Leave blank to hide a button/section.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>📸 Wedding Photos (Google Drive link)</label>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                      style={{ ...inputStyle, minWidth: 0 }}
+                      value={photosInput}
+                      onChange={(e) => { setPhotosInput(e.target.value); setPhotosSaved(false); }}
+                      placeholder="https://drive.google.com/drive/folders/..."
+                    />
+                    <button style={saveBtn(photosSaving, photosSaved)} onClick={savePhotosUrl} disabled={photosSaving}>
+                      {photosSaved ? "Saved ✓" : photosSaving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>🎬 Wedding Videos (Google Drive link)</label>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                      style={{ ...inputStyle, minWidth: 0 }}
+                      value={videosInput}
+                      onChange={(e) => { setVideosInput(e.target.value); setVideosSaved(false); }}
+                      placeholder="https://drive.google.com/drive/folders/..."
+                    />
+                    <button style={saveBtn(videosSaving, videosSaved)} onClick={saveVideosUrl} disabled={videosSaving}>
+                      {videosSaved ? "Saved ✓" : videosSaving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>▶️ Video Highlights (YouTube link)</label>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                      style={{ ...inputStyle, minWidth: 0 }}
+                      value={highlightsInput}
+                      onChange={(e) => { setHighlightsInput(e.target.value); setHighlightsSaved(false); }}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                    <button style={saveBtn(highlightsSaving, highlightsSaved)} onClick={saveHighlightsUrl} disabled={highlightsSaving}>
+                      {highlightsSaved ? "Saved ✓" : highlightsSaving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                  {highlightsInput.trim() && !youtubeEmbedUrl(highlightsInput) && (
+                    <p style={{ marginTop: 8, fontSize: 13, color: "#e67e22" }}>⚠️ Couldn&apos;t parse a video ID — check the URL.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {isSuper && (
             <div style={card}>
