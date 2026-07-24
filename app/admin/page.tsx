@@ -535,8 +535,9 @@ export default function AdminPage() {
 
   const regularTabs: { key: Tab; label: string }[] = [
     { key: "live", label: "🔴 Live Stream" },
-    { key: "control", label: "⚙️ Site Control" },
+    { key: "control", label: "📢 Announcement" },
     { key: "preview", label: "👁 Preview" },
+    { key: "audit", label: "📋 Audit Log" },
   ];
 
   const visibleTabs = isSuper ? superTabs : regularTabs;
@@ -914,11 +915,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── SITE CONTROL ── */}
+      {/* ── SITE CONTROL / ANNOUNCEMENT ── */}
       {tab === "control" && (
         <div style={{ maxWidth: 680 }}>
 
-          <div style={card}>
+          {isSuper && <div style={card}>
             <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Phase Override</h3>
             <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
               Force all guests into a specific phase of the site — useful to flip everyone to the live stream at the right moment on the wedding day. Set back to <strong>Auto-detect</strong> when done.
@@ -949,7 +950,7 @@ export default function AdminPage() {
                 ⚠️ Site is currently forced to <strong>{settings.phase_override}</strong> for all guests.
               </p>
             )}
-          </div>
+          </div>}
 
           <div style={card}>
             <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Announcement Banner</h3>
@@ -1106,7 +1107,7 @@ export default function AdminPage() {
       )}
 
       {/* ── AUDIT LOG ── */}
-      {tab === "audit" && isSuper && <AuditTab />}
+      {tab === "audit" && <AuditTab />}
 
       {/* ── COMMENTS MODERATION ── */}
       {tab === "comments" && isSuper && <CommentsTab />}
