@@ -25,7 +25,14 @@ export default function DevPanel() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setCurrent(localStorage.getItem("dev_phase"));
+    const path = window.location.pathname;
+    if (path === "/preview") {
+      // On preview page, phase comes from URL param (not localStorage)
+      const param = new URLSearchParams(window.location.search).get("phase");
+      setCurrent(param);
+    } else {
+      setCurrent(localStorage.getItem("dev_phase"));
+    }
     const vp = localStorage.getItem(DEV_VIEWPORT_KEY);
     setViewportState(vp);
     applyViewportCSS(vp);
@@ -48,6 +55,11 @@ export default function DevPanel() {
   }
 
   function setPhase(phase: Phase | null) {
+    if (isOnPreviewPath) {
+      // On /preview: navigate with URL param to avoid polluting the main site's localStorage
+      window.location.href = phase ? `/preview?phase=${phase}` : "/preview";
+      return;
+    }
     if (phase === null) {
       localStorage.removeItem("dev_phase");
       localStorage.removeItem("guest_name");
@@ -79,12 +91,18 @@ export default function DevPanel() {
   }
 
   const [visible, setVisible] = useState(false);
+  const [isOnPreviewPath, setIsOnPreviewPath] = useState(false);
   useEffect(() => {
     const isDev = process.env.NODE_ENV !== "production";
     const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
     const hasFlag = window.location.search.includes("dev=1");
     const isAdmin = localStorage.getItem("admin_dev_mode") === "1";
-    setVisible(isDev || isPreview || hasFlag || isAdmin);
+    const path = window.location.pathname;
+    const isAdminOrPreviewPath = path.startsWith("/admin") || path === "/preview";
+    const onPreviewPage = path === "/preview";
+    setIsOnPreviewPath(onPreviewPage);
+    // On staging, only show the gear on /admin* and /preview — not on every page real guests visit
+    setVisible(isDev || (isPreview && isAdminOrPreviewPath) || hasFlag || (isAdmin && isAdminOrPreviewPath));
   }, []);
 
   if (!visible) return null;

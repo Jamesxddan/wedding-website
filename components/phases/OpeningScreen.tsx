@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import FirstVisitForm from "./FirstVisitForm";
 import GradientText from "@/components/ui/GradientText";
 import { useSiteContent } from "@/lib/SiteContentContext";
@@ -28,35 +27,11 @@ function Divider({ delay }: { delay: string }) {
 }
 
 export default function OpeningScreen({ onComplete }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { opening } = useSiteContent();
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const fit = () => {
-      el.style.zoom = "1";
-      // clientHeight accounts for iOS Safari URL bar; innerHeight does not
-      const vh = document.documentElement.clientHeight || window.innerHeight;
-      const ratio = Math.min(1, (vh - 4) / el.scrollHeight);
-      el.style.zoom = String(ratio);
-    };
-    fit();
-    // Re-fit after fonts/images/form fields settle
-    const t1 = setTimeout(fit, 150);
-    const t2 = setTimeout(fit, 500);
-    window.addEventListener("resize", fit);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      window.removeEventListener("resize", fit);
-    };
-  }, []);
+  const { opening, invitation } = useSiteContent();
 
   return (
     <div
-      ref={containerRef}
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-10"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 py-10"
       style={{
         background: [
           "radial-gradient(ellipse at 50% -10%, rgba(212,175,55,0.22) 0%, transparent 60%)",
@@ -66,6 +41,25 @@ export default function OpeningScreen({ onComplete }: Props) {
         ].join(", "),
       }}
     >
+      {/* Aurora blobs — living background colour shifts, below WebGL canvas */}
+      <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
+        <div style={{
+          position: "absolute", width: 520, height: 520, top: "-10%", right: "-15%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(212,175,55,0.09) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-1 18s ease-in-out infinite",
+        }} />
+        <div style={{
+          position: "absolute", width: 480, height: 480, bottom: "-5%", left: "-10%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(244,194,194,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-2 22s ease-in-out infinite",
+        }} />
+        <div style={{
+          position: "absolute", width: 400, height: 400, top: "30%", left: "20%", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(245,230,195,0.08) 0%, transparent 70%)",
+          filter: "blur(40px)", animation: "aurora-3 26s ease-in-out infinite",
+        }} />
+      </div>
+
       {/* Three.js scene: blurred photo backdrops + interactive gold & rose particles */}
       <OpeningScene />
 
@@ -110,7 +104,6 @@ export default function OpeningScreen({ onComplete }: Props) {
             alt="Wedding rings"
             width={200}
             style={{
-              mixBlendMode: "multiply",
               animation: "pulse-glow 3s ease-in-out 2s infinite",
             }}
           />
@@ -119,10 +112,9 @@ export default function OpeningScreen({ onComplete }: Props) {
         <Divider delay="1.5s" />
 
         <p
-          className="font-body"
+          className="font-script italic"
           style={{
-            fontFamily: "Georgia, serif", fontStyle: "italic",
-            fontSize: 12, letterSpacing: 2, color: `rgba(107,42,58,0.5)`,
+            fontSize: 15, letterSpacing: 1.5, color: `rgba(90,31,46,0.80)`,
             margin: "12px 0 10px", animation: "fade-up 0.7s ease 1.9s both",
           }}
         >
@@ -131,9 +123,9 @@ export default function OpeningScreen({ onComplete }: Props) {
 
         <div className="text-center" style={{ marginBottom: 8 }}>
           <span
-            className="block"
+            className="font-heading block"
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
+              fontStyle: "italic",
               fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               whiteSpace: "nowrap",
@@ -148,19 +140,18 @@ export default function OpeningScreen({ onComplete }: Props) {
             animation: "underline-grow 0.7s ease 3.1s both",
           }} />
           <span
-            className="block"
+            className="shimmer-text font-heading block"
             style={{
-              fontFamily: "Georgia, serif", fontStyle: "italic",
-              fontSize: 22, color: GOLD, margin: "4px 0",
-              textShadow: `0 0 16px ${GOLD_RGBA(0.5)}`,
+              fontStyle: "italic",
+              fontSize: 24, margin: "4px 0",
             }}
           >
             &amp;
           </span>
           <span
-            className="block"
+            className="font-heading block"
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic",
+              fontStyle: "italic",
               fontSize: "clamp(38px, 13vw, 52px)", lineHeight: 1.05, color: ROSE,
               textShadow: `0 2px 20px rgba(90,31,46,0.12)`,
               whiteSpace: "nowrap",
@@ -181,39 +172,59 @@ export default function OpeningScreen({ onComplete }: Props) {
           style={{ animation: "fade-up 0.8s ease 3.7s both", marginBottom: 0 }}
         >
           <span
-            className="block"
-            style={{ fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
+            className="font-heading block"
+            style={{ fontSize: 13, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A" }}
           >
             {opening.date}
           </span>
           <span
-            className="block"
-            style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(107,42,58,0.5)", marginTop: 3 }}
+            className="font-script italic block"
+            style={{ fontSize: 14, color: "rgba(90,31,46,0.78)", marginTop: 3 }}
           >
             {opening.venue_short}
           </span>
         </div>
 
-        <div style={{ margin: "14px 0 16px" }}>
+        {/* Bible verse */}
+        <div
+          className="text-center"
+          style={{ margin: "12px 0 4px", animation: "fade-up 0.7s ease 4.0s both" }}
+        >
+          <p
+            className="font-script italic"
+            style={{ fontSize: 14, color: "rgba(90,31,46,0.72)", letterSpacing: "0.02em" }}
+          >
+            &ldquo;{invitation.scripture}&rdquo;
+          </p>
+          <p
+            className="font-heading"
+            style={{ fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "#9C4A5A", marginTop: 3 }}
+          >
+            {invitation.scripture_ref}
+          </p>
+        </div>
+
+        <div style={{ margin: "10px 0 16px" }}>
           <Divider delay="4.2s" />
         </div>
 
         {/* Form card */}
         <div
+          className="w-full max-w-[300px]"
           style={{
-            background: "rgba(255,255,255,0.88)",
-            border: `1px solid ${GOLD_RGBA(0.3)}`,
-            borderRadius: 16, padding: "18px 24px", width: 280,
-            boxShadow: `0 6px 40px rgba(90,31,46,0.08), 0 0 0 1px ${GOLD_RGBA(0.08)}`,
-            backdropFilter: "blur(8px)",
+            background: "rgba(253,246,236,0.92)",
+            border: `1px solid ${GOLD_RGBA(0.28)}`,
+            borderRadius: 18, padding: "20px 24px 22px",
+            boxShadow: `0 8px 48px rgba(90,31,46,0.1), 0 0 0 1px ${GOLD_RGBA(0.07)}, inset 0 1px 0 rgba(255,255,255,0.85)`,
+            backdropFilter: "blur(12px)",
             animation: "form-rise 1s cubic-bezier(0.22,1,0.36,1) 4.7s both",
           }}
         >
           <span
-            className="block text-center"
+            className="font-script italic block text-center"
             style={{
-              fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: 3,
-              textTransform: "uppercase", color: "rgba(107,42,58,0.4)",
+              fontSize: 13, letterSpacing: 1.5,
+              color: "rgba(90,31,46,0.65)",
               marginBottom: 14,
             }}
           >

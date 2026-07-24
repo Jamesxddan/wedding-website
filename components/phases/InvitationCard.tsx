@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
-import PetalScene from "@/components/webgl/PetalScene";
 import { useSiteContent } from "@/lib/SiteContentContext";
-import { useSelectPhotos } from "@/lib/useSelectPhotos";
+
+const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
 interface Props {
   guestName: string;
@@ -31,12 +32,112 @@ function Divider() {
   );
 }
 
+// ── Video crossfade backdrop ─────────────────────────────────────────────────
+const FADE_MS = 1500;
+const INTERVAL_MS = 10000;
+
+function VideoBackdrop({ onLoaded, limit }: { onLoaded?: () => void; limit?: number }) {
+  const [srcs, setSrcs]       = useState<string[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [next, setNext]       = useState<number | null>(null);
+  const refs        = useRef<(HTMLVideoElement | null)[]>([]);
+  const curRef      = useRef(0);
+  const fadingRef   = useRef(false);
+
+  useEffect(() => {
+    fetch("/videos/manifest.json")
+      .then(r => r.json())
+      .then((files: string[]) => {
+        // Manifest is sorted by file size ascending — slicing gives the smallest videos first
+        const selected = limit ? files.slice(0, limit) : files;
+        setSrcs(selected.map(f => `/videos/${f}`));
+        if (selected.length > 0) onLoaded?.();
+      })
+      .catch(() => {});
+  }, []);
+
+  const preloadVideo = useCallback((idx: number) => {
+    const vid = refs.current[idx];
+    if (!vid || vid.preload !== "none") return;
+    vid.preload = "auto";
+    vid.load();
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (fadingRef.current) return;
+    const nxt = (curRef.current + 1) % srcs.length;
+    const vid = refs.current[nxt];
+    if (!vid) return;
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+    fadingRef.current = true;
+    setNext(nxt);
+    setTimeout(() => {
+      curRef.current = nxt;
+      setCurrent(nxt);
+      setNext(null);
+      fadingRef.current = false;
+      // Preload the video after next so it's ready in time
+      preloadVideo((nxt + 1) % srcs.length);
+    }, FADE_MS);
+  }, [srcs, preloadVideo]);
+
+  useEffect(() => {
+    if (srcs.length === 0) return;
+    refs.current[0]?.play().catch(() => {});
+    // Preload video 1 after a short delay so video 0 gets bandwidth priority
+    const preloadTimer = setTimeout(() => preloadVideo(1), 4000);
+    const id = setInterval(goNext, INTERVAL_MS);
+    return () => { clearInterval(id); clearTimeout(preloadTimer); };
+  }, [srcs, goNext, preloadVideo]);
+
+  if (srcs.length === 0) return null;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+      {srcs.map((src, i) => {
+        const opacity = (i === current && next === null) ? 1
+                      : (i === next)                    ? 1
+                      : 0;
+        return (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video
+            key={src}
+            ref={el => { refs.current[i] = el; }}
+            src={src}
+            muted
+            playsInline
+            autoPlay={i === 0}
+            loop={i === 0}
+            preload={i === 0 ? "auto" : "none"}
+            style={{
+              position: "absolute", inset: 0,
+              width: "100%", height: "100%",
+              objectFit: "cover",
+              opacity,
+              transition: `opacity ${FADE_MS}ms ease-in-out`,
+              pointerEvents: "none",
+            }}
+          />
+        );
+      })}
+      {/* Cinematic overlay — darkens edges, keeps card readable */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)",
+      }} />
+      {/* Subtle warm tint to harmonise with cream card */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "linear-gradient(to bottom, rgba(20,8,5,0.25) 0%, rgba(20,8,5,0.1) 50%, rgba(20,8,5,0.3) 100%)",
+      }} />
+    </div>
+  );
+}
+
 // ── Wax seal that splits in half ────────────────────────────────────────────
 function WaxSeal({ breaking }: { breaking: boolean }) {
   const half = S / 2;
-  // Both images share identical positioning — clip-path cuts each half.
-  // This guarantees the visual seal circle stays at the exact container center
-  // regardless of any white-space offset in the PNG.
   const imgBase: React.CSSProperties = {
     position: "absolute", top: 0, left: 0,
     width: S, height: S,
@@ -54,7 +155,6 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
         opacity: breaking ? 0 : 1,
         transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
       }} />
-
       {/* Right half */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/wax-seal.png" alt="" draggable={false} style={{
@@ -64,7 +164,6 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
         opacity: breaking ? 0 : 1,
         transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
       }} />
-
       {/* J & S monogram */}
       <div style={{
         position: "absolute", inset: 0,
@@ -94,11 +193,11 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   const [ready, setReady]             = useState(false);
   const [guestCity, setGuestCity]     = useState("");
   const [isMobile, setIsMobile]       = useState(false);
+  const [hasVideo, setHasVideo]       = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const { invitation } = useSiteContent();
-  const photos = useSelectPhotos();
-  const couplePhoto = photos.byName("main", "10.JPG");
+  const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
 
   useEffect(() => {
     setGuestCity(localStorage.getItem("guest_city") ?? "");
@@ -143,15 +242,19 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #fdf6ec 0%, #f5e8d8 60%, #f0ddd0 100%)" }}>
+      style={{ background: "#0f0a08" }}>
 
-      {/* Aurora blobs */}
+      {/* Video backdrop — desktop gets the 2 smallest videos only (~3MB each); mobile gets all */}
+      <VideoBackdrop onLoaded={() => setHasVideo(true)} limit={isMobile ? undefined : 2} />
+
+      {/* Aurora blobs — subtle warmth over video */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute rounded-full" style={{ width: 520, height: 320, top: "5%", left: "-10%", background: "radial-gradient(ellipse,rgba(244,194,194,0.45) 0%,transparent 70%)", filter: "blur(60px)", animation: "aurora-1 12s ease-in-out infinite" }} />
-        <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.3) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
-        <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(196,165,130,0.35) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 520, height: 320, top: "5%", left: "-10%", background: "radial-gradient(ellipse,rgba(244,194,194,0.18) 0%,transparent 70%)", filter: "blur(60px)", animation: "aurora-1 12s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
+        <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
-      <PetalScene />
+      {/* Petal scene: fallback when video fails to load */}
+      {!hasVideo && !isMobile && <PetalScene />}
 
       {/* ── ENVELOPE SCENE ───────────────────────────────────────────────── */}
       {stage !== "card" && (
@@ -164,21 +267,21 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         }}>
           {/* Context line */}
           <p style={{
-            fontFamily: "Georgia, serif", fontStyle: "italic",
-            fontSize: 12, color: RA(0.38), letterSpacing: "1px",
+            fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic",
+            fontSize: 15, color: RA(0.75), letterSpacing: "1px",
             animation: "fade-in 0.5s ease both",
           }}>
             {stage === "front" ? "You have received a letter" : "Sealed with love"}
           </p>
 
           {/* Envelope + rising card container */}
-          <div style={{ position: "relative", width: "min(340px, calc(100vw - 40px))" }}>
+          <div style={{ position: "relative", width: "min(460px, calc(100vw - 24px))" }}>
 
             {/* Card that rises from INSIDE envelope (z:2 < envelope z:3) */}
             <div style={{
               position: "absolute", left: "50%", bottom: 0,
               transform: cardVisible
-                ? "translateX(-50%) translateY(-215px)"
+                ? "translateX(-50%) translateY(-295px)"
                 : "translateX(-50%) translateY(20px)",
               transition: "transform 0.95s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease",
               opacity: cardVisible ? 1 : 0,
@@ -189,10 +292,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                 boxShadow: `0 20px 60px rgba(0,0,0,0.22), 0 0 0 1px ${GA(0.2)}`,
                 overflow: "hidden",
               }}>
-                {couplePhoto && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={couplePhoto.heroUrl} alt="" style={{ width: "100%", height: 130, objectFit: "cover", objectPosition: "50% 35%", display: "block" }} />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={couplePhotoSrc(600)} alt="" style={{ width: "100%", height: 130, objectFit: "cover", objectPosition: "50% 20%", display: "block" }} />
                 <div style={{ padding: "10px 14px 12px", textAlign: "center" }}>
                   <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 16, color: ROSE, margin: 0 }}>{invitation.couple_name}</p>
                   <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2px", textTransform: "uppercase", color: RA(0.5), margin: "4px 0 0" }}>{invitation.date}</p>
@@ -265,8 +366,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                       <>
                         {/* Return address — top left */}
                         <div style={{ position: "absolute", top: 10, left: 14, zIndex: 2 }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 6.5, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.3), margin: "0 0 3px" }}>From</p>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 8, color: RA(0.48), margin: 0, lineHeight: 1.5 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: "#9C4A5A", margin: "0 0 3px" }}>From</p>
+                          <p style={{ fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.8), margin: 0, lineHeight: 1.5 }}>
                             The family of<br />{invitation.couple_name}
                           </p>
                         </div>
@@ -289,14 +390,14 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                           display: "flex", flexDirection: "column",
                           alignItems: "center", justifyContent: "center", gap: 5,
                         }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 7.5, letterSpacing: "3.5px", textTransform: "uppercase", color: RA(0.32), margin: 0 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 10, letterSpacing: "3.5px", textTransform: "uppercase", color: "#9C4A5A", margin: 0 }}>
                             To
                           </p>
-                          <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 22, color: ROSE, lineHeight: 1, margin: 0 }}>
+                          <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontStyle: "italic", fontSize: 26, color: ROSE, lineHeight: 1, margin: 0 }}>
                             {guestName}
                           </p>
                           {guestCity ? (
-                            <p style={{ fontFamily: "Georgia, serif", fontSize: 7.5, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.38), margin: 0 }}>
+                            <p style={{ fontFamily: "var(--font-heading), Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.75), margin: 0 }}>
                               {guestCity}
                             </p>
                           ) : null}
@@ -304,7 +405,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
                         {/* Tap/click prompt — bottom */}
                         <div style={{ position: "absolute", bottom: 9, left: 0, right: 0, textAlign: "center", zIndex: 2 }}>
-                          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 7.5, letterSpacing: "2px", color: RA(0.26), margin: 0, animation: "fade-up 0.5s ease 0.6s both" }}>
+                          <p style={{ fontFamily: "var(--font-body), Georgia, serif", fontSize: 11, letterSpacing: "2px", color: RA(0.65), margin: 0, animation: "fade-up 0.5s ease 0.6s both" }}>
                             {isMobile ? "tap" : "click"} to open
                           </p>
                         </div>
@@ -315,8 +416,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
                     {isBack && !sealBreaking && (
                       <p style={{
                         position: "absolute", bottom: 9, left: 0, right: 0, textAlign: "center",
-                        fontFamily: "Georgia, serif", fontStyle: "italic",
-                        fontSize: 7.5, letterSpacing: "2px", color: RA(0.26), margin: 0, zIndex: 3,
+                        fontFamily: "var(--font-body), Georgia, serif", fontStyle: "italic",
+                        fontSize: 12, letterSpacing: "2px", color: RA(0.65), margin: 0, zIndex: 3,
                         animation: "fade-up 0.5s ease 0.3s both",
                       }}>
                         {isMobile ? "tap" : "click"} the seal to open
@@ -363,7 +464,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
 
           {/* Bottom cue text */}
           {stage === "front" && ready && (
-            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 10.5, color: RA(0.32), animation: "fade-up 0.5s ease 0.5s both" }}>
+            <p style={{ fontFamily: "var(--font-script), Georgia, serif", fontStyle: "italic", fontSize: 14, color: RA(0.65), animation: "fade-up 0.5s ease 0.5s both" }}>
               ✦ your letter awaits ✦
             </p>
           )}
@@ -374,7 +475,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
       {stage === "card" && (
         <div style={{
           position: "relative", zIndex: 20,
-          width: "min(360px, calc(100vw - 24px))",
+          width: "min(480px, calc(100vw - 24px))",
           maxHeight: "calc(100dvh - 24px)",
           overflowY: "auto", borderRadius: 14,
           background: "#fffdf9",
@@ -382,13 +483,9 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
           animation: "card-rise 0.88s cubic-bezier(0.22,1,0.36,1) both",
         }}>
           {/* Couple photo */}
-          {couplePhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={couplePhoto.heroUrl} alt="couple photo"
-              style={{ width: "100%", height: 260, objectFit: "cover", objectPosition: "50% 35%", display: "block", borderRadius: "14px 14px 0 0" }} />
-          ) : (
-            <div style={{ height: 180, borderRadius: "14px 14px 0 0", background: `linear-gradient(135deg, ${GA(0.2)}, ${RA(0.1)})` }} />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={couplePhotoSrc(1600)} alt="couple photo"
+            style={{ width: "100%", height: 260, objectFit: "cover", objectPosition: "50% 20%", display: "block", borderRadius: "14px 14px 0 0" }} />
 
           <div style={{ height: 2, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
 
