@@ -480,9 +480,17 @@ function BookCoverRight({ folder }: { folder: "engagement" | "wedding" }) {
         <p className="font-body tracking-[0.35em] mb-5" style={{ color: "rgba(201,168,76,0.65)", fontSize: "clamp(0.45rem, 1.1vw, 0.68rem)" }}>
           {albumLabel}
         </p>
-        <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
-        <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
-        <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
+        {folder === "wedding" ? (
+          <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(0.95rem, 2.6vw, 2rem)", lineHeight: 1.2 }}>
+            Mr &amp; Mrs<br/>James Daniel
+          </h1>
+        ) : (
+          <>
+            <h1 className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>James</h1>
+            <p className="font-body my-2" style={{ color: "rgba(201,168,76,0.75)", fontSize: "clamp(0.85rem, 1.8vw, 1.3rem)" }}>&amp;</p>
+            <h1 className="font-heading mb-5" style={{ color: "#f5e6c8", fontSize: "clamp(1.1rem, 3.2vw, 2.5rem)", lineHeight: 1.1 }}>Sharon</h1>
+          </>
+        )}
         <div className="mx-auto mb-4" style={{ width: "50%", height: 1, background: "linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent)" }} />
         <p className="font-body tracking-[0.18em]" style={{ color: "rgba(201,168,76,0.5)", fontSize: "clamp(0.42rem, 0.9vw, 0.62rem)" }}>
           {dateLabel}
@@ -501,6 +509,324 @@ function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 32, zIndex: 5, background: "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.10) 100%)" }} />
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 2, zIndex: 6, background: "linear-gradient(to bottom, #c9a84c80, #8b691480, #c9a84c80)" }} />
       <div className="relative h-full" style={{ width: "50%" }}><BookCoverRight folder={folder} /></div>
+    </div>
+  );
+}
+
+// ─── Slideshow ────────────────────────────────────────────────────────────────
+
+function SlideshowWatermark({ text }: { text: string }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" style={{ zIndex: 10 }}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: "-40%", right: "-40%",
+            top: `${2 + i * 18}%`,
+            transform: "rotate(-28deg)",
+            textAlign: "center",
+            fontFamily: "Georgia, serif",
+            fontSize: "clamp(0.55rem, 1.3vw, 0.78rem)",
+            fontWeight: "700",
+            color: "rgba(255,255,255,0.22)",
+            letterSpacing: "0.28em",
+            whiteSpace: "nowrap",
+            userSelect: "none",
+          }}
+        >
+          {text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface SlotProps {
+  photo: DrivePhoto;
+  portraitCache: React.MutableRefObject<Map<string, boolean>>;
+  wmText: string;
+  onPortraitDetected: (url: string, isPortrait: boolean) => void;
+}
+
+function SlideshowSlot({ photo, portraitCache, wmText, onPortraitDetected }: SlotProps) {
+  const cached = portraitCache.current.get(photo.fullUrl);
+  const [isPortrait, setIsPortrait] = useState(cached ?? false);
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+      <img
+        src={photo.fullUrl}
+        alt=""
+        draggable={false}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          const portrait = img.naturalHeight > img.naturalWidth;
+          setIsPortrait(portrait);
+          onPortraitDetected(photo.fullUrl, portrait);
+        }}
+        style={{
+          maxWidth: isPortrait ? "100vh" : "100%",
+          maxHeight: isPortrait ? "100vw" : "100%",
+          width: "auto",
+          height: "auto",
+          transform: isPortrait ? "rotate(90deg)" : "none",
+          transition: "transform 0.3s ease",
+          objectFit: "contain",
+          userSelect: "none",
+          WebkitUserDrag: "none",
+        } as React.CSSProperties}
+      />
+      <SlideshowWatermark text={wmText} />
+    </div>
+  );
+}
+
+function SlideshowPlayer({
+  photos, startIndex, wmText, onClose, folder,
+}: {
+  photos: DrivePhoto[];
+  startIndex: number;
+  wmText: string;
+  onClose: () => void;
+  folder: "engagement" | "wedding";
+}) {
+  void folder; // used for event context in future
+  const [slotA, setSlotA] = useState(startIndex);
+  const [slotB, setSlotB] = useState<number | null>(null);
+  const [showB, setShowB] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(startIndex);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [speed, setSpeed] = useState(3000);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const timerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlsTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pausedMedia    = useRef<HTMLMediaElement[]>([]);
+  const transitioning  = useRef(false);
+  const portraitCache  = useRef<Map<string, boolean>>(new Map());
+  const isPlayingRef   = useRef(isPlaying);
+  const currentIdxRef  = useRef(currentIdx);
+  isPlayingRef.current  = isPlaying;
+  currentIdxRef.current = currentIdx;
+
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+  }, []);
+
+  // Pause all browser media on mount
+  useEffect(() => {
+    document.querySelectorAll<HTMLMediaElement>("audio, video").forEach((el) => {
+      if (!el.paused) { el.pause(); pausedMedia.current.push(el); }
+    });
+    document.querySelectorAll("iframe").forEach((iframe) => {
+      try { iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', "*"); } catch {}
+    });
+    const token = localStorage.getItem("session_token");
+    const headers: HeadersInit = { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
+    fetch("/api/gallery-event", {
+      method: "POST", headers,
+      body: JSON.stringify({ type: "slideshow_start", metadata: { photo_count: photos.length, start_index: startIndex } }),
+    }).catch(() => {});
+    return () => {
+      pausedMedia.current.forEach((el) => { try { el.play(); } catch {} });
+      fetch("/api/gallery-event", {
+        method: "POST", headers,
+        body: JSON.stringify({ type: "slideshow_end", metadata: { final_index: currentIdxRef.current } }),
+      }).catch(() => {});
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    if (controlsTimer.current) clearTimeout(controlsTimer.current);
+    const timeout = isMobile ? 5000 : 3000;
+    controlsTimer.current = setTimeout(() => setControlsVisible(false), timeout);
+  }, [isMobile]);
+
+  useEffect(() => {
+    showControls();
+    return () => { if (controlsTimer.current) clearTimeout(controlsTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
+
+  const advanceTo = useCallback((idx: number) => {
+    if (transitioning.current) return;
+    transitioning.current = true;
+    setSlotB(idx);
+    // Small tick to let React render slotB at opacity 0 before fade-in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setShowB(true));
+    });
+    setTimeout(() => {
+      setCurrentIdx(idx);
+      setSlotA(idx);
+      setSlotB(null);
+      setShowB(false);
+      transitioning.current = false;
+    }, 720);
+  }, []);
+
+  const goNext = useCallback(() => {
+    advanceTo((currentIdxRef.current + 1) % photos.length);
+  }, [advanceTo, photos.length]);
+
+  const goPrev = useCallback(() => {
+    advanceTo((currentIdxRef.current - 1 + photos.length) % photos.length);
+  }, [advanceTo, photos.length]);
+
+  // Auto-advance
+  useEffect(() => {
+    if (!isPlaying) return;
+    timerRef.current = setTimeout(goNext, speed);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [isPlaying, speed, currentIdx, goNext]);
+
+  const handleTogglePlay = () => {
+    const nextPlaying = !isPlaying;
+    setIsPlaying(nextPlaying);
+    if (!nextPlaying) {
+      const token = localStorage.getItem("session_token");
+      fetch("/api/gallery-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
+        body: JSON.stringify({ type: "slideshow_pause", metadata: { photo_index: currentIdx } }),
+      }).catch(() => {});
+    }
+  };
+
+  const handleClose = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (controlsTimer.current) clearTimeout(controlsTimer.current);
+    onClose();
+  }, [onClose]);
+
+  // Keyboard
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      showControls();
+      if (e.key === "Escape") { handleClose(); return; }
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goNext(); }
+      if (e.key === "ArrowLeft") goPrev();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [goNext, goPrev, handleClose, showControls]);
+
+  const onPortraitDetected = useCallback((url: string, portrait: boolean) => {
+    portraitCache.current.set(url, portrait);
+  }, []);
+
+  const closeVisible = isMobile ? 1 : (controlsVisible ? 1 : 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] select-none"
+      style={{ background: "rgba(4,2,1,0.97)" }}
+      onMouseMove={showControls}
+      onTouchStart={showControls}
+    >
+      {/* Photo slots */}
+      <div
+        className="absolute inset-0"
+        style={{ opacity: showB ? 0 : 1, transition: "opacity 0.7s ease", zIndex: 1 }}
+        onClick={showControls}
+      >
+        <SlideshowSlot
+          photo={photos[slotA]}
+          portraitCache={portraitCache}
+          wmText={wmText}
+          onPortraitDetected={onPortraitDetected}
+        />
+      </div>
+      {slotB !== null && (
+        <div
+          className="absolute inset-0"
+          style={{ opacity: showB ? 1 : 0, transition: "opacity 0.7s ease", zIndex: 2 }}
+        >
+          <SlideshowSlot
+            photo={photos[slotB]}
+            portraitCache={portraitCache}
+            wmText={wmText}
+            onPortraitDetected={onPortraitDetected}
+          />
+        </div>
+      )}
+
+      {/* Close button — always visible on mobile */}
+      <button
+        onClick={handleClose}
+        aria-label="Close slideshow"
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-colors"
+        style={{ zIndex: 30, opacity: closeVisible, transition: "opacity 0.3s" }}
+      >
+        ×
+      </button>
+
+      {/* Photo counter */}
+      <div
+        className="absolute top-5 left-1/2 -translate-x-1/2 font-body text-[10px] tracking-widest text-white/40 pointer-events-none"
+        style={{ zIndex: 30, opacity: controlsVisible ? 1 : 0, transition: "opacity 0.3s" }}
+      >
+        {currentIdx + 1} / {photos.length}
+      </div>
+
+      {/* Controls bar */}
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{
+          zIndex: 30,
+          opacity: controlsVisible ? 1 : 0,
+          transition: "opacity 0.3s",
+          background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        <div className="flex items-center justify-center gap-3 py-5 px-6 flex-wrap">
+          {/* Media controls */}
+          {(
+            [
+              { label: "First",    icon: "⏮", action: () => advanceTo(0) },
+              { label: "Previous", icon: "⏪", action: goPrev },
+              { label: isPlaying ? "Pause" : "Play", icon: isPlaying ? "⏸" : "▶", action: handleTogglePlay, primary: true },
+              { label: "Next",     icon: "⏩", action: goNext },
+              { label: "Last",     icon: "⏭", action: () => advanceTo(photos.length - 1) },
+            ] as { label: string; icon: string; action: () => void; primary?: boolean }[]
+          ).map(({ label, icon, action, primary }) => (
+            <button
+              key={label}
+              onClick={action}
+              aria-label={label}
+              className={`flex items-center justify-center transition-colors ${
+                primary
+                  ? "w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white"
+                  : "w-9 h-9 text-white/65 hover:text-white"
+              }`}
+              style={{ fontSize: primary ? 20 : 18 }}
+            >
+              {icon}
+            </button>
+          ))}
+
+          {/* Speed selector */}
+          <div className="flex items-center gap-1 ml-2 border border-white/20 rounded-full px-3 py-1">
+            {([1000, 3000, 5000] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSpeed(s)}
+                className={`font-body text-[11px] tracking-wide px-2 py-0.5 rounded-full transition-colors ${
+                  speed === s ? "bg-white/20 text-white" : "text-white/45 hover:text-white/75"
+                }`}
+              >
+                {s / 1000}s
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -715,6 +1041,7 @@ function AlbumBook({
   const [isMobile, setIsMobile]         = useState(false);
   const [isPortrait, setIsPortrait]     = useState(false);
   const [dismissedRotate, setDismissedRotate] = useState(false);
+  const [showSlideshow, setShowSlideshow] = useState(false);
 
   const sceneRef      = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
@@ -1270,7 +1597,37 @@ function AlbumBook({
             </svg>
           </button>
         )}
+
+        {/* Start Slideshow pill */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20">
+          <button
+            onClick={() => setShowSlideshow(true)}
+            className="font-body text-[10px] tracking-[0.2em] uppercase flex items-center gap-2 px-5 py-2.5 rounded-full transition-all"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "rgba(255,255,255,0.62)",
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.62)"; }}
+          >
+            <span style={{ fontSize: 12 }}>▶</span>
+            Start Slideshow
+          </button>
+        </div>
       </div>
+
+      {showSlideshow && (
+        <SlideshowPlayer
+          photos={photos}
+          startIndex={Math.max(0, (spreadIndex - 1) * 2)}
+          wmText={["James & Sharon", guestName, guestCity].filter(Boolean).join("  ·  ")}
+          onClose={() => setShowSlideshow(false)}
+          folder={folder}
+        />
+      )}
     </>
   );
 }
