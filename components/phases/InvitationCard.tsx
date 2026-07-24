@@ -36,7 +36,7 @@ function Divider() {
 const FADE_MS = 1500;
 const INTERVAL_MS = 10000;
 
-function VideoBackdrop({ onLoaded }: { onLoaded?: () => void }) {
+function VideoBackdrop({ onLoaded, limit }: { onLoaded?: () => void; limit?: number }) {
   const [srcs, setSrcs]       = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
   const [next, setNext]       = useState<number | null>(null);
@@ -48,8 +48,10 @@ function VideoBackdrop({ onLoaded }: { onLoaded?: () => void }) {
     fetch("/videos/manifest.json")
       .then(r => r.json())
       .then((files: string[]) => {
-        setSrcs(files.map(f => `/videos/${f}`));
-        if (files.length > 0) onLoaded?.();
+        // Manifest is sorted by file size ascending — slicing gives the smallest videos first
+        const selected = limit ? files.slice(0, limit) : files;
+        setSrcs(selected.map(f => `/videos/${f}`));
+        if (selected.length > 0) onLoaded?.();
       })
       .catch(() => {});
   }, []);
@@ -242,8 +244,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       style={{ background: "#0f0a08" }}>
 
-      {/* Video backdrop — mobile only; desktop skips to avoid saturating the GPU */}
-      {isMobile && <VideoBackdrop onLoaded={() => setHasVideo(true)} />}
+      {/* Video backdrop — desktop gets the 2 smallest videos only (~3MB each); mobile gets all */}
+      <VideoBackdrop onLoaded={() => setHasVideo(true)} limit={isMobile ? undefined : 2} />
 
       {/* Aurora blobs — subtle warmth over video */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -251,8 +253,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
         <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
-      {/* Petal scene: mobile-only fallback when video is unavailable */}
-      {!hasVideo && isMobile && <PetalScene />}
+      {/* Petal scene: fallback when video fails to load */}
+      {!hasVideo && !isMobile && <PetalScene />}
 
       {/* ── ENVELOPE SCENE ───────────────────────────────────────────────── */}
       {stage !== "card" && (
