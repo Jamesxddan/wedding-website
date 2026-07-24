@@ -94,15 +94,12 @@ export default function DevPanel() {
   const [isOnPreviewPath, setIsOnPreviewPath] = useState(false);
   useEffect(() => {
     const isDev = process.env.NODE_ENV !== "production";
-    const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
-    const hasFlag = window.location.search.includes("dev=1");
-    const isAdmin = localStorage.getItem("admin_dev_mode") === "1";
     const path = window.location.pathname;
-    const isAdminOrPreviewPath = path.startsWith("/admin") || path === "/preview";
     const onPreviewPage = path === "/preview";
     setIsOnPreviewPath(onPreviewPage);
-    // On staging, only show the gear on /admin* and /preview — not on every page real guests visit
-    setVisible(isDev || (isPreview && isAdminOrPreviewPath) || hasFlag || (isAdmin && isAdminOrPreviewPath));
+    // Gear shows ONLY on /preview (admin's preview sandbox) and in local dev.
+    // Never on /admin, never on the main site — goes away the moment admin navigates back.
+    setVisible(isDev || onPreviewPage);
   }, []);
 
   if (!visible) return null;
