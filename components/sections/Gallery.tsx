@@ -26,8 +26,36 @@ const PAGE_SIZE = 32;
 
 // ─── Spotlight tile ───────────────────────────────────────────────────────────
 
+function TileWatermark({ text }: { text: string }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" style={{ zIndex: 5 }}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: "-30%", right: "-30%",
+            top: `${8 + i * 38}%`,
+            transform: "rotate(-28deg)",
+            textAlign: "center",
+            fontFamily: "Georgia, serif",
+            fontSize: "clamp(0.38rem, 1vw, 0.6rem)",
+            fontWeight: "700",
+            color: "rgba(44,24,16,0.22)",
+            letterSpacing: "0.22em",
+            whiteSpace: "nowrap",
+            userSelect: "none",
+          }}
+        >
+          {text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SpotlightTile({
-  photo, onClick, featured = false, dimmed, onEnter, onLeave,
+  photo, onClick, featured = false, dimmed, onEnter, onLeave, wmText,
 }: {
   photo: DrivePhoto;
   onClick: () => void;
@@ -35,6 +63,7 @@ function SpotlightTile({
   dimmed: boolean;
   onEnter: () => void;
   onLeave: () => void;
+  wmText: string;
 }) {
   const [loaded, setLoaded] = useState(false);
 
@@ -66,6 +95,7 @@ function SpotlightTile({
         className="absolute inset-0 w-full h-full object-cover"
         style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.3s" }}
       />
+      {loaded && wmText && <TileWatermark text={wmText} />}
     </button>
   );
 }
@@ -73,10 +103,11 @@ function SpotlightTile({
 // ─── Spotlight grid ───────────────────────────────────────────────────────────
 
 function SpotlightGrid({
-  photos, onPhotoClick,
+  photos, onPhotoClick, wmText,
 }: {
   photos: DrivePhoto[];
   onPhotoClick: (p: DrivePhoto) => void;
+  wmText: string;
 }) {
   const [cols, setCols] = useState(4);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -101,6 +132,7 @@ function SpotlightGrid({
           dimmed={anyHovered && hoveredId !== featured.id}
           onEnter={() => setHoveredId(featured.id)}
           onLeave={() => setHoveredId(null)}
+          wmText={wmText}
         />
       )}
       {rest.map((photo) => (
@@ -111,6 +143,7 @@ function SpotlightGrid({
           dimmed={anyHovered && hoveredId !== photo.id}
           onEnter={() => setHoveredId(photo.id)}
           onLeave={() => setHoveredId(null)}
+          wmText={wmText}
         />
       ))}
     </div>
@@ -172,7 +205,7 @@ function useColumnCount() {
   return cols;
 }
 
-function MasonryTile({ photo, onClick }: { photo: DrivePhoto; onClick: () => void }) {
+function MasonryTile({ photo, onClick, wmText }: { photo: DrivePhoto; onClick: () => void; wmText: string }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -206,12 +239,13 @@ function MasonryTile({ photo, onClick }: { photo: DrivePhoto; onClick: () => voi
           onError={() => setError(true)}
           className={`w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.03] ${loaded ? "block" : "absolute inset-0 opacity-0"}`}
         />
+        {loaded && wmText && <TileWatermark text={wmText} />}
       </div>
     </button>
   );
 }
 
-function MasonryGrid({ photos, onPhotoClick }: { photos: DrivePhoto[]; onPhotoClick: (p: DrivePhoto) => void }) {
+function MasonryGrid({ photos, onPhotoClick, wmText }: { photos: DrivePhoto[]; onPhotoClick: (p: DrivePhoto) => void; wmText: string }) {
   const numCols = useColumnCount();
   const columns = Array.from({ length: numCols }, (_, col) =>
     photos.filter((_, i) => i % numCols === col)
@@ -221,7 +255,7 @@ function MasonryGrid({ photos, onPhotoClick }: { photos: DrivePhoto[]; onPhotoCl
       {columns.map((colPhotos, colIdx) => (
         <div key={colIdx} className="flex-1 flex flex-col min-w-0">
           {colPhotos.map((photo) => (
-            <MasonryTile key={photo.id} photo={photo} onClick={() => onPhotoClick(photo)} />
+            <MasonryTile key={photo.id} photo={photo} onClick={() => onPhotoClick(photo)} wmText={wmText} />
           ))}
         </div>
       ))}
@@ -1254,6 +1288,12 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [openAlbum, setOpenAlbum] = useState<DriveAlbum | null>(null);
   const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [wmText, setWmText] = useState("James & Sharon");
+
+  useEffect(() => {
+    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    setWmText(parts.join("  ·  "));
+  }, []);
 
   // Set gallery_token cookie early so thumbnail img tags (which can't use custom
   // headers) pass the drive-image auth check as soon as the section mounts.
@@ -1370,7 +1410,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
       {/* Engagement: Spotlight mosaic */}
       {folder === "engagement" && !state.loading && state.configured && !state.error && spotlightVisible.length > 0 && (
         <Reveal delay={150}>
-          <SpotlightGrid photos={spotlightVisible} onPhotoClick={openLightbox} />
+          <SpotlightGrid photos={spotlightVisible} onPhotoClick={openLightbox} wmText={wmText} />
           {spotlightHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </Reveal>
       )}
@@ -1409,7 +1449,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
               {openAlbum.photos.length} photos
             </span>
           </div>
-          <MasonryGrid photos={albumPhotosVisible} onPhotoClick={openLightbox} />
+          <MasonryGrid photos={albumPhotosVisible} onPhotoClick={openLightbox} wmText={wmText} />
           {albumHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
         </div>
       )}

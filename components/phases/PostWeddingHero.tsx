@@ -53,6 +53,7 @@ export default function PostWeddingHero({ guestName }: Props) {
   const [highlightsUrl, setHighlightsUrl] = useState("");
   const [photosUrl, setPhotosUrl] = useState("");
   const [videosUrl, setVideosUrl] = useState("");
+  const [wmText, setWmText] = useState("James & Sharon");
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
@@ -64,6 +65,8 @@ export default function PostWeddingHero({ guestName }: Props) {
         setVideosUrl(s.post_wedding_videos_url ?? "");
       })
       .catch(() => {});
+    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    setWmText(parts.join("  ·  "));
     return () => clearTimeout(t);
   }, []);
 
@@ -299,6 +302,30 @@ export default function PostWeddingHero({ guestName }: Props) {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
+              {/* Diagonal watermark — traceable to guest on screenshots/recordings */}
+              <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" style={{ zIndex: 10 }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      position: "absolute",
+                      left: "-40%", right: "-40%",
+                      top: `${4 + i * 22}%`,
+                      transform: "rotate(-28deg)",
+                      textAlign: "center",
+                      fontFamily: "Georgia, serif",
+                      fontSize: "clamp(0.6rem, 1.4vw, 0.85rem)",
+                      fontWeight: "700",
+                      color: "rgba(255,255,255,0.18)",
+                      letterSpacing: "0.28em",
+                      whiteSpace: "nowrap",
+                      userSelect: "none",
+                    }}
+                  >
+                    {wmText}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
