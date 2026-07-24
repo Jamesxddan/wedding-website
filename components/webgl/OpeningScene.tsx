@@ -17,7 +17,13 @@ export default function OpeningScene() {
 
     import("@/lib/webgl/openingScene").then(({ createOpeningScene }) => {
       if (!canvasRef.current) return;
-      handle = createOpeningScene(canvasRef.current, { bokehUrl, ringsUrl });
+      // Background blur planes are very GPU-intensive at desktop resolutions.
+      // Only enable them on touch devices where the canvas is small enough.
+      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+      handle = createOpeningScene(canvasRef.current, {
+        bokehUrl: isTouchDevice ? bokehUrl : undefined,
+        ringsUrl: isTouchDevice ? ringsUrl : undefined,
+      });
     });
 
     return () => { handle?.destroy(); };

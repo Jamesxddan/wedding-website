@@ -27,6 +27,18 @@ export default function FirstVisitForm({ onComplete }: Props) {
       return;
     }
     const results = searchCities(cityQuery);
+
+    // Auto-select when typed text is an exact match (case-insensitive)
+    const q = cityQuery.trim().toLowerCase();
+    const exactMatch = results.find((c) => c.name.toLowerCase() === q);
+    if (exactMatch) {
+      setSelectedCity(exactMatch);
+      setCityQuery(exactMatch.name); // normalize casing
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
     setSuggestions(results);
     setShowDropdown(results.length > 0);
   }, [cityQuery]);

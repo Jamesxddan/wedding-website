@@ -25,13 +25,13 @@ const fragBackground = /* glsl */ `
   void main() {
     vec2 uv = vUv + uOffset;
     vec4 sum = vec4(0.0);
-    // 9x9 box blur — heavy enough to dissolve texture into soft colour wash
-    for (float x = -4.0; x <= 4.0; x += 1.0) {
-      for (float y = -4.0; y <= 4.0; y += 1.0) {
+    // 5x5 box blur — 25 samples vs 81, still dissolves texture into soft colour wash
+    for (float x = -2.0; x <= 2.0; x += 1.0) {
+      for (float y = -2.0; y <= 2.0; y += 1.0) {
         sum += texture2D(uTexture, uv + vec2(x, y) * uBlurStep);
       }
     }
-    gl_FragColor = vec4((sum / 81.0).rgb, uOpacity);
+    gl_FragColor = vec4((sum / 25.0).rgb, uOpacity);
   }
 `;
 
@@ -70,8 +70,8 @@ export function createOpeningScene(
   canvas: HTMLCanvasElement,
   options: OpeningSceneOptions
 ): { destroy: () => void } {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+  renderer.setPixelRatio(1); // decorative scene — pixel-perfect not needed, saves 4× GPU on HiDPI
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
@@ -137,13 +137,13 @@ export function createOpeningScene(
     uTexture:  { value: null },
     uOpacity:  { value: 0.28 },
     uOffset:   { value: new THREE.Vector2() },
-    uBlurStep: { value: 0.038 }, // ~180px blur on 600px image → pure colour wash
+    uBlurStep: { value: 0.062 }, // wider step compensates for 5×5 vs 9×9 → same blur radius
   };
   const ringsUniforms: BgUniforms = {
     uTexture:  { value: null },
     uOpacity:  { value: 0.11 },
     uOffset:   { value: new THREE.Vector2() },
-    uBlurStep: { value: 0.055 }, // heavy — just warm tones, no shape
+    uBlurStep: { value: 0.088 }, // heavy — just warm tones, no shape
   };
 
   let bokehPlane: THREE.Mesh | null = null;
@@ -231,9 +231,15 @@ export function createOpeningScene(
   // ── Animation loop ──────────────────────────────────────────────────────
 
   let animId = 0;
+  let lastFrameTime = 0;
+  const FRAME_MS = 1000 / 30; // 30fps cap — decorative background doesn't need 60fps
   const _mouseWorld = new THREE.Vector3();
 
-  function tick() {
+  function tick(now: number) {
+    animId = requestAnimationFrame(tick);
+    if (now - lastFrameTime < FRAME_MS) return;
+    lastFrameTime = now;
+
     mouse.x += (mouseTarget.x - mouse.x) * 0.06;
     mouse.y += (mouseTarget.y - mouse.y) * 0.06;
 
@@ -286,10 +292,9 @@ export function createOpeningScene(
     ringsUniforms.uOffset.value.set(-mouse.x * 0.025, -mouse.y * 0.025);
 
     renderer.render(scene, camera);
-    animId = requestAnimationFrame(tick);
   }
 
-  tick();
+  animId = requestAnimationFrame(tick);
 
   // ── Cleanup ────────────────────────────────────────────────────────────
 
