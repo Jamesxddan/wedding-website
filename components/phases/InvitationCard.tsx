@@ -242,8 +242,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
       style={{ background: "#0f0a08" }}>
 
-      {/* Video backdrop — desktop-optimised, gracefully hides on small screens if videos absent */}
-      <VideoBackdrop onLoaded={() => setHasVideo(true)} />
+      {/* Video backdrop — mobile only; desktop skips to avoid saturating the GPU */}
+      {isMobile && <VideoBackdrop onLoaded={() => setHasVideo(true)} />}
 
       {/* Aurora blobs — subtle warmth over video */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -251,8 +251,8 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
         <div className="absolute rounded-full" style={{ width: 400, height: 260, top: "20%", right: "-8%", background: "radial-gradient(ellipse,rgba(139,94,131,0.14) 0%,transparent 70%)", filter: "blur(55px)", animation: "aurora-2 16s ease-in-out infinite" }} />
         <div className="absolute rounded-full" style={{ width: 460, height: 200, bottom: "10%", left: "20%", background: "radial-gradient(ellipse,rgba(212,175,55,0.1) 0%,transparent 70%)", filter: "blur(50px)", animation: "aurora-3 14s ease-in-out infinite" }} />
       </div>
-      {/* Skip WebGL petals when video is available — GPU contention causes stutter */}
-      {!hasVideo && !isMobile && <PetalScene />}
+      {/* Petal scene: mobile-only fallback when video is unavailable */}
+      {!hasVideo && isMobile && <PetalScene />}
 
       {/* ── ENVELOPE SCENE ───────────────────────────────────────────────── */}
       {stage !== "card" && (
