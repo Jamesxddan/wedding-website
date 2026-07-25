@@ -461,7 +461,7 @@ function BookCoverLeft() {
     <div className="relative h-full w-full" style={{ background: "#f2ece0" }}>
       <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
         <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
-          "God&apos;s will was on<br/>our marriage"
+          &ldquo;God&apos;s will was on<br/>our marriage&rdquo;
         </p>
       </div>
       <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />
