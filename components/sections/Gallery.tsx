@@ -516,45 +516,53 @@ function BookCover({ folder }: { folder: "engagement" | "wedding" }) {
 // ─── Slideshow ────────────────────────────────────────────────────────────────
 
 function SlideshowWatermark({ line1, line2 }: { line1: string; line2?: string }) {
+  const rep = (s: string, n: number) => Array(n).fill(s).join("  ·  ");
+  const ROWS = 9;
   return (
     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" style={{ zIndex: 10 }}>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            left: "-40%", right: "-40%",
-            top: `${3 + i * 20}%`,
-            transform: "rotate(-28deg)",
-            textAlign: "center",
-            userSelect: "none",
-          }}
-        >
-          <div style={{
-            fontFamily: "Georgia, serif",
-            fontSize: "clamp(0.55rem, 1.3vw, 0.78rem)",
-            fontWeight: "700",
-            color: "rgba(255,255,255,0.26)",
-            letterSpacing: "0.28em",
-            whiteSpace: "nowrap",
-          }}>
-            {line1}
-          </div>
-          {line2 && (
+      {Array.from({ length: ROWS }, (_, i) => {
+        const even = i % 2 === 0;
+        const mainText = even ? rep("JAMES & SHARON", 6) : rep(line1.toUpperCase(), 6);
+        const subText  = even ? rep(line1 + (line2 ? "  ·  " + line2 : ""), 3) : rep("JAMES & SHARON" + (line2 ? "  ·  " + line2 : ""), 3);
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: "-55%", right: "-55%",
+              top: `${1 + i * (97 / ROWS)}%`,
+              transform: "rotate(-28deg)",
+              textAlign: "center",
+              userSelect: "none",
+              lineHeight: 1.55,
+            }}
+          >
             <div style={{
               fontFamily: "Georgia, serif",
-              fontSize: "clamp(0.42rem, 0.9vw, 0.58rem)",
-              fontWeight: "400",
-              color: "rgba(255,255,255,0.16)",
-              letterSpacing: "0.22em",
+              fontSize: "clamp(0.45rem, 1.05vw, 0.64rem)",
+              fontWeight: "700",
+              color: "rgba(255,255,255,0.34)",
+              letterSpacing: "0.26em",
               whiteSpace: "nowrap",
+              display: "block",
+            }}>
+              {mainText}
+            </div>
+            <div style={{
+              fontFamily: "Georgia, serif",
+              fontSize: "clamp(0.35rem, 0.8vw, 0.50rem)",
+              fontWeight: "400",
+              color: "rgba(255,255,255,0.21)",
+              letterSpacing: "0.20em",
+              whiteSpace: "nowrap",
+              display: "block",
               marginTop: 2,
             }}>
-              {line2}
+              {subText}
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
