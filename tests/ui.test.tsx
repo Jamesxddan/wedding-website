@@ -15,7 +15,7 @@ describe("Footer", () => {
 
   it("renders tagline", () => {
     render(<Footer />);
-    expect(screen.getByText(/God's will was on our marriage/)).toBeInTheDocument();
+    expect(screen.getByText(/Love bears all things/)).toBeInTheDocument();
   });
 });
 

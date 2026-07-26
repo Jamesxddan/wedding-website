@@ -42,3 +42,9 @@ next-env.d.ts
 
 .vercel
 graphify-out/
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/playwright/.auth/

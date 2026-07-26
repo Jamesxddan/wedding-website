@@ -1290,7 +1290,7 @@ function CommentsTab() {
   );
 }
 
-import type { SiteContent, Milestone, PersonFact, FamilyMember, ItineraryItem } from "@/lib/content";
+import type { SiteContent, PersonFact, FamilyMember, ItineraryItem } from "@/lib/content";
 import { DEFAULT_CONTENT, mergeSiteContent } from "@/lib/content";
 
 function ContentTab() {
@@ -1408,36 +1408,6 @@ function ContentTab() {
               <div>{label("Reception line")}<input style={inp} value={content.invitation.reception_line} onChange={(e) => patch("invitation", { reception_line: e.target.value })} /></div>
               <div>{label("Presence line")}<input style={inp} value={content.invitation.presence_line} onChange={(e) => patch("invitation", { presence_line: e.target.value })} /></div>
               <div>{label("Explore button text")}<input style={inp} value={content.invitation.explore_btn} onChange={(e) => patch("invitation", { explore_btn: e.target.value })} /></div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Our Story ── */}
-        <div>
-          {sectionHead("story", "📖 Our Story")}
-          {openSection === "story" && (
-            <div style={sectionBody}>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 180 }}>{label("Heading")}<input style={inp} value={content.story.heading} onChange={(e) => patch("story", { heading: e.target.value })} /></div>
-                <div style={{ flex: 1, minWidth: 180 }}>{label("Subtitle")}<input style={inp} value={content.story.subtitle} onChange={(e) => patch("story", { subtitle: e.target.value })} /></div>
-              </div>
-              <div>
-                {label("Milestones")}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {content.story.milestones.map((m: Milestone, i: number) => (
-                    <div key={i} style={{ background: "#faf9f7", borderRadius: 8, padding: 12, border: "1px solid #ede8e2" }}>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                        <input style={{ ...inp, width: 60 }} value={m.emoji} placeholder="emoji" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, emoji: e.target.value } : x); patch("story", { milestones: ms }); }} />
-                        <input style={{ ...inp, width: 80 }} value={m.year} placeholder="Year" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, year: e.target.value } : x); patch("story", { milestones: ms }); }} />
-                        <input style={{ ...inp, flex: 1 }} value={m.title} placeholder="Title" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, title: e.target.value } : x); patch("story", { milestones: ms }); }} />
-                        <button onClick={() => patch("story", { milestones: content.story.milestones.filter((_, j) => j !== i) })} style={{ ...btn, background: "#fef2f2", color: "#c0392b", padding: "4px 9px" }}>✕</button>
-                      </div>
-                      <textarea style={{ ...ta, minHeight: 54 }} value={m.description} placeholder="Description" onChange={(e) => { const ms = content.story.milestones.map((x, j) => j === i ? { ...x, description: e.target.value } : x); patch("story", { milestones: ms }); }} />
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => patch("story", { milestones: [...content.story.milestones, { year: "", title: "", description: "", emoji: "✨" }] })} style={{ ...btn, background: "#f0ede9", color: "#555", marginTop: 10 }}>+ Add milestone</button>
-              </div>
             </div>
           )}
         </div>
