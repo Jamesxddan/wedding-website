@@ -84,16 +84,17 @@ function SpotlightTile({
         borderRadius: "6px",
       }}
     >
-      {!loaded && (
-        <div className="absolute inset-0 bg-champagne/30 animate-pulse" />
-      )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.thumbnailUrl}
         alt=""
         onLoad={() => setLoaded(true)}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.3s" }}
+        className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
+        style={{
+          filter: loaded ? "blur(0)" : "blur(20px)",
+          transform: loaded ? "scale(1)" : "scale(1.1)",
+          opacity: 1,
+        }}
       />
       {loaded && wmText && <TileWatermark text={wmText} />}
     </button>
@@ -164,15 +165,16 @@ function AlbumCard({ album, onClick }: { album: DriveAlbum; onClick: () => void 
     >
       {cover && (
         <>
-          {!imgLoaded && (
-            <div className="absolute inset-0 bg-gradient-to-r from-champagne/40 via-blush/20 to-champagne/40 animate-pulse" />
-          )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cover.thumbnailUrl}
             alt={album.name}
             onLoad={() => setImgLoaded(true)}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
+            style={{
+              filter: imgLoaded ? "blur(0)" : "blur(20px)",
+              transform: imgLoaded ? "scale(1)" : "scale(1.1)",
+            }}
           />
         </>
       )}
@@ -228,16 +230,17 @@ function MasonryTile({ photo, onClick, wmText }: { photo: DrivePhoto; onClick: (
       aria-label="View photo"
     >
       <div className="relative bg-champagne/30 w-full" style={{ paddingBottom: loaded ? "0" : "75%" }}>
-        {!loaded && (
-          <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-champagne/30 via-blush/10 to-champagne/30" />
-        )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo.thumbnailUrl}
           alt=""
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
-          className={`w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.03] ${loaded ? "block" : "absolute inset-0 opacity-0"}`}
+          className={`w-full h-auto object-cover transition-all duration-500 group-hover:scale-[1.03] ${loaded ? "block" : "absolute inset-0"}`}
+          style={{
+            filter: loaded ? "blur(0)" : "blur(20px)",
+            transform: loaded ? "scale(1)" : "scale(1.1)",
+          }}
         />
         {loaded && wmText && <TileWatermark text={wmText} />}
       </div>
@@ -461,7 +464,7 @@ function BookCoverLeft() {
     <div className="relative h-full w-full" style={{ background: "#f2ece0" }}>
       <div className="absolute inset-0 flex items-end justify-center pb-10 px-8">
         <p className="font-heading italic text-center" style={{ color: "rgba(0,0,0,0.18)", fontSize: "clamp(0.75rem, 2vw, 1.15rem)", lineHeight: 1.6 }}>
-          &ldquo;God&apos;s will was on<br/>our marriage&rdquo;
+          &ldquo;Two are better than one,<br/>Eccl. 4:9–12&rdquo;
         </p>
       </div>
       <div className="absolute right-0 inset-y-0 pointer-events-none" style={{ width: 28, background: "linear-gradient(to left, rgba(0,0,0,0.09), transparent)" }} />

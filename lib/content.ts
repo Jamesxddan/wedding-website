@@ -28,11 +28,13 @@ export interface SiteContent {
   };
   james: {
     name: string;
+    photo?: string;
     bio: string;
     facts: PersonFact[];
   };
   sharon: {
     name: string;
+    photo?: string;
     bio: string;
     facts: PersonFact[];
   };
@@ -80,6 +82,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   james: {
     name: "James Daniel",
+    photo: "/images/james-profile.jpg",
     bio: "James is a man shaped by faith, family, and a deep love for people. Raised in a home where Jesus was central, he carries a quiet strength and a heart that seeks to serve. He found in Sharon not just a life partner, but an answer to years of prayer.",
     facts: [
       { label: "Hometown", value: "Chennai, India" },
@@ -89,6 +92,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   sharon: {
     name: "Sharon",
+    photo: "/images/sharon-profile.jpg",
     bio: "Sharon is a woman of grace, warmth, and unwavering faith. Those who know her speak of a joy that is contagious and a gentleness that draws people in. In James she found a love she had entrusted to God long before she knew his name.",
     facts: [
       { label: "Hometown", value: "Chennai, India" },

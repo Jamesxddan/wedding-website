@@ -13,16 +13,16 @@ describe("Comments", () => {
 
   it("renders the section heading", () => {
     render(<Comments />);
-    expect(screen.getByText("Wishes & Messages")).toBeInTheDocument();
+    expect(screen.getByText("Wall of Love")).toBeInTheDocument();
   });
 
   it("renders empty state when no comments", async () => {
     render(<Comments />);
-    expect(await screen.findByText("Be the first to leave a wish! 💌")).toBeInTheDocument();
+    expect(await screen.findByText("No messages yet — be the first blessing!")).toBeInTheDocument();
   });
 
   it("renders the subtitle", () => {
     render(<Comments />);
-    expect(screen.getByText(/Leave a message for James & Sharon/)).toBeInTheDocument();
+    expect(screen.getByText(/Leave your blessings for James & Sharon/)).toBeInTheDocument();
   });
 });

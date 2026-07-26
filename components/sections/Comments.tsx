@@ -60,6 +60,39 @@ interface Props {
   isOwner?: boolean;
 }
 
+// ─── Decorative divider ──────────────────────────────────────────
+function DecorativeDivider() {
+  return (
+    <div className="flex items-center justify-center gap-3 mb-6">
+      <span className="h-px w-12 bg-gradient-to-r from-transparent via-sage/30 to-transparent" />
+      <span className="text-2xl text-sage/60" aria-hidden>🌿</span>
+      <span className="h-px w-12 bg-gradient-to-r from-transparent via-sage/30 to-transparent" />
+    </div>
+  );
+}
+
+// ─── Stagger animation on mount ──────────────────────────────────
+function useStagger(delay = 60) {
+  const [visible, setVisible] = useState<Set<string>>(new Set());
+  const addId = useCallback((id: string) => {
+    setVisible((prev) => { if (prev.has(id)) return prev; const n = new Set(prev); n.add(id); return n; });
+  }, []);
+  const style = useCallback((id: string): React.CSSProperties => ({
+    opacity: visible.has(id) ? 1 : 0,
+    transform: visible.has(id) ? "translateY(0) rotate(0deg)" : "translateY(16px) rotate(-0.5deg)",
+    transition: `opacity 0.45s ease, transform 0.5s ease`,
+  }), [visible]);
+
+  const enter = useCallback((id: string, i: number) => {
+    setTimeout(() => addId(id), i * delay);
+  }, [addId, delay]);
+
+  return { enter, style };
+}
+
+// ─── Guest Book Card ─────────────────────────────────────────────
+const CARD_ROTATIONS = ["-0.3deg", "0.2deg", "-0.1deg", "0.4deg", "-0.2deg", "0.1deg"];
+
 export default function Comments({ guestName, guestId, isOwner }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [message, setMessage] = useState("");
@@ -73,6 +106,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   const [, setTick] = useState(0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const { enter: enterStagger, style: staggerStyle } = useStagger(70);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/comments");
@@ -85,6 +119,11 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Stagger animation on new comments
+  useEffect(() => {
+    comments.forEach((c, i) => enterStagger(c.id, i));
+  }, [comments, enterStagger]);
 
   function insertEmoji(emoji: string, forEdit = false) {
     if (forEdit) {
@@ -173,59 +212,85 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     await load();
   }
 
+  // Share your message UI when not logged in
+  const NotLoggedInPrompt = () => (
+    <div className="text-center py-12 px-6 bg-white/60 rounded-2xl border border-dashed border-champagne/60">
+      <span className="text-4xl block mb-3">💌</span>
+      <p className="font-body text-deep-rose/50 text-sm mb-1">Want to leave a message?</p>
+      <p className="font-body text-deep-rose/40 text-xs">
+        Register your name on the home page to share your wishes.
+      </p>
+    </div>
+  );
+
   const iconBtn: React.CSSProperties = {
-    fontSize: 20, background: "#f5f0fb", border: "none", borderRadius: 8,
+    fontSize: 20, background: "#faf5f0", border: "none", borderRadius: 8,
     width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
   };
 
   const pickerBox: React.CSSProperties = {
     position: "absolute", bottom: "calc(100% + 8px)", left: 0, background: "#fff",
-    border: "1px solid #e8d8f0", borderRadius: 14, padding: 12, width: 280,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)", zIndex: 100,
+    border: "1px solid #e8ddd4", borderRadius: 14, padding: 12, width: 280,
+    boxShadow: "0 4px 24px rgba(0,0,0,0.10)", zIndex: 100,
   };
 
   return (
-    <section style={{ padding: "80px 24px", background: "#faf8f5", fontFamily: "Georgia, serif" }}>
-      <div style={{ maxWidth: 680, margin: "0 auto" }}>
-        <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem, 4vw, 2.2rem)", color: "#1a1a1a", marginBottom: 8, fontWeight: 400 }}>
-          Wishes & Messages
-        </h2>
-        <p style={{ textAlign: "center", color: "#888", fontSize: 14, marginBottom: 40 }}>
-          Leave a message for James & Sharon ✨
-        </p>
+    <section className="py-24 px-6" style={{ background: "linear-gradient(180deg, #faf8f5 0%, #f5f0eb 100%)" }}>
+      <div className="max-w-2xl mx-auto">
+        {/* Heading */}
+        <div className="text-center mb-6">
+          <h2 className="font-heading text-3xl md:text-4xl text-deep-rose mb-2">
+            Wall of Love
+          </h2>
+          <DecorativeDivider />
+          <p className="font-script italic text-sage text-lg">
+            Leave your blessings for James &amp; Sharon 💛
+          </p>
+        </div>
 
+        {/* Write message area */}
         {guestName ? (
-          <div style={{ background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", marginBottom: 32 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#8B4A6B", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                {guestName[0].toUpperCase()}
+          <div
+            className="bg-white rounded-2xl p-6 mb-10"
+            style={{
+              boxShadow: "0 2px 16px rgba(139,74,107,0.06), 0 1px 4px rgba(0,0,0,0.04)",
+              transform: "rotate(-0.1deg)",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #8B4A6B, #b56576)" }}
+              >
+                {guestName![0].toUpperCase()}
               </div>
-              <span style={{ fontWeight: 600, color: "#1a1a1a", fontSize: 14 }}>{guestName}</span>
+              <span className="font-heading text-deep-rose text-sm tracking-wider">{guestName}</span>
             </div>
             <textarea
               ref={textRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); post(); } }}
-              placeholder="Share your wishes… (Enter to send)"
+              placeholder="Write a sweet message… (Enter to send)"
               rows={3}
-              style={{ width: "100%", border: "1px solid #e8e0d8", borderRadius: 10, padding: "10px 14px", fontSize: 15, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", color: "#1a1a1a", background: "#fdfbf9" }}
+              className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body transition-colors"
+              style={{ borderColor: "#e8ddd4", color: "#1a1a1a", background: "#fdfbf9" }}
             />
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <div style={{ position: "relative" }}>
                 <button onClick={() => { setShowEmoji(!showEmoji); setShowStickers(false); }} style={iconBtn}>😊</button>
                 {showEmoji && (
                   <div style={pickerBox}>
-                    <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+                    <div className="flex gap-1 mb-2 flex-wrap">
                       {EMOJI_GROUPS.map((g, i) => (
-                        <button key={i} onClick={() => setEmojiTab(i)} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "none", background: emojiTab === i ? "#8B4A6B" : "#f0e8f0", color: emojiTab === i ? "#fff" : "#555", cursor: "pointer" }}>
+                        <button key={i} onClick={() => setEmojiTab(i)} className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer transition-colors" style={{ background: emojiTab === i ? "#8B4A6B" : "#f5efe8", color: emojiTab === i ? "#fff" : "#666" }}>
                           {g.label}
                         </button>
                       ))}
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    <div className="flex flex-wrap gap-1">
                       {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
-                        <button key={em} onClick={() => insertEmoji(em)} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", padding: 2, borderRadius: 6, lineHeight: 1 }}>{em}</button>
+                        <button key={em} onClick={() => insertEmoji(em)} className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none">{em}</button>
                       ))}
                     </div>
                   </div>
@@ -236,12 +301,12 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
                 <button onClick={() => { setShowStickers(!showStickers); setShowEmoji(false); }} style={iconBtn}>🎁</button>
                 {showStickers && (
                   <div style={{ ...pickerBox, width: 260 }}>
-                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "#888" }}>Tap a sticker to send</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                    <p className="text-[11px] text-deep-rose/50 mb-2 font-body">Tap a sticker to send</p>
+                    <div className="grid grid-cols-4 gap-1.5">
                       {STICKERS.map((s) => (
-                        <button key={s.id} onClick={() => sendSticker(s)} style={{ background: "#fdf6ff", border: "1px solid #e8d8f0", borderRadius: 10, padding: "8px 4px", cursor: "pointer", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                          <span style={{ fontSize: 26 }}>{s.emoji}</span>
-                          <span style={{ fontSize: 9, color: "#888" }}>{s.label}</span>
+                        <button key={s.id} onClick={() => sendSticker(s)} className="bg-[#fdf6ff] border border-[#e8d8f0] rounded-xl p-2 cursor-pointer text-center flex flex-col items-center gap-0.5 hover:border-blush transition-colors">
+                          <span className="text-2xl">{s.emoji}</span>
+                          <span className="text-[9px] text-deep-rose/60">{s.label}</span>
                         </button>
                       ))}
                     </div>
@@ -249,75 +314,95 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
                 )}
               </div>
 
-              <div style={{ flex: 1 }} />
+              <div className="flex-1" />
               <button
                 onClick={post}
                 disabled={posting || !message.trim()}
-                style={{ padding: "8px 20px", background: message.trim() ? "#8B4A6B" : "#ddd", color: "#fff", border: "none", borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: message.trim() ? "pointer" : "default", transition: "background 0.2s" }}
+                className="font-heading text-sm tracking-wider px-5 py-2 rounded-full border-none cursor-pointer transition-all"
+                style={{
+                  background: message.trim() ? "linear-gradient(135deg, #8B4A6B, #b56576)" : "#ddd",
+                  color: "#fff",
+                  opacity: posting ? 0.7 : 1,
+                }}
               >
-                {posting ? "Sending…" : "Send ✉️"}
+                {posting ? "Sending…" : "Send 💌"}
               </button>
             </div>
-            {error && <p style={{ marginTop: 10, color: "#c0392b", fontSize: 13 }}>{error}</p>}
+            {error && <p className="mt-2 text-[13px]" style={{ color: "#c0392b" }}>{error}</p>}
           </div>
         ) : (
-          <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, marginBottom: 32 }}>
-            Register to leave a message 💌
+          <div className="mb-10">
+            <NotLoggedInPrompt />
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {comments.map((c) => {
+        {/* Messages */}
+        <div className="flex flex-col gap-5">
+          {comments.map((c, idx) => {
             const isMe = guestId ? c.guest_id === guestId : false;
             const left = isMe ? timeLeft(c.created_at) : 0;
             const canEdit = isMe && left > 0;
             const sticker = isSticker(c.message) ? stickerData(c.message) : null;
+            const rotation = CARD_ROTATIONS[idx % CARD_ROTATIONS.length];
 
             return (
-              <div key={c.id} style={{ background: "#fff", borderRadius: 14, padding: 16, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#8B4A6B", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+              <div
+                key={c.id}
+                className="bg-white rounded-xl p-5 transition-shadow hover:shadow-md"
+                style={{
+                  ...staggerStyle(c.id),
+                  boxShadow: "0 1px 6px rgba(139,74,107,0.05), 0 1px 3px rgba(0,0,0,0.03)",
+                  transform: sticker?.id ? staggerStyle(c.id).transform : `${staggerStyle(c.id).transform} rotate(${rotation})`,
+                }}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ background: isMe ? "linear-gradient(135deg, #8B4A6B, #b56576)" : "linear-gradient(135deg, #a8b8a0, #8a9e80)" }}
+                  >
                     {c.guest_name[0].toUpperCase()}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a" }}>{c.guest_name}</span>
-                    <span style={{ marginLeft: 8, fontSize: 11, color: "#bbb" }}>{new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                    {c.updated_at !== c.created_at && <span style={{ marginLeft: 6, fontSize: 10, color: "#ccc" }}>edited</span>}
+                  <div className="flex-1 min-w-0">
+                    <span className="font-heading text-sm text-deep-rose">{c.guest_name}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-deep-rose/40">
+                      <span>{new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      {c.updated_at !== c.created_at && <span className="italic">· edited</span>}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {canEdit && editingId !== c.id && (
-                      <button onClick={() => { setEditingId(c.id); setEditText(c.message); }} style={{ fontSize: 11, color: "#8B4A6B", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
+                      <button onClick={() => { setEditingId(c.id); setEditText(c.message); }} className="text-[11px] px-2 py-1 rounded-full border-none cursor-pointer transition-colors" style={{ color: "#8B4A6B", background: "rgba(139,74,107,0.08)" }}>
                         Edit · {formatCountdown(left)}
                       </button>
                     )}
                     {(isOwner || isMe) && editingId !== c.id && (
-                      <button onClick={() => { if (confirm("Delete this message?")) deleteComment(c.id); }} style={{ fontSize: 11, color: "#ccc", background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>✕</button>
+                      <button onClick={() => { if (confirm("Delete this message?")) deleteComment(c.id); }} className="text-[14px] opacity-30 hover:opacity-60 border-none cursor-pointer bg-none" style={{ color: "#8B4A6B" }}>✕</button>
                     )}
                   </div>
                 </div>
 
                 {sticker ? (
-                  <div style={{ textAlign: "center", padding: "8px 0" }}>
-                    <div style={{ fontSize: 56 }}>{sticker.emoji}</div>
-                    <div style={{ fontSize: 12, color: "#8B4A6B", fontWeight: 600, marginTop: 4 }}>{sticker.label}</div>
+                  <div className="text-center py-2">
+                    <div className="text-5xl">{sticker.emoji}</div>
+                    <div className="text-sm font-heading text-sage mt-1">{sticker.label}</div>
                   </div>
                 ) : editingId === c.id ? (
                   <div>
-                    <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    <div className="flex gap-2 mb-2">
                       <div style={{ position: "relative" }}>
                         <button onClick={() => setShowEmoji(!showEmoji)} style={iconBtn}>😊</button>
                         {showEmoji && (
                           <div style={pickerBox}>
-                            <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+                            <div className="flex gap-1 mb-2 flex-wrap">
                               {EMOJI_GROUPS.map((g, i) => (
-                                <button key={i} onClick={() => setEmojiTab(i)} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 8, border: "none", background: emojiTab === i ? "#8B4A6B" : "#f0e8f0", color: emojiTab === i ? "#fff" : "#555", cursor: "pointer" }}>
+                                <button key={i} onClick={() => setEmojiTab(i)} className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer" style={{ background: emojiTab === i ? "#8B4A6B" : "#f5efe8", color: emojiTab === i ? "#fff" : "#666" }}>
                                   {g.label}
                                 </button>
                               ))}
                             </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            <div className="flex flex-wrap gap-1">
                               {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
-                                <button key={em} onClick={() => insertEmoji(em, true)} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", padding: 2, borderRadius: 6, lineHeight: 1 }}>{em}</button>
+                                <button key={em} onClick={() => insertEmoji(em, true)} className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none">{em}</button>
                               ))}
                             </div>
                           </div>
@@ -329,22 +414,26 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       rows={3}
-                      style={{ width: "100%", border: "1px solid #c084a0", borderRadius: 8, padding: "8px 12px", fontSize: 14, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body"
+                      style={{ borderColor: "#c084a0", background: "#fdfbf9" }}
                     />
-                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                      <button onClick={() => saveEdit(c.id)} style={{ padding: "6px 16px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>Save</button>
-                      <button onClick={() => setEditingId(null)} style={{ padding: "6px 16px", background: "#f0e8f0", color: "#888", border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-                      <span style={{ fontSize: 12, color: "#aaa", lineHeight: "30px" }}>· {formatCountdown(left)} left</span>
+                    <div className="flex gap-3 mt-2 items-center">
+                      <button onClick={() => saveEdit(c.id)} className="font-heading text-xs tracking-wider px-4 py-2 rounded-full border-none cursor-pointer text-white" style={{ background: "linear-gradient(135deg, #8B4A6B, #b56576)" }}>Save</button>
+                      <button onClick={() => setEditingId(null)} className="font-body text-xs px-4 py-2 rounded-full border-none cursor-pointer" style={{ background: "#f0e8e0", color: "#888" }}>Cancel</button>
+                      <span className="font-body text-xs" style={{ color: "#aaa" }}>· {formatCountdown(left)} left</span>
                     </div>
                   </div>
                 ) : (
-                  <p style={{ margin: 0, fontSize: 15, color: "#333", lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.message}</p>
+                  <p className="font-body text-[15px] leading-relaxed" style={{ color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.message}</p>
                 )}
               </div>
             );
           })}
           {comments.length === 0 && (
-            <p style={{ textAlign: "center", color: "#ccc", fontSize: 14, padding: 32 }}>Be the first to leave a wish! 💌</p>
+            <div className="text-center py-16">
+              <span className="text-5xl block mb-4">💫</span>
+              <p className="font-body text-deep-rose/40 text-sm">No messages yet — be the first blessing!</p>
+            </div>
           )}
         </div>
       </div>

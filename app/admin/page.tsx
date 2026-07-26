@@ -1543,6 +1543,7 @@ function ContentTab() {
           {openSection === "james" && (
             <div style={sectionBody}>
               <div>{label("Name")}<input style={inp} value={content.james.name} onChange={(e) => patch("james", { name: e.target.value })} /></div>
+              <div>{label("Photo URL")}<input style={inp} value={content.james.photo ?? ""} onChange={(e) => patch("james", { photo: e.target.value })} placeholder="/images/james-profile.jpg" /></div>
               <div>{label("Bio")}<textarea style={ta} value={content.james.bio} onChange={(e) => patch("james", { bio: e.target.value })} /></div>
               <div>
                 {label("Facts")}
@@ -1567,6 +1568,7 @@ function ContentTab() {
           {openSection === "sharon" && (
             <div style={sectionBody}>
               <div>{label("Name")}<input style={inp} value={content.sharon.name} onChange={(e) => patch("sharon", { name: e.target.value })} /></div>
+              <div>{label("Photo URL")}<input style={inp} value={content.sharon.photo ?? ""} onChange={(e) => patch("sharon", { photo: e.target.value })} placeholder="/images/sharon-profile.jpg" /></div>
               <div>{label("Bio")}<textarea style={ta} value={content.sharon.bio} onChange={(e) => patch("sharon", { bio: e.target.value })} /></div>
               <div>
                 {label("Facts")}
