@@ -203,6 +203,11 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
     setGuestCity(localStorage.getItem("guest_city") ?? "");
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
     const t = setTimeout(() => setReady(true), 400);
+    // Set gallery_token cookie so /api/drive-image auth passes for the couple photo
+    const token = localStorage.getItem("session_token");
+    if (token) {
+      document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
+    }
     return () => clearTimeout(t);
   }, []);
 
