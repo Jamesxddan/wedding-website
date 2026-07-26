@@ -629,6 +629,7 @@ function SlideshowPlayer({
   const transitioning = useRef(false);
   const currentIdxRef = useRef(currentIdx);
   currentIdxRef.current = currentIdx;
+  const slotBReadyRef = useRef<((portrait: boolean) => void) | null>(null);
 
   const wmLine2 = `PRIVATE · ${slideTime} IST`;
 
@@ -674,26 +675,20 @@ function SlideshowPlayer({
 
   const onSlotLoad = useCallback((url: string, portrait: boolean) => {
     setPortraitByUrl((prev) => prev[url] === portrait ? prev : { ...prev, [url]: portrait });
+    if (slotBReadyRef.current) {
+      slotBReadyRef.current(portrait);
+    }
   }, []);
 
-  // Preload next image → detect portrait → then crossfade. This eliminates the
-  // layout jump caused by isPortrait flipping after the image appears.
+  // Render SlotB immediately at opacity:0, then let its own DOM img onLoad trigger
+  // the crossfade. This guarantees the pixel data is decoded before the fade starts,
+  // eliminating the blank-flash caused by starting the transition before the browser
+  // has painted the new image.
   const advanceTo = useCallback((idx: number) => {
     if (transitioning.current) return;
     transitioning.current = true;
 
-    const photo = photos[idx];
-    let done = false;
-
-    const startCrossfade = (portrait?: boolean) => {
-      if (done) return;
-      done = true;
-      if (portrait !== undefined) {
-        setPortraitByUrl((prev) => ({ ...prev, [photo.fullUrl]: portrait }));
-      }
-      setSlotB(idx);
-      // Two-frame delay so slotB renders at opacity:0 before the fade-in starts
-      requestAnimationFrame(() => requestAnimationFrame(() => setShowB(true)));
+    const finishCrossfade = () => {
       setTimeout(() => {
         setCurrentIdx(idx);
         setSlotA(idx);
@@ -703,12 +698,24 @@ function SlideshowPlayer({
       }, 740);
     };
 
-    // Give the preload 600ms; if it hasn't resolved, start anyway
-    const fallback = setTimeout(() => startCrossfade(), 600);
-    const img = new window.Image();
-    img.onload = () => { clearTimeout(fallback); startCrossfade(img.naturalHeight > img.naturalWidth); };
-    img.onerror = () => { clearTimeout(fallback); startCrossfade(); };
-    img.src = photo.fullUrl;
+    // Fallback: if SlotB's onLoad never fires (network error, etc.) start anyway
+    const fallback = setTimeout(() => {
+      slotBReadyRef.current = null;
+      requestAnimationFrame(() => setShowB(true));
+      finishCrossfade();
+    }, 1200);
+
+    slotBReadyRef.current = (portrait: boolean) => {
+      clearTimeout(fallback);
+      slotBReadyRef.current = null;
+      setPortraitByUrl((prev) => ({ ...prev, [photos[idx].fullUrl]: portrait }));
+      // One rAF so the portrait state flush paints before opacity starts
+      requestAnimationFrame(() => setShowB(true));
+      finishCrossfade();
+    };
+
+    // Render SlotB hidden — crossfade fires from its img's onLoad
+    setSlotB(idx);
   }, [photos]);
 
   const goNext = useCallback(() => {
