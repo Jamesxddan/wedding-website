@@ -83,7 +83,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   james: {
     name: "James Daniel",
     photo: "/images/james-profile.jpg",
-    bio: "Born on October 16, 1997, alongside his twin brother John Jebasingh, James grew up in Chennai with faith as his foundation — shaped by his years at Anitha Methodist School and the community of the Laymen's Evangelical Fellowship. A graduate in Physiotherapy from MGR Medical University, he followed his calling to serve others before charting a new path in technology. Today he serves as an Associate Application Support Analyst at Globus Medical, an international medical device company — carrying the same heart for people, now through a different door. He found in Sharon not just a life partner, but an answer to years of prayer.",
+    bio: "Born on October 16, 1997, alongside his twin brother John Jebasingh, James grew up in Chennai with faith as his foundation — shaped by his years at Anitha Methodist School and the community of the Laymen's Evangelical Fellowship. A graduate in Physiotherapy from MGR Medical University, he continues to serve others through his clinical calling while also building a career in technology. Today he serves as an Associate Application Support Analyst at Globus Medical, an international medical device company — carrying the same heart for people, now through a different door. He found in Sharon not just a life partner, but an answer to years of prayer.",
     facts: [
       { label: "Hometown", value: "Chennai, India" },
       { label: "Education", value: "B.P.T., MGR Medical University" },
