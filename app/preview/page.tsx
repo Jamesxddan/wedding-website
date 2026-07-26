@@ -13,7 +13,6 @@ import OpeningScreen from "@/components/phases/OpeningScreen";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
 import PostWeddingHero from "@/components/phases/PostWeddingHero";
 import Gallery from "@/components/sections/Gallery";
-import OurStory from "@/components/sections/OurStory";
 import AboutJames from "@/components/sections/AboutJames";
 import AboutSharon from "@/components/sections/AboutSharon";
 import Families from "@/components/sections/Families";
@@ -51,7 +50,6 @@ function PreviewContent() {
           />
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
-          <OurStory />
           <Reveal><AboutJames /></Reveal>
           <Reveal delay={100}><AboutSharon /></Reveal>
           <Families />

@@ -1,10 +1,3 @@
-export interface Milestone {
-  year: string;
-  title: string;
-  description: string;
-  emoji: string;
-}
-
 export interface PersonFact { label: string; value: string; }
 export interface FamilyMember { name: string; role: string; }
 export interface ItineraryItem { time: string; label: string; venue: string; }
@@ -32,11 +25,6 @@ export interface SiteContent {
     reception_line: string;
     presence_line: string;
     explore_btn: string;
-  };
-  story: {
-    heading: string;
-    subtitle: string;
-    milestones: Milestone[];
   };
   james: {
     name: string;
@@ -75,12 +63,12 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   invitation: {
     scripture: "He has made everything beautiful in His time.",
-    scripture_ref: "Ecclesiastes 3:11",
+    scripture_ref: "Ecclesiastes 4:9-12",
     hosts_groom: "Mr. Joseph Washington & Mrs. Sophia Joseph",
     hosts_bride: "Mr. Yesurathinam & Mrs. Singapogu Rizma",
     body: "We greet you in the name of the Lord Jesus Christ. With great joy in our hearts, we invite you to celebrate the wedding of our children",
     couple_name: "James Daniel & Sharon",
-    quote: "God's will was on our marriage",
+    quote: "Two are better than one, because they have a good return for their labor — a cord of three strands is not quickly broken.",
     date: "October 8th (Thursday), 2026",
     time: "4:30 P.M.",
     ceremony_label: "Holy Matrimony",
@@ -89,16 +77,6 @@ export const DEFAULT_CONTENT: SiteContent = {
     reception_line: "BKN Auditorium, Ritherdon Road, Vepery, Chennai",
     presence_line: "Your gracious presence and blessings will make this joyous occasion truly memorable.",
     explore_btn: "Explore the wedding website",
-  },
-  story: {
-    heading: "Our Story",
-    subtitle: '"God\'s will was on our marriage"',
-    milestones: [
-      { year: "2023", title: "First Meeting", description: "God brought two hearts together in a moment neither of us expected. It was the beginning of something beautiful — a friendship that quietly blossomed into love.", emoji: "🌱" },
-      { year: "2024", title: "Growing Together", description: "Through laughter, prayers, and countless conversations, we discovered that God's hand was weaving our stories into one. Every moment felt like a gentle confirmation.", emoji: "🌿" },
-      { year: "2025", title: "The Proposal", description: "On a day we will never forget, James asked Sharon to walk with him for the rest of his life. With joy and tears, she said yes — and God smiled.", emoji: "💍" },
-      { year: "2026", title: "October 8th — Wedding Day", description: "Before family, friends, and God, we will make a covenant of love. St Andrews Kirk, Chennai — the place where our forever begins.", emoji: "🕊️" },
-    ],
   },
   james: {
     name: "James Daniel",

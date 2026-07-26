@@ -7,7 +7,13 @@ const ITEMS = [
   "·",
   "St Andrews Kirk, Chennai",
   "·",
-  "God's will was on our marriage",
+  "Two are better than one",
+  "·",
+  "Many waters cannot quench love",
+  "·",
+  "Above all, put on love",
+  "·",
+  "He who finds a wife finds what is good",
   "·",
 ];
 

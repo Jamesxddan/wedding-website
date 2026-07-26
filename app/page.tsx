@@ -17,7 +17,6 @@ const CountdownHero   = dynamic(() => import("@/components/phases/CountdownHero"
 const WeddingDayBanner = dynamic(() => import("@/components/phases/WeddingDayBanner"), { ssr: false });
 const PostWeddingHero  = dynamic(() => import("@/components/phases/PostWeddingHero"),  { ssr: false });
 const Gallery     = dynamic(() => import("@/components/sections/Gallery"),     { ssr: false });
-const OurStory    = dynamic(() => import("@/components/sections/OurStory"),    { ssr: false });
 const AboutJames  = dynamic(() => import("@/components/sections/AboutJames"),  { ssr: false });
 const AboutSharon = dynamic(() => import("@/components/sections/AboutSharon"), { ssr: false });
 const Families    = dynamic(() => import("@/components/sections/Families"),    { ssr: false });
@@ -148,7 +147,6 @@ export default function Home() {
           {!guestName && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={refresh} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
-          <OurStory />
           <Reveal><AboutJames /></Reveal>
           <Reveal delay={100}><AboutSharon /></Reveal>
           <Families />
