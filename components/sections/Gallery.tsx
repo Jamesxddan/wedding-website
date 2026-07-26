@@ -637,7 +637,8 @@ function SlideshowPlayer({
   const transitioning = useRef(false);
   const currentIdxRef = useRef(currentIdx);
   currentIdxRef.current = currentIdx;
-  const slotBReadyRef = useRef<((portrait: boolean) => void) | null>(null);
+  const slotBReadyRef  = useRef<((portrait: boolean) => void) | null>(null);
+  const slotBUrlRef    = useRef<string | null>(null); // URL we're waiting for
 
   const wmLine2 = `PRIVATE · ${slideTime} IST`;
 
@@ -683,7 +684,9 @@ function SlideshowPlayer({
 
   const onSlotLoad = useCallback((url: string, portrait: boolean) => {
     setPortraitByUrl((prev) => prev[url] === portrait ? prev : { ...prev, [url]: portrait });
-    if (slotBReadyRef.current) {
+    // Only trigger the crossfade when the URL matches the SlotB photo we're waiting for.
+    // Without this guard, SlotA firing onLoad would start the fade before SlotB is ready.
+    if (slotBReadyRef.current && slotBUrlRef.current === url) {
       slotBReadyRef.current(portrait);
     }
   }, []);
@@ -709,20 +712,23 @@ function SlideshowPlayer({
     // Fallback: if SlotB's onLoad never fires (network error, etc.) start anyway
     const fallback = setTimeout(() => {
       slotBReadyRef.current = null;
+      slotBUrlRef.current   = null;
       requestAnimationFrame(() => setShowB(true));
       finishCrossfade();
     }, 1200);
 
+    slotBUrlRef.current   = photos[idx].fullUrl;
     slotBReadyRef.current = (portrait: boolean) => {
       clearTimeout(fallback);
       slotBReadyRef.current = null;
+      slotBUrlRef.current   = null;
       setPortraitByUrl((prev) => ({ ...prev, [photos[idx].fullUrl]: portrait }));
       // One rAF so the portrait state flush paints before opacity starts
       requestAnimationFrame(() => setShowB(true));
       finishCrossfade();
     };
 
-    // Render SlotB hidden — crossfade fires from its img's onLoad
+    // Render SlotB hidden — crossfade fires only when ITS img's onLoad fires
     setSlotB(idx);
   }, [photos]);
 
