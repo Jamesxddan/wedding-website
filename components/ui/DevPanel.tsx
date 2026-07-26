@@ -93,13 +93,13 @@ export default function DevPanel() {
   const [visible, setVisible] = useState(false);
   const [isOnPreviewPath, setIsOnPreviewPath] = useState(false);
   useEffect(() => {
-    const isDev = process.env.NODE_ENV !== "production";
+    const isNonProd = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
     const path = window.location.pathname;
     const onPreviewPage = path === "/preview";
     setIsOnPreviewPath(onPreviewPage);
-    // Gear shows ONLY on /preview (admin's preview sandbox) and in local dev.
-    // Never on /admin, never on the main site — goes away the moment admin navigates back.
-    setVisible(isDev || onPreviewPage);
+    // Gear shows in all non-production environments (local dev + staging)
+    // and on /preview in production (admin's preview sandbox).
+    setVisible(isNonProd || onPreviewPage);
   }, []);
 
   if (!visible) return null;
