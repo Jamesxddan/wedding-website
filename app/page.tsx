@@ -17,15 +17,12 @@ const CountdownHero   = dynamic(() => import("@/components/phases/CountdownHero"
 const WeddingDayBanner = dynamic(() => import("@/components/phases/WeddingDayBanner"), { ssr: false });
 const PostWeddingHero  = dynamic(() => import("@/components/phases/PostWeddingHero"),  { ssr: false });
 const Gallery     = dynamic(() => import("@/components/sections/Gallery"),     { ssr: false });
-const AboutJames  = dynamic(() => import("@/components/sections/AboutJames"),  { ssr: false });
-const AboutSharon = dynamic(() => import("@/components/sections/AboutSharon"), { ssr: false });
+const AboutSection = dynamic(() => import("@/components/sections/AboutSection"), { ssr: false });
 const Families    = dynamic(() => import("@/components/sections/Families"),    { ssr: false });
 const Venue       = dynamic(() => import("@/components/sections/Venue"),       { ssr: false });
-const Itinerary   = dynamic(() => import("@/components/sections/Itinerary"),   { ssr: false });
 const Comments    = dynamic(() => import("@/components/sections/Comments"),    { ssr: false });
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
-const Reveal      = dynamic(() => import("@/components/ui/Reveal"),            { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 
 function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
@@ -147,11 +144,9 @@ export default function Home() {
           {!guestName && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={refresh} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
-          <Reveal><AboutJames /></Reveal>
-          <Reveal delay={100}><AboutSharon /></Reveal>
+          <AboutSection />
           <Families />
           <Venue />
-          <Itinerary />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
         </>

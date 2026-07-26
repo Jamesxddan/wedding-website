@@ -13,15 +13,12 @@ import OpeningScreen from "@/components/phases/OpeningScreen";
 import WeddingDayBanner from "@/components/phases/WeddingDayBanner";
 import PostWeddingHero from "@/components/phases/PostWeddingHero";
 import Gallery from "@/components/sections/Gallery";
-import AboutJames from "@/components/sections/AboutJames";
-import AboutSharon from "@/components/sections/AboutSharon";
+import AboutSection from "@/components/sections/AboutSection";
 import Families from "@/components/sections/Families";
 import Venue from "@/components/sections/Venue";
-import Itinerary from "@/components/sections/Itinerary";
 import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
 import Marquee from "@/components/ui/Marquee";
-import Reveal from "@/components/ui/Reveal";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
 
 function PreviewContent() {
@@ -50,11 +47,9 @@ function PreviewContent() {
           />
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
-          <Reveal><AboutJames /></Reveal>
-          <Reveal delay={100}><AboutSharon /></Reveal>
+          <AboutSection />
           <Families />
           <Venue />
-          <Itinerary />
           <Comments guestName={null} guestId={null} isOwner={false} />
           <Footer />
         </>
