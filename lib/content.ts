@@ -94,11 +94,12 @@ export const DEFAULT_CONTENT: SiteContent = {
   sharon: {
     name: "Sharon",
     photo: "/images/sharon-profile.jpg",
-    bio: "Sharon is a woman of grace, warmth, and unwavering faith. Those who know her speak of a joy that is contagious and a gentleness that draws people in. In James she found a love she had entrusted to God long before she knew his name.",
+    bio: "Raised in Guntur, Sharon grew up with a heart anchored in faith and a mind drawn to excellence. A graduate in Electronics and Communication Engineering from Vasireddy Venkatadri Institute of Technology, she built a career that reflects both her sharp intellect and her commitment to doing things right. With over five years of experience across Amazon and Uber, she now serves as an AI Evaluation Specialist — shaping the quality and integrity of AI systems at a global scale. It was through their shared church community that God wove two families together, and in James, Sharon found the love she had quietly trusted Him for.",
     facts: [
-      { label: "Hometown", value: "Chennai, India" },
+      { label: "Hometown", value: "Guntur, Andhra Pradesh" },
+      { label: "Education", value: "B.Tech, Electronics & Communication Engineering" },
+      { label: "Profession", value: "AI Evaluation Specialist, Uber" },
       { label: "Faith", value: "Christian" },
-      { label: "Favourite verse", value: "Proverbs 31:25" },
     ],
   },
   venue: {
