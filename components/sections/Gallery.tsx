@@ -701,11 +701,16 @@ function SlideshowPlayer({
 
     const finishCrossfade = () => {
       setTimeout(() => {
-        setCurrentIdx(idx);
+        // Prime SlotA with the new photo while it's still hidden behind SlotB (showB=true).
+        // Two rAFs give the browser time to decode and paint the new src before we make
+        // SlotA visible, preventing the 1-frame blank snap when showB flips to false.
         setSlotA(idx);
-        setSlotB(null);
-        setShowB(false);
-        transitioning.current = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          setCurrentIdx(idx);
+          setSlotB(null);
+          setShowB(false);
+          transitioning.current = false;
+        }));
       }, 740);
     };
 
