@@ -148,22 +148,28 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
     <div style={{ position: "relative", width: S, height: S }}>
       {/* Left half */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/wax-seal.png" alt="" draggable={false} style={{
-        ...imgBase,
-        clipPath: "polygon(0 0, 50% 0, 50% 100%, 0 100%)",
-        transform: breaking ? `translateX(-${half + 14}px) translateY(14px) rotate(-26deg)` : "none",
-        opacity: breaking ? 0 : 1,
-        transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
-      }} />
+      <picture>
+        <source srcSet="/wax-seal.webp" type="image/webp" />
+        <img src="/wax-seal.png" alt="" draggable={false} style={{
+          ...imgBase,
+          clipPath: "polygon(0 0, 50% 0, 50% 100%, 0 100%)",
+          transform: breaking ? `translateX(-${half + 14}px) translateY(14px) rotate(-26deg)` : "none",
+          opacity: breaking ? 0 : 1,
+          transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
+        }} />
+      </picture>
       {/* Right half */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/wax-seal.png" alt="" draggable={false} style={{
-        ...imgBase,
-        clipPath: "polygon(50% 0, 100% 0, 100% 100%, 50% 100%)",
-        transform: breaking ? `translateX(${half + 14}px) translateY(14px) rotate(26deg)` : "none",
-        opacity: breaking ? 0 : 1,
-        transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
-      }} />
+      <picture>
+        <source srcSet="/wax-seal.webp" type="image/webp" />
+        <img src="/wax-seal.png" alt="" draggable={false} style={{
+          ...imgBase,
+          clipPath: "polygon(50% 0, 100% 0, 100% 100%, 50% 100%)",
+          transform: breaking ? `translateX(${half + 14}px) translateY(14px) rotate(26deg)` : "none",
+          opacity: breaking ? 0 : 1,
+          transition: "transform 0.58s cubic-bezier(0.3,0,0.8,1), opacity 0.42s ease 0.1s",
+        }} />
+      </picture>
       {/* J & S monogram */}
       <div style={{
         position: "absolute", inset: 0,

@@ -99,14 +99,17 @@ export default function OpeningScreen({ onComplete }: Props) {
         {/* Rings illustration */}
         <div style={{ animation: "rings-drop 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.7s both", marginBottom: 22 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/rings.png"
-            alt="Wedding rings"
-            width={200}
-            style={{
-              animation: "pulse-glow 3s ease-in-out 2s infinite",
-            }}
-          />
+          <picture>
+            <source srcSet="/rings.webp" type="image/webp" />
+            <img
+              src="/rings.png"
+              alt="Wedding rings"
+              width={200}
+              style={{
+                animation: "pulse-glow 3s ease-in-out 2s infinite",
+              }}
+            />
+          </picture>
         </div>
 
         <Divider delay="1.5s" />

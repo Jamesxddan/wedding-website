@@ -11,6 +11,14 @@ function signFileId(fileId: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  // Block direct URL access in all environments.
+  // Legitimate loads (InvitationCard) always carry a Referer from our own hostname.
+  const referer = req.headers.get("referer") ?? "";
+  const ownHost = req.nextUrl.hostname;
+  if (!referer || !referer.includes(ownHost)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const sz = req.nextUrl.searchParams.get("sz") ?? "1600";
   const token = signFileId(FILE_ID);
   return NextResponse.redirect(new URL(`/api/drive-image?id=${token}&sz=${sz}`, req.url));

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
+import sharp from "sharp";
 import { supabase } from "@/lib/supabase";
 import { sendBreachAlert } from "@/lib/alert";
 
@@ -47,33 +48,31 @@ export async function GET(req: NextRequest) {
   const sz = req.nextUrl.searchParams.get("sz") ?? "600";
 
   if (!token) {
-    return new NextResponse("Not found", { status: 404 });
+    return new NextResponse(null, { status: 404 });
   }
 
   const fileId = verifyToken(token);
   if (!fileId) {
-    return new NextResponse("Forbidden", { status: 403 });
+    return new NextResponse(null, { status: 404 });
   }
 
-  // On Vercel, enforce two checks:
-  // 1. Referer must be from our own hostname — blocks direct tab access / hotlinking.
-  // 2. A valid gallery_token session cookie must be present.
-  // If someone has a valid cookie but bad Referer (direct URL access while logged in),
-  // immediately kill their session and ban them for 1 hour.
-  if (process.env.VERCEL_ENV === "production") {
-    const referer = req.headers.get("referer") ?? "";
-    const ownHost = req.nextUrl.hostname;
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  // Referer check applies in ALL environments — direct URL access (no Referer) returns 404.
+  // This prevents anyone who sees a URL in devtools from opening it in a new tab.
+  // Legitimate image loads always carry a Referer from our own hostname.
+  const referer = req.headers.get("referer") ?? "";
+  const ownHost = req.nextUrl.hostname;
 
-    const cookieHeader = req.headers.get("cookie") ?? "";
-    const galleryToken = cookieHeader
-      .split(";")
-      .map(c => c.trim())
-      .find(c => c.startsWith("gallery_token="))
-      ?.slice("gallery_token=".length);
+  if (!referer || !referer.includes(ownHost)) {
+    // In production: if the caller had a valid session cookie, punish them for hotlinking.
+    if (process.env.VERCEL_ENV === "production") {
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+      const cookieHeader = req.headers.get("cookie") ?? "";
+      const galleryToken = cookieHeader
+        .split(";")
+        .map(c => c.trim())
+        .find(c => c.startsWith("gallery_token="))
+        ?.slice("gallery_token=".length);
 
-    if (!referer || !referer.includes(ownHost)) {
-      // If they have a valid session token, identify and punish them.
       if (galleryToken) {
         const { data: fp } = await supabase
           .from("device_fingerprints")
@@ -98,11 +97,21 @@ export async function GET(req: NextRequest) {
           });
         }
       }
-      return new NextResponse("Forbidden", { status: 403 });
     }
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // In production, also require a valid gallery_token session cookie.
+  if (process.env.VERCEL_ENV === "production") {
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const galleryToken = cookieHeader
+      .split(";")
+      .map(c => c.trim())
+      .find(c => c.startsWith("gallery_token="))
+      ?.slice("gallery_token=".length);
 
     if (!galleryToken || !(await isValidSession(galleryToken))) {
-      return new NextResponse("Forbidden", { status: 403 });
+      return new NextResponse(null, { status: 404 });
     }
   }
 
@@ -117,17 +126,33 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok) {
-      return new NextResponse("Image not found", { status: res.status });
+      return new NextResponse(null, { status: 404 });
     }
 
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
 
     // Only serve actual images — block HTML error pages
     if (!contentType.startsWith("image/")) {
-      return new NextResponse("Not an image", { status: 404 });
+      return new NextResponse(null, { status: 404 });
     }
 
-    const body = await res.arrayBuffer();
+    const body = Buffer.from(await res.arrayBuffer());
+
+    // Convert to WebP if the browser supports it — smaller, faster decode
+    const accept = req.headers.get("accept") ?? "";
+    if (accept.includes("image/webp")) {
+      try {
+        const webp = await sharp(body).webp({ quality: 82 }).toBuffer();
+        return new NextResponse(webp, {
+          headers: {
+            "Content-Type": "image/webp",
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        });
+      } catch {
+        // Fall through to original JPEG on conversion failure
+      }
+    }
 
     return new NextResponse(body, {
       headers: {
@@ -136,6 +161,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch {
-    return new NextResponse("Error", { status: 500 });
+    return new NextResponse(null, { status: 404 });
   }
 }
