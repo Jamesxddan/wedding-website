@@ -136,14 +136,14 @@ export async function GET(req: NextRequest) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const body = Buffer.from(await res.arrayBuffer());
+    const arrayBuf = await res.arrayBuffer();
 
     // Convert to WebP if the browser supports it — smaller, faster decode
     const accept = req.headers.get("accept") ?? "";
     if (accept.includes("image/webp")) {
       try {
-        const webp = await sharp(body).webp({ quality: 82 }).toBuffer();
-        return new NextResponse(webp, {
+        const webp = await sharp(Buffer.from(arrayBuf)).webp({ quality: 82 }).toBuffer();
+        return new NextResponse(new Uint8Array(webp), {
           headers: {
             "Content-Type": "image/webp",
             "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
@@ -154,7 +154,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return new NextResponse(body, {
+    return new NextResponse(arrayBuf, {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "no-store",
