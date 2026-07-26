@@ -89,7 +89,7 @@ export const DEFAULT_CONTENT: SiteContent = {
       { label: "Education", value: "B.P.T., MGR Medical University" },
       { label: "Profession", value: "Software Programmer, Globus Medical" },
       { label: "Faith", value: "Christian — Laymen's Evangelical Fellowship" },
-      { label: "Favourite verse", value: "Jeremiah 29:11" },
+      { label: "Favourite verse", value: "Proverbs 18:22 — "He who finds a wife finds a good thing, and obtains favor from the Lord."" },
     ],
   },
   sharon: {
