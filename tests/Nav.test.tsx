@@ -12,11 +12,11 @@ describe("Nav", () => {
     render(<Nav />);
     // Each link appears twice: desktop list + mobile list
     expect(screen.getAllByRole("link", { name: /home/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /our story/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /about/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /gallery/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /venue/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /families/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /comments/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /wall of love/i }).length).toBeGreaterThan(0);
   });
 
   it("hamburger button toggles aria-expanded", () => {

@@ -2,7 +2,33 @@
   "permissions": {
     "allow": [
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
-      "PowerShell(Get-ChildItem *)"
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(gh *)",
+      "PowerShell(winget install *)",
+      "Bash(gh pr *)",
+      "PowerShell(Get-Command *)",
+      "Bash(git remote *)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(npx *)",
+      "PowerShell(npx @qaskills/cli add playwright-e2e)",
+      "Read(//c/Users/jjame/.claude/**)",
+      "Read(//c/Users/jjame/Documents/**)",
+      "Read(//c/Users/jjame/.cache/**)",
+      "Bash(npm ls *)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "PowerShell(git *)",
+      "Bash(git fetch *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(timeout 8)",
+      "Bash(ping -n 6 127.0.0.1)",
+      "Bash(type \"C:\\\\Users\\\\jjame\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-jjame-OneDrive---Globus-Medical-Documents-Personal-wedding-website\\\\42d5939d-8f65-4a20-9542-e98404b3bb9e\\\\tasks\\\\bjfyike7o.output\")"
     ]
   }
 }

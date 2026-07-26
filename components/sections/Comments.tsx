@@ -235,7 +235,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   };
 
   return (
-    <section className="py-24 px-6" style={{ background: "linear-gradient(180deg, #faf8f5 0%, #f5f0eb 100%)" }}>
+    <section id="wall-of-love" className="py-24 px-6" style={{ background: "linear-gradient(180deg, #faf8f5 0%, #f5f0eb 100%)" }}>
       <div className="max-w-2xl mx-auto">
         {/* Heading */}
         <div className="text-center mb-6">

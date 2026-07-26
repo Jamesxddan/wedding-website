@@ -6,7 +6,7 @@ import Reveal from "@/components/ui/Reveal";
 
 export default function AboutSection() {
   return (
-    <section className="relative py-24 px-6 max-w-4xl mx-auto overflow-hidden">
+    <section id="about" className="relative py-24 px-6 max-w-4xl mx-auto overflow-hidden">
       {/* Aurora background */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
         <div
