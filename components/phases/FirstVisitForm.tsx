@@ -65,12 +65,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
   }
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const isMobileValid = /^\+?[0-9\s-()]{7,20}$/.test(mobile.trim());
-  const isFormValid = isEmailValid && isMobileValid;
+  const mobileDigits = mobile.trim().replace(/\D/g, "");
+  const isMobileValid = /^[\d\s\-()+]*$/.test(mobile.trim()) && mobileDigits.length >= 10 && mobileDigits.length <= 15;
+  const hasAtLeastOne = isEmailValid || isMobileValid;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !selectedCity || !isFormValid || isSubmitting) return;
+    if (!name.trim() || !selectedCity || !hasAtLeastOne || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -119,7 +120,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
     }
   }
 
-  const canSubmit = name.trim().length > 0 && selectedCity !== null && isFormValid && !isSubmitting;
+  const canSubmit = name.trim().length > 0 && selectedCity !== null && hasAtLeastOne && !isSubmitting;
 
   const inputCls = "border border-champagne rounded-lg px-4 py-3 bg-[rgba(253,246,236,0.85)] text-deep-rose font-body placeholder:text-deep-rose/35 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[rgba(212,175,55,0.25)] transition-all duration-200";
 
@@ -140,34 +141,58 @@ export default function FirstVisitForm({ onComplete }: Props) {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="guest-email" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-          Email
-        </label>
-        <input
-          id="guest-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="your@email.com"
-          className={inputCls}
-          autoComplete="off"
-        />
+      {/* Hide email when mobile is typed (but not if both are filled via autofill) */}
+      <div
+        style={{
+          maxHeight: mobile.trim() && !email.trim() ? "0px" : "120px",
+          opacity: mobile.trim() && !email.trim() ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: mobile.trim() && !email.trim() ? "none" : "auto",
+          transition: "max-height 0.45s ease, opacity 0.35s ease",
+          marginBottom: mobile.trim() && !email.trim() ? "-20px" : "0px",
+        }}
+      >
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="guest-email" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
+            Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
+          </label>
+          <input
+            id="guest-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            className={inputCls}
+            autoComplete="off"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-          Mobile
-        </label>
-        <input
-          id="guest-mobile"
-          type="tel"
-          value={mobile}
-          onChange={(e) => setMobile(e.target.value)}
-          placeholder="+91 98765 43210"
-          className={inputCls}
-          autoComplete="off"
-        />
+      {/* Hide mobile when email is typed (but not if both are filled via autofill) */}
+      <div
+        style={{
+          maxHeight: email.trim() && !mobile.trim() ? "0px" : "120px",
+          opacity: email.trim() && !mobile.trim() ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: email.trim() && !mobile.trim() ? "none" : "auto",
+          transition: "max-height 0.45s ease, opacity 0.35s ease",
+          marginBottom: email.trim() && !mobile.trim() ? "-20px" : "0px",
+        }}
+      >
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
+            Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
+          </label>
+          <input
+            id="guest-mobile"
+            type="tel"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="+91 98765 43210"
+            className={inputCls}
+            autoComplete="off"
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
