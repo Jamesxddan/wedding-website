@@ -94,7 +94,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   sharon: {
     name: "Sharon",
     photo: "/images/sharon-profile.jpg",
-    bio: "Raised in Guntur, Sharon grew up with a heart anchored in faith and a mind drawn to excellence. A graduate in Electronics and Communication Engineering from Vasireddy Venkatadri Institute of Technology, she built a career that reflects both her sharp intellect and her commitment to doing things right. With over five years of experience across Amazon and Uber, she now serves as an AI Evaluation Specialist — shaping the quality and integrity of AI systems at a global scale. It was through their shared church community that, by His sovereign will, God wove these two families together.",
+    bio: "Raised in Guntur, Sharon grew up with a heart anchored in faith and a mind drawn to excellence. A graduate in Electronics and Communication Engineering from Vasireddy Venkatadri Institute of Technology, she built a career that reflects both her sharp intellect and her commitment to doing things right. With over five years of experience across Amazon and Uber, she now serves as an AI Evaluation Specialist — shaping the quality and integrity of AI systems at a global scale. She shares a special bond with her sister Shiny, and together their family has been a pillar of love and support. It was through their shared church community that, by His sovereign will, God wove these two families together.",
     facts: [
       { label: "Hometown", value: "Guntur, Andhra Pradesh" },
       { label: "Education", value: "B.Tech, Electronics & Communication Engineering" },
