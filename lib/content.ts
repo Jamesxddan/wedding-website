@@ -99,7 +99,7 @@ export const DEFAULT_CONTENT: SiteContent = {
       { label: "Hometown", value: "Guntur, Andhra Pradesh" },
       { label: "Education", value: "B.Tech, Electronics & Communication Engineering" },
       { label: "Profession", value: "AI Evaluation Specialist, Uber" },
-      { label: "Faith", value: "Christian" },
+      { label: "Faith", value: "Christian — Laymen's Evangelical Fellowship" },
     ],
   },
   venue: {
