@@ -10,11 +10,11 @@ const VENUE_COORDS = {
 };
 
 interface VenueCardProps {
-  tag: string; name: string; address: string; time: string; dress: string;
+  tag: string; name: string; address: string; time: string;
   lat: number; lng: number; accent: "blush" | "sage";
 }
 
-function VenueCard({ tag, name, address, time, dress, lat, lng, accent }: VenueCardProps) {
+function VenueCard({ tag, name, address, time, lat, lng, accent }: VenueCardProps) {
   const accentBg     = accent === "blush" ? "bg-blush/20"    : "bg-sage/20";
   const accentBorder = accent === "blush" ? "border-blush"   : "border-sage";
   const accentText   = accent === "blush" ? "text-deep-rose" : "text-sage";
@@ -37,7 +37,6 @@ function VenueCard({ tag, name, address, time, dress, lat, lng, accent }: VenueC
             { label: "Event", value: tag === "Ceremony" ? "Wedding Ceremony" : "Wedding Reception" },
             { label: "Date", value: "October 8, 2026" },
             { label: "Time", value: time },
-            { label: "Dress", value: dress },
           ].map(({ label, value }) => (
             <li key={label} className="flex gap-3 items-baseline">
               <span className="font-heading text-xs tracking-widest uppercase text-sage w-24 flex-shrink-0">{label}</span>

@@ -41,8 +41,8 @@ export interface SiteContent {
   venue: {
     heading: string;
     subtitle: string;
-    ceremony: { tag: string; name: string; address: string; time: string; dress: string };
-    reception: { tag: string; name: string; address: string; time: string; dress: string };
+    ceremony: { tag: string; name: string; address: string; time: string };
+    reception: { tag: string; name: string; address: string; time: string };
   };
   itinerary: {
     heading: string;
@@ -105,14 +105,14 @@ export const DEFAULT_CONTENT: SiteContent = {
   venue: {
     heading: "Venue & Details",
     subtitle: "Chennai, October 8th, 2026",
-    ceremony: { tag: "Ceremony", name: "St Andrews Kirk", address: "Poonamallee High Rd, Vepery, Chennai 600 007", time: "TBD", dress: "Formals / Ethnic" },
-    reception: { tag: "Reception", name: "BKN Auditorium", address: "Chennai, Tamil Nadu", time: "TBD", dress: "Formals / Ethnic" },
+    ceremony: { tag: "Ceremony", name: "St Andrews Kirk", address: "Poonamallee High Rd, Vepery, Chennai 600 007", time: "4:30 PM" },
+    reception: { tag: "Reception", name: "BKN Auditorium", address: "Chennai, Tamil Nadu", time: "7:00 PM" },
   },
   itinerary: {
     heading: "Day Itinerary",
     items: [
-      { time: "TBD", label: "Ceremony", venue: "St Andrews Kirk" },
-      { time: "TBD", label: "Reception", venue: "BKN Auditorium" },
+      { time: "4:30 PM", label: "Ceremony", venue: "St Andrews Kirk" },
+      { time: "7:00 PM", label: "Reception", venue: "BKN Auditorium" },
     ],
   },
   families: {
