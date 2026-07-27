@@ -154,8 +154,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-email" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-            Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
-          </label>
+            Email          </label>
           <input
             id="guest-email"
             type="email"
@@ -181,8 +180,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-            Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
-          </label>
+            Mobile          </label>
           <input
             id="guest-mobile"
             type="tel"
