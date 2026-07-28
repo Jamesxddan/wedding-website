@@ -251,7 +251,7 @@ export default function Home() {
       )}
 
       {phase === Phase.INVITATION && (
-        <InvitationCard guestName={guestName ?? "Friend"} onExplore={() => { refresh(); }} />
+        <InvitationCard guestName={guestName ?? "Friend"} guestId={guestId} onExplore={() => { refresh(); }} />
       )}
 
       {phase === Phase.RETURN_VISIT && (
@@ -298,6 +298,7 @@ export default function Home() {
           </button>
           <InvitationCard
             guestName={guestName ?? "Friend"}
+            guestId={guestId}
             onExplore={() => setShowInvitationModal(false)}
           />
         </div>

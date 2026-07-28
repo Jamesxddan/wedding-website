@@ -10,6 +10,7 @@ const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr:
 
 interface Props {
   guestName: string;
+  guestId?: string | null;
   onExplore: () => void;
 }
 
@@ -191,7 +192,7 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function InvitationCard({ guestName, onExplore }: Props) {
+export default function InvitationCard({ guestName, guestId, onExplore }: Props) {
   const [stage, setStage]             = useState<Stage>("front");
   const [flipPhase, setFlipPhase]     = useState<FlipPhase>("idle");
   const [sealBreaking, setSealBreaking] = useState(false);
@@ -239,8 +240,20 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
     timers.current.push(t1, t2, t3);
   }
 
-  function handleExplore() {
+  async function handleExplore() {
     safeSetItem("invitation_seen", "true");
+    // Persist to DB so it follows the user across devices.
+    // Await it so the session check that runs after onExplore()
+    // reads the updated value from Supabase.
+    if (guestId) {
+      try {
+        await fetch("/api/guest/invitation-seen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_id: guestId }),
+        });
+      } catch { /* best-effort */ }
+    }
     onExplore();
   }
 

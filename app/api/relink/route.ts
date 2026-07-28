@@ -86,11 +86,13 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (existingFp) {
+      // Mark invitation as seen — relinking user already saw it on their original device
+      await supabase.from("guests").update({ invitation_seen: true }).eq("id", guest.id);
       return NextResponse.json({
         session_token: existingFp.session_token,
         name: guest.name,
         city: guest.city,
-        invitation_seen: guest.invitation_seen,
+        invitation_seen: true,
       });
     }
   }
@@ -111,10 +113,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "failed to relink" }, { status: 500 });
   }
 
+  // Mark invitation as seen — relinking user already saw it on their original device
+  await supabase.from("guests").update({ invitation_seen: true }).eq("id", guest.id);
+
   return NextResponse.json({
     session_token: fp.session_token,
     name: guest.name,
     city: guest.city,
-    invitation_seen: guest.invitation_seen,
+    invitation_seen: true,
   });
 }
