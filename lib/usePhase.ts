@@ -14,10 +14,11 @@ export interface PhaseState {
   sessionRestored: boolean;
   relinkPending: boolean;
   refresh: () => void;
+  acknowledgeInvitation: () => void;
 }
 
 export function usePhase(): PhaseState {
-  const [state, setState] = useState<Omit<PhaseState, "refresh">>({
+  const [state, setState] = useState<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>({
     phase: Phase.FIRST_VISIT,
     guestName: null,
     guestCity: null,
@@ -31,11 +32,11 @@ export function usePhase(): PhaseState {
   const sessionChecked = useRef(false);
   const dbOverride = useRef<Phase | null>(null);
   const settingsFetched = useRef(false);
+  const invitationAcknowledged = useRef(false);
 
   useEffect(() => {
     const name = safeGetItem("guest_name");
     const city = safeGetItem("guest_city");
-    const invitationSeen = safeGetItem("invitation_seen") === "true";
 
     const devOverride = safeGetItem("dev_phase");
     const localOverride =
@@ -47,11 +48,14 @@ export function usePhase(): PhaseState {
     // Production: default new (no-name) visitors to FIRST_VISIT so they see the
     // registration form. The async session check below will override to the
     // correct phase for returning or incognito users.
+    // invitationAcknowledged starts false, so pre-wedding users always see
+    // INVITATION first — even returning users. They advance to RETURN_VISIT
+    // by clicking Explore on the invitation card.
     const isNonProd = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
     const defaultPhase = isNonProd && !name
       ? Phase.RETURN_VISIT
       : name
-        ? getPhase(name, new Date(), invitationSeen)
+        ? getPhase(name, new Date(), invitationAcknowledged.current)
         : Phase.FIRST_VISIT;
 
     setState((prev) => ({
@@ -90,7 +94,7 @@ export function usePhase(): PhaseState {
     // the phase back to FIRST_VISIT on every load.
     if (!sessionChecked.current && !localOverride && !isNonProd) {
       sessionChecked.current = true;
-      _runSessionCheck(setState, dbOverride);
+      _runSessionCheck(setState, dbOverride, invitationAcknowledged);
     }
   }, [tick]);
 
@@ -100,12 +104,16 @@ export function usePhase(): PhaseState {
       sessionChecked.current = false;
       setTick((t) => t + 1);
     },
+    acknowledgeInvitation: () => {
+      invitationAcknowledged.current = true;
+    },
   };
 }
 
 async function _runSessionCheck(
-  setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh">>>,
-  dbOverride: React.MutableRefObject<Phase | null>
+  setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>>,
+  dbOverride: React.MutableRefObject<Phase | null>,
+  invitationAcknowledged: React.MutableRefObject<boolean>,
 ): Promise<void> {
   try {
     const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
@@ -186,8 +194,17 @@ async function _runSessionCheck(
     const effectiveDbOverride =
       dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
 
+    // Don't auto-skip INVITATION on the initial session check.
+    // Pre-wedding users must click Explore on the invitation card to advance
+    // to RETURN_VISIT. Date-based phases (WEDDING_DAY / POST_WEDDING) are
+    // always used directly.
+    const computedPhase = localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false);
+    const effectivePhase = computedPhase === Phase.RETURN_VISIT && !invitationAcknowledged.current
+      ? Phase.INVITATION
+      : computedPhase;
+
     setState({
-      phase: localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false),
+      phase: effectivePhase,
       guestName: data.name,
       guestCity: data.city ?? null,
       guestId: data.guest_id ?? null,
