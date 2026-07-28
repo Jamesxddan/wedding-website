@@ -5,6 +5,7 @@ import Nav from "@/components/ui/Nav";
 import Gallery from "@/components/sections/Gallery";
 import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
+import { safeGetItem } from "@/lib/storage";
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -65,7 +66,7 @@ export default function PostWeddingHero({ guestName }: Props) {
         setVideosUrl(s.post_wedding_videos_url ?? "");
       })
       .catch(() => {});
-    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    const parts = ["James & Sharon", safeGetItem("guest_name"), safeGetItem("guest_city")].filter(Boolean);
     setWmText(parts.join("  ·  "));
     return () => clearTimeout(t);
   }, []);

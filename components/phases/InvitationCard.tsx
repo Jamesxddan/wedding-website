@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
+import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
@@ -206,11 +207,11 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
 
   useEffect(() => {
-    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    setGuestCity(safeGetItem("guest_city") ?? "");
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
     const t = setTimeout(() => setReady(true), 400);
     // Set gallery_token cookie so /api/drive-image auth passes for the couple photo
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }
@@ -239,7 +240,7 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   }
 
   function handleExplore() {
-    localStorage.setItem("invitation_seen", "true");
+    safeSetItem("invitation_seen", "true");
     onExplore();
   }
 

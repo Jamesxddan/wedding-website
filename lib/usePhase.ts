@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getPhase, Phase } from "./phase";
+import { safeGetItem, safeSetItem, safeRemoveItem } from "./storage";
 
 export interface PhaseState {
   phase: Phase;
@@ -11,6 +12,7 @@ export interface PhaseState {
   isOwner: boolean;
   isLoading: boolean;
   sessionRestored: boolean;
+  relinkPending: boolean;
   refresh: () => void;
 }
 
@@ -23,35 +25,48 @@ export function usePhase(): PhaseState {
     isOwner: false,
     isLoading: true,
     sessionRestored: false,
+    relinkPending: false,
   });
   const [tick, setTick] = useState(0);
   const sessionChecked = useRef(false);
   const dbOverride = useRef<Phase | null>(null);
+  const settingsFetched = useRef(false);
 
   useEffect(() => {
-    const name = localStorage.getItem("guest_name");
-    const city = localStorage.getItem("guest_city");
-    const invitationSeen = localStorage.getItem("invitation_seen") === "true";
+    const name = safeGetItem("guest_name");
+    const city = safeGetItem("guest_city");
+    const invitationSeen = safeGetItem("invitation_seen") === "true";
 
-    const devOverride = localStorage.getItem("dev_phase");
+    const devOverride = safeGetItem("dev_phase");
     const localOverride =
       devOverride && Object.values(Phase).includes(devOverride as Phase)
         ? (devOverride as Phase)
         : null;
 
     // Dev and staging: skip registration — default to RETURN_VISIT when no guest set
+    // Production: default new (no-name) visitors to FIRST_VISIT so they see the
+    // registration form. The async session check below will override to the
+    // correct phase for returning or incognito users.
     const isNonProd = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
-    const defaultPhase = isNonProd && !name ? Phase.RETURN_VISIT : getPhase(name, new Date(), invitationSeen);
+    const defaultPhase = isNonProd && !name
+      ? Phase.RETURN_VISIT
+      : name
+        ? getPhase(name, new Date(), invitationSeen)
+        : Phase.FIRST_VISIT;
 
     setState((prev) => ({
       ...prev,
       phase: localOverride ?? dbOverride.current ?? defaultPhase,
-      guestName: name,
-      guestCity: city,
+      // When localStorage is unavailable (Safari private browsing etc.),
+      // keep the guestName/guestCity from the previous session-check result
+      // rather than resetting to null.
+      guestName: name ?? prev.guestName,
+      guestCity: city ?? prev.guestCity,
       isLoading: false,
     }));
 
-    if (!localOverride) {
+    if (!localOverride && !settingsFetched.current) {
+      settingsFetched.current = true;
       fetch("/api/settings")
         .then((r) => (r.ok ? r.json() : {}))
         .then((settings: Record<string, string>) => {
@@ -79,7 +94,13 @@ export function usePhase(): PhaseState {
     }
   }, [tick]);
 
-  return { ...state, refresh: () => setTick((t) => t + 1) };
+  return {
+    ...state,
+    refresh: () => {
+      sessionChecked.current = false;
+      setTick((t) => t + 1);
+    },
+  };
 }
 
 async function _runSessionCheck(
@@ -108,13 +129,13 @@ async function _runSessionCheck(
       is_owner?: boolean;
     };
 
-    // Session gone from DB — guest was deleted or factory reset.
-    // Clear all cached data so they register fresh as a new device.
+    // Genuinely new user — no fingerprint and no browser-signal match anywhere.
+    // Show the registration form (FIRST_VISIT) so they can sign up.
     if (data.status === "new") {
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("guest_name");
-      localStorage.removeItem("guest_city");
-      localStorage.removeItem("invitation_seen");
+      safeRemoveItem("session_token");
+      safeRemoveItem("guest_name");
+      safeRemoveItem("guest_city");
+      safeRemoveItem("invitation_seen");
       setState((prev) => ({
         ...prev,
         phase: Phase.FIRST_VISIT,
@@ -123,18 +144,38 @@ async function _runSessionCheck(
         guestId: null,
         isOwner: false,
         sessionRestored: false,
+        relinkPending: false,
+      }));
+      return;
+    }
+
+    // Known guest from a different device (incognito / new browser) —
+    // same browser profile, but device UUID was cleared.
+    // Show RETURN_VISIT with the relink form so they can verify their identity.
+    if (data.status === "relink_required") {
+      safeSetItem("guest_name", data.name!);
+      if (data.city) safeSetItem("guest_city", data.city);
+      setState((prev) => ({
+        ...prev,
+        phase: Phase.RETURN_VISIT,
+        guestName: data.name ?? null,
+        guestCity: data.city ?? null,
+        guestId: data.guest_id ?? null,
+        isOwner: false,
+        sessionRestored: false,
+        relinkPending: true,
       }));
       return;
     }
 
     if (data.status !== "known" || !data.name) return;
 
-    localStorage.setItem("guest_name", data.name);
-    if (data.city) localStorage.setItem("guest_city", data.city);
-    if (data.invitation_seen) localStorage.setItem("invitation_seen", "true");
-    if (data.session_token) localStorage.setItem("session_token", data.session_token);
+    safeSetItem("guest_name", data.name);
+    if (data.city) safeSetItem("guest_city", data.city);
+    if (data.invitation_seen) safeSetItem("invitation_seen", "true");
+    if (data.session_token) safeSetItem("session_token", data.session_token);
 
-    const devOverride = localStorage.getItem("dev_phase");
+    const devOverride = safeGetItem("dev_phase");
     const localOverride =
       devOverride && Object.values(Phase).includes(devOverride as Phase)
         ? (devOverride as Phase)
@@ -153,6 +194,7 @@ async function _runSessionCheck(
       isOwner: data.is_owner ?? false,
       isLoading: false,
       sessionRestored: true,
+      relinkPending: false,
     });
   } catch {
     // Network failure or non-production env — silent

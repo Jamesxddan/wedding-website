@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { safeGetItem } from "@/lib/storage";
 
 interface Comment {
   id: string;
@@ -32,7 +33,7 @@ const STICKERS = [
 ];
 
 function authHeaders(): HeadersInit {
-  const token = typeof window !== "undefined" ? localStorage.getItem("session_token") : null;
+  const token = typeof window !== "undefined" ? safeGetItem("session_token") : null;
   return { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
 }
 

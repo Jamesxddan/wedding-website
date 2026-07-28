@@ -6,6 +6,7 @@ import Reveal from "@/components/ui/Reveal";
 import { albumPriority } from "@/lib/album-priority";
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
+import { safeGetItem } from "@/lib/storage";
 
 gsap.registerPlugin(Observer);
 
@@ -657,7 +658,7 @@ function SlideshowPlayer({
     document.querySelectorAll("iframe").forEach((iframe) => {
       try { iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', "*"); } catch {}
     });
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     const headers: HeadersInit = { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
     fetch("/api/gallery-event", {
       method: "POST", headers,
@@ -759,7 +760,7 @@ function SlideshowPlayer({
     const nextPlaying = !isPlaying;
     setIsPlaying(nextPlaying);
     if (!nextPlaying) {
-      const token = localStorage.getItem("session_token");
+      const token = safeGetItem("session_token");
       fetch("/api/gallery-event", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
@@ -1080,8 +1081,8 @@ function AlbumBook({
   const [guestCity, setGuestCity] = useState<string>("");
   const openedAtRef = useRef<string>("");
   useEffect(() => {
-    setGuestName(localStorage.getItem("guest_name") ?? "");
-    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    setGuestName(safeGetItem("guest_name") ?? "");
+    setGuestCity(safeGetItem("guest_city") ?? "");
     openedAtRef.current = new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata",
       hour: "2-digit",
@@ -1137,7 +1138,7 @@ function AlbumBook({
 
   // Screenshot / print logging
   useEffect(() => {
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     const headers: HeadersInit = {
       "Content-Type": "application/json",
       ...(token ? { "x-session-token": token } : {}),
@@ -1716,21 +1717,21 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [wmText, setWmText] = useState("James & Sharon");
 
   useEffect(() => {
-    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    const parts = ["James & Sharon", safeGetItem("guest_name"), safeGetItem("guest_city")].filter(Boolean);
     setWmText(parts.join("  ·  "));
   }, []);
 
   // Set gallery_token cookie early so thumbnail img tags (which can't use custom
   // headers) pass the drive-image auth check as soon as the section mounts.
   useEffect(() => {
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }
   }, []);
 
   useEffect(() => {
-    const sessionToken = localStorage.getItem("session_token");
+    const sessionToken = safeGetItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
 
     const url = `/api/drive-photos?folder=${folder}&view=albums`;
@@ -1764,7 +1765,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
     // Set a short-lived cookie so drive-image route can authenticate img tag requests
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }

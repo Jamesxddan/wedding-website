@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { searchCities, type City } from "@/lib/cities";
 import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
+import { safeSetItem } from "@/lib/storage";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -107,11 +108,11 @@ export default function FirstVisitForm({ onComplete }: Props) {
       const data = await res.json();
 
       startBackgroundMusic("/song.mp3");
-      localStorage.setItem("guest_name", name.trim());
-      localStorage.setItem("guest_city", selectedCity.name);
-      localStorage.setItem("guest_email", email.trim().toLowerCase());
-      localStorage.setItem("guest_mobile", mobile.trim());
-      if (data.session_token) localStorage.setItem("session_token", data.session_token);
+      safeSetItem("guest_name", name.trim());
+      safeSetItem("guest_city", selectedCity.name);
+      safeSetItem("guest_email", email.trim().toLowerCase());
+      safeSetItem("guest_mobile", mobile.trim());
+      if (data.session_token) safeSetItem("session_token", data.session_token);
       onComplete(name.trim());
     } catch {
       setError("Something went wrong — please try again.");

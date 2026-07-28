@@ -6,6 +6,7 @@ import Nav from "@/components/ui/Nav";
 import ParticleCanvas from "@/components/ui/ParticleCanvas";
 import CinematicSlideshow from "@/components/ui/CinematicSlideshow";
 import type { DrivePhoto } from "@/lib/drive";
+import { safeGetItem } from "@/lib/storage";
 
 interface TimeLeft {
   days: number;
@@ -137,9 +138,9 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
 
   // Fetch engagement photos for the slideshow — use device-specific folder
   useEffect(() => {
-    const sessionToken = localStorage.getItem("session_token");
+    const sessionToken = safeGetItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
-    const devVp = localStorage.getItem("dev_viewport");
+    const devVp = safeGetItem("dev_viewport");
     const isMobile = devVp ? devVp === "mobile" : window.innerWidth < 768;
     const device = isMobile ? "mobile" : "desktop";
     fetch(`/api/drive-photos?folder=engagement&device=${device}&view=albums`, { headers })
