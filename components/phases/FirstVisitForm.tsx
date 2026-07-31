@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { searchCities, type City } from "@/lib/cities";
+import { searchCities, isIndianCity, type City } from "@/lib/cities";
 import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
 import { safeSetItem } from "@/lib/storage";
 
@@ -29,10 +29,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
     }
     const results = searchCities(cityQuery);
 
-    // Auto-select when typed text is an exact match (case-insensitive)
+    // Auto-select when typed text is an exact match of a real Indian city.
+    // (Otherwise a partial prefix like "Hyder" could match an obscure
+    // non-Indian town in the world list — e.g. "Hyder" — and silently lock
+    // the field instead of requiring a real city like "Hyderabad".)
     const q = cityQuery.trim().toLowerCase();
     const exactMatch = results.find((c) => c.name.toLowerCase() === q);
-    if (exactMatch) {
+    if (exactMatch && isIndianCity(exactMatch.name)) {
       setSelectedCity(exactMatch);
       setCityQuery(exactMatch.name); // normalize casing
       setSuggestions([]);
