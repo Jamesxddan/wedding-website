@@ -1,6 +1,6 @@
 "use client";
 
-import Reveal from "@/components/ui/Reveal";
+import AnimatedSection from "@/components/ui/AnimatedSection";
 import { useSiteContent } from "@/lib/SiteContentContext";
 
 // Lat/lng are fixed to actual venue coordinates — not editable via CMS
@@ -15,18 +15,17 @@ interface VenueCardProps {
 }
 
 function VenueCard({ tag, name, address, time, lat, lng, accent }: VenueCardProps) {
-  const accentBg     = accent === "blush" ? "bg-blush/20"    : "bg-sage/20";
-  const accentBorder = accent === "blush" ? "border-blush"   : "border-sage";
+  const accentBorder = accent === "blush" ? "border-blush/40"   : "border-sage/40";
   const accentText   = accent === "blush" ? "text-deep-rose" : "text-sage";
   const mapsNav = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   const embedSrc = `https://maps.google.com/maps?q=${lat},${lng}&output=embed&z=16`;
 
   return (
-    <div className={`flex flex-col rounded-2xl overflow-hidden border ${accentBorder} shadow-md`}>
+    <div className={`flex flex-col rounded-2xl overflow-hidden border ${accentBorder} shadow-lg shadow-deep-rose/5 bg-white/70 backdrop-blur-md`}>
       <div className="relative w-full h-56">
         <iframe title={`Map of ${name}`} src={embedSrc} className="absolute inset-0 w-full h-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
       </div>
-      <div className={`${accentBg} p-7 flex flex-col gap-4 flex-1`}>
+      <div className="bg-white/40 backdrop-blur-sm p-7 flex flex-col gap-4 flex-1">
         <div>
           <span className={`font-heading text-xs tracking-widest uppercase ${accentText}`}>{tag}</span>
           <h3 className="font-heading text-2xl text-deep-rose mt-1">{name}</h3>
@@ -61,17 +60,17 @@ export default function Venue() {
   return (
     <section id="venue" className="py-24 px-6 bg-cream">
       <div className="max-w-5xl mx-auto">
-        <Reveal>
+        <AnimatedSection variant="fade-up" className="text-center">
           <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">{venue.heading}</h2>
           <p className="font-script italic text-sage text-center text-xl mb-16">{venue.subtitle}</p>
-        </Reveal>
+        </AnimatedSection>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Reveal>
+          <AnimatedSection variant="fade-left" as="div">
             <VenueCard {...venue.ceremony} lat={VENUE_COORDS.ceremony.lat} lng={VENUE_COORDS.ceremony.lng} accent="blush" />
-          </Reveal>
-          <Reveal delay={100}>
+          </AnimatedSection>
+          <AnimatedSection variant="fade-right" delay={0.1} as="div">
             <VenueCard {...venue.reception} lat={VENUE_COORDS.reception.lat} lng={VENUE_COORDS.reception.lng} accent="sage" />
-          </Reveal>
+          </AnimatedSection>
         </div>
       </div>
     </section>

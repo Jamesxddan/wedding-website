@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wall of Love — Premium Concept</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=Caveat:wght@400;600;700&family=Marcellus+SC&family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #1a1612;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ─── Theme Toggle ─── */
+  .theme-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    background: rgba(26,22,18,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #2a2420;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .theme-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1px solid #3a3430;
+    background: transparent;
+    color: #8a7a6a;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.3px;
+  }
+  .theme-btn:hover { border-color: #b56576; color: #c8b8a8; }
+  .theme-btn.active {
+    background: linear-gradient(135deg, #8B4A6B, #b56576);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  /* ─── Section Wrapper ─── */
+  .wall-section {
+    width: 100%;
+    max-width: 1000px;
+    padding: 50px 24px 80px;
+    display: none;
+  }
+  .wall-section.active { display: block; }
+
+  /* ─── Wall Header ─── */
+  .wall-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .wall-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    color: #c8b8a8;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .wall-header .count {
+    font-size: 13px;
+    color: #6a5a4a;
+    letter-spacing: 1px;
+  }
+  .wall-header .count span {
+    color: #b56576;
+    font-weight: 600;
+  }
+
+  /* ================================================================
+     THEME 1 — VELVET WALL (Dark Romance)
+     Rich burgundy wallpaper, ornate gold frames, moody lighting
+     ================================================================ */
+  #theme-velvet {
+    min-height: 100vh;
+  }
+  .velvet-bg {
+    background:
+      radial-gradient(ellipse 120% 80% at 50% 0%, rgba(139,74,107,0.08) 0%, transparent 100%),
+      radial-gradient(ellipse 80% 60% at 20% 100%, rgba(60,30,40,0.3) 0%, transparent 100%),
+      linear-gradient(180deg, #1a1015 0%, #2a1820 40%, #1e1418 100%);
+    position: relative;
+    padding: 40px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(139,74,107,0.15);
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.3);
+  }
+
+  /* damask pattern overlay */
+  .velvet-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 10 Q60 30 50 50 Q40 30 50 10z M50 50 Q60 70 50 90 Q40 70 50 50z M10 50 Q30 60 50 50 Q30 40 10 50z M50 50 Q70 60 90 50 Q70 40 50 50z' fill='%23ffffff'/%3E%3C/svg%3E");
+    background-size: 120px 120px;
+    pointer-events: none;
+  }
+
+  .velvet-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Ornate Frame Card ─── */
+  .frame-card {
+    width: 260px;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s;
+    cursor: default;
+  }
+  .frame-card:hover {
+    transform: scale(1.04) !important;
+    z-index: 5;
+  }
+
+  .frame-card .frame-outer {
+    padding: 10px;
+    border-radius: 4px;
+    background: linear-gradient(145deg, #8a7a5a, #6a5a3a, #8a7a5a);
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    position: relative;
+  }
+  /* gold leaf shimmer */
+  .frame-card .frame-outer::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 3px;
+    background: linear-gradient(135deg,
+      transparent 30%,
+      rgba(255,215,0,0.04) 40%,
+      transparent 50%,
+      rgba(255,215,0,0.03) 60%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .frame-card .frame-inner {
+    background: #faf5ec;
+    padding: 16px 18px 14px;
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .frame-card .hanging-ring {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    border: 2px solid #8a7a5a;
+    border-radius: 50%;
+    z-index: 2;
+    background: transparent;
+    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  }
+  .frame-card .hanging-ring::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 3px;
+    width: 1px;
+    height: 10px;
+    background: rgba(138,122,90,0.3);
+  }
+
+  .frame-card .avatar-frame {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .frame-card .avatar-frame .initials {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Marcellus SC', serif;
+    font-size: 13px;
+    color: #fff;
+    font-weight: 600;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .frame-card .avatar-frame .info {
+    flex: 1;
+  }
+  .frame-card .avatar-frame .name {
+    font-family: 'Marcellus SC', serif;
+    font-size: 12px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #2a1a1a;
+  }
+  .frame-card .avatar-frame .date {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    color: #b0a090;
+    letter-spacing: 0.5px;
+  }
+  .frame-card .msg {
+    font-family: 'Caveat', cursive;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #2a1a1a;
+    margin-top: 2px;
+  }
+  .frame-card .sticker-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fdf6ff;
+    border: 1px solid #e8d8f0;
+    border-radius: 100px;
+    padding: 3px 12px 3px 8px;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* Frame color variants */
+  .frame-card.gold .frame-outer {
+    background: linear-gradient(145deg, #c8a86a, #a88848, #c8a86a);
+  }
+  .frame-card.silver .frame-outer {
+    background: linear-gradient(145deg, #b0b0b0, #909090, #b0b0b0);
+  }
+  .frame-card.rose .frame-outer {
+    background: linear-gradient(145deg, #c89090, #a87070, #c89090);
+  }
+  .frame-card.sage .frame-outer {
+    background: linear-gradient(145deg, #8a9e80, #6a7e60, #8a9e80);
+  }
+  .frame-card.dark .frame-outer {
+    background: linear-gradient(145deg, #4a3a3a, #2a1a1a, #4a3a3a);
+  }
+
+  /* Confetti overlay for new posts */
+  .confetti-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: -20px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ================================================================
+     THEME 2 — GARDEN WALL (Botanical)
+     Stone wall texture, ivy accents, hanging botanical tags
+     ================================================================ */
+  #theme-garden {
+    min-height: 100vh;
+  }
+  .garden-bg {
+    background:
+      radial-gradient(ellipse 100% 60% at 50% 0%, rgba(100,140,80,0.06) 0%, transparent 100%),
+      linear-gradient(180deg, #1a1a16, #22201a, #1a1a16);
+    position: relative;
+    padding: 40px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(100,140,80,0.1);
+  }
+
+  /* stone texture */
+  .garden-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background-image:
+      /* horizontal mortar lines */
+      repeating-linear-gradient(0deg, transparent, transparent 58px, rgba(255,255,255,0.015) 58px, rgba(255,255,255,0.015) 60px),
+      /* vertical mortar lines (staggered) */
+      repeating-linear-gradient(90deg, transparent, transparent 58px, rgba(255,255,255,0.012) 58px, rgba(255,255,255,0.012) 60px),
+      /* random stone variations */
+      radial-gradient(ellipse 70% 50% at 15% 20%, rgba(255,255,255,0.02) 0%, transparent 100%),
+      radial-gradient(ellipse 50% 60% at 65% 45%, rgba(0,0,0,0.03) 0%, transparent 100%),
+      radial-gradient(ellipse 60% 40% at 40% 75%, rgba(255,255,255,0.015) 0%, transparent 100%),
+      radial-gradient(ellipse 40% 50% at 80% 15%, rgba(0,0,0,0.02) 0%, transparent 100%),
+      linear-gradient(180deg, #3a3830, #323028, #2a2822);
+    pointer-events: none;
+  }
+
+  .garden-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Garden Tag Card ─── */
+  .tag-card {
+    width: 240px;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: default;
+  }
+  .tag-card:hover {
+    transform: translateY(-6px) !important;
+  }
+
+  .tag-card .ribbon {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    z-index: 2;
+  }
+
+  .tag-card .tag-body {
+    background: #fffef5;
+    border-radius: 8px 8px 12px 12px;
+    padding: 18px 18px 14px;
+    box-shadow:
+      0 4px 20px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+    border: 1px solid rgba(200,190,170,0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  /* paper fiber texture */
+  .tag-card .tag-body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+      transparent, transparent 3px,
+      rgba(0,0,0,0.005) 3px, rgba(0,0,0,0.005) 4px
+    );
+    pointer-events: none;
+  }
+
+  .tag-card .tag-body .avatar-garden {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Caveat', cursive;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .tag-card .tag-body .name-garden {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 16px;
+    color: #3a2a1a;
+  }
+  .tag-card .tag-body .date-garden {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    color: #b0a090;
+  }
+  .tag-card .tag-body .msg-garden {
+    font-family: 'Caveat', cursive;
+    font-size: 17px;
+    line-height: 1.5;
+    color: #2a1a1a;
+    margin-top: 6px;
+  }
+
+  /* leaf accent */
+  .tag-card .leaf-accent {
+    position: absolute;
+    font-size: 16px;
+    opacity: 0.25;
+    z-index: 1;
+  }
+  .tag-card .leaf-accent.tl { top: -4px; left: -4px; transform: rotate(-20deg); }
+  .tag-card .leaf-accent.br { bottom: -4px; right: -4px; transform: rotate(160deg); }
+
+  /* ribbon color variants */
+  .tag-card.ribbon-blush .ribbon::before { content: '🎀'; }
+  .tag-card.ribbon-gold .ribbon::before { content: '🎀'; filter: hue-rotate(30deg); }
+  .tag-card.ribbon-sage .ribbon::before { content: '🎀'; filter: hue-rotate(80deg); }
+  .tag-card.ribbon-lavender .ribbon::before { content: '🎀'; filter: hue-rotate(220deg); }
+
+  /* ================================================================
+     THEME 3 — CORK & POLAROID MIX (Vintage Collage)
+     Rich cork board with polaroids, notes, and clippings mixed
+     ================================================================ */
+  #theme-collage {
+    min-height: 100vh;
+  }
+
+  .collage-bg {
+    background: #4a3a2a;
+    background-image:
+      repeating-linear-gradient(90deg, transparent, transparent 80px, rgba(0,0,0,0.03) 80px, rgba(0,0,0,0.03) 82px),
+      repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(0,0,0,0.03) 80px, rgba(0,0,0,0.03) 82px),
+      radial-gradient(ellipse 80% 60% at 30% 20%, rgba(255,200,150,0.03) 0%, transparent 100%),
+      radial-gradient(ellipse 60% 70% at 70% 80%, rgba(0,0,0,0.05) 0%, transparent 100%),
+      linear-gradient(135deg, #b8956a, #a8885a, #b8956a, #a08050);
+    border-radius: 18px;
+    padding: 50px 30px;
+    box-shadow:
+      inset 0 2px 40px rgba(0,0,0,0.3),
+      0 8px 40px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .collage-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    background:
+      repeating-conic-gradient(rgba(0,0,0,0.015) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+    pointer-events: none;
+  }
+
+  .collage-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    background:
+      radial-gradient(ellipse 100% 50% at 50% 0%, rgba(255,210,160,0.05) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .collage-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Mixed Card Types ─── */
+  /* Polaroid style */
+  .collage-item {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s;
+    cursor: default;
+    position: relative;
+  }
+  .collage-item:hover {
+    transform: scale(1.05) !important;
+    z-index: 10;
+  }
+
+  .collage-item.polaroid-mix {
+    background: #faf5ec;
+    padding: 8px 8px 46px;
+    box-shadow:
+      2px 3px 12px rgba(0,0,0,0.15),
+      1px 1px 3px rgba(0,0,0,0.05);
+    width: 190px;
+  }
+  .collage-item.polaroid-mix .polaroid-photo {
+    height: 110px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    position: relative;
+    overflow: hidden;
+  }
+  .collage-item.polaroid-mix .polaroid-photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.04) 100%);
+  }
+  .collage-item.polaroid-mix .photo-initials {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  .collage-item.polaroid-mix .polaroid-msg {
+    font-family: 'Caveat', cursive;
+    font-size: 15px;
+    line-height: 1.4;
+    text-align: center;
+    padding: 6px 2px 2px;
+    color: #3a2a2a;
+  }
+  .collage-item.polaroid-mix .polaroid-name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    color: #5a3a2a;
+    position: absolute;
+    bottom: 8px;
+    left: 0; right: 0;
+  }
+
+  /* Sticky note style */
+  .collage-item.sticky-mix {
+    padding: 16px 18px;
+    border-radius: 3px;
+    width: 200px;
+    box-shadow:
+      2px 3px 10px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.3);
+    position: relative;
+  }
+  .collage-item.sticky-mix .pin-icon {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+  }
+  .collage-item.sticky-mix .sticky-name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 16px;
+    color: #2a1a1a;
+  }
+  .collage-item.sticky-mix .sticky-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    color: #9a8a7a;
+  }
+  .collage-item.sticky-mix .sticky-msg {
+    font-family: 'Caveat', cursive;
+    font-size: 17px;
+    line-height: 1.45;
+    color: #2a1a1a;
+    margin-top: 4px;
+  }
+  .collage-item.sticky-mix.sticky-pink { background: #fef0f0; }
+  .collage-item.sticky-mix.sticky-mint { background: #effaf3; }
+  .collage-item.sticky-mix.sticky-lavender { background: #f5f0fc; }
+  .collage-item.sticky-mix.sticky-peach { background: #fef5e6; }
+  .collage-item.sticky-mix.sticky-blue { background: #edf4fc; }
+
+  /* Photo print style */
+  .collage-item.photo-print {
+    width: 160px;
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow:
+      2px 3px 14px rgba(0,0,0,0.12),
+      1px 1px 4px rgba(0,0,0,0.05);
+  }
+  .collage-item.photo-print .print-gradient {
+    height: 100px;
+    display: flex;
+    align-items: flex-end;
+    padding: 8px;
+    position: relative;
+  }
+  .collage-item.photo-print .print-gradient .print-name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .collage-item.photo-print .print-gradient .print-msg-overlay {
+    font-family: 'Caveat', cursive;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    max-width: 70%;
+    text-align: right;
+  }
+
+  /* Entrance animation */
+  .collage-item {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    animation: itemEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .collage-item:nth-child(1) { animation-delay: 0.05s; }
+  .collage-item:nth-child(2) { animation-delay: 0.12s; }
+  .collage-item:nth-child(3) { animation-delay: 0.19s; }
+  .collage-item:nth-child(4) { animation-delay: 0.26s; }
+  .collage-item:nth-child(5) { animation-delay: 0.33s; }
+  .collage-item:nth-child(6) { animation-delay: 0.40s; }
+  .collage-item:nth-child(7) { animation-delay: 0.47s; }
+  .collage-item:nth-child(8) { animation-delay: 0.54s; }
+  .collage-item:nth-child(9) { animation-delay: 0.61s; }
+  .collage-item:nth-child(10) { animation-delay: 0.68s; }
+
+  @keyframes itemEnter {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .frame-card, .tag-card {
+    opacity: 0;
+    animation: itemEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .frame-card:nth-child(1) { animation-delay: 0.05s; }
+  .frame-card:nth-child(2) { animation-delay: 0.12s; }
+  .frame-card:nth-child(3) { animation-delay: 0.19s; }
+  .frame-card:nth-child(4) { animation-delay: 0.26s; }
+  .frame-card:nth-child(5) { animation-delay: 0.33s; }
+  .frame-card:nth-child(6) { animation-delay: 0.40s; }
+  .frame-card:nth-child(7) { animation-delay: 0.47s; }
+  .frame-card:nth-child(8) { animation-delay: 0.54s; }
+
+  .tag-card:nth-child(1) { animation-delay: 0.06s; }
+  .tag-card:nth-child(2) { animation-delay: 0.13s; }
+  .tag-card:nth-child(3) { animation-delay: 0.20s; }
+  .tag-card:nth-child(4) { animation-delay: 0.27s; }
+  .tag-card:nth-child(5) { animation-delay: 0.34s; }
+  .tag-card:nth-child(6) { animation-delay: 0.41s; }
+  .tag-card:nth-child(7) { animation-delay: 0.48s; }
+
+  /* ─── Footer / picker ─── */
+  .picker-area {
+    text-align: center;
+    padding: 30px;
+    background: #1a1612;
+    width: 100%;
+    border-top: 1px solid #2a2420;
+  }
+  .picker-area h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: #c8b8a8;
+    margin-bottom: 14px;
+  }
+  .picker-area .pick-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .picker-area .pick-buttons button {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 100px;
+    border: 1.5px solid #3a3430;
+    background: transparent;
+    color: #b8a898;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .picker-area .pick-buttons button:hover {
+    border-color: #b56576;
+    color: #e8c0b0;
+    background: rgba(181,101,118,0.08);
+  }
+  .pick-result {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #b56576;
+    font-weight: 500;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ─── Theme Tabs ─── -->
+<div class="theme-bar">
+  <button class="theme-btn active" data-theme="velvet">✨ Velvet Gallery</button>
+  <button class="theme-btn" data-theme="garden">🌿 Garden Tags</button>
+  <button class="theme-btn" data-theme="collage">📌 Vintage Collage</button>
+</div>
+
+<!-- ================================================================
+     THEME 1 — VELVET GALLERY WALL
+     ================================================================ -->
+<section id="theme-velvet" class="wall-section active">
+  <div class="wall-header">
+    <h2>Wall of Love</h2>
+    <p class="count"><span>8</span> blessings from your loved ones</p>
+  </div>
+  <div class="velvet-bg">
+    <div class="velvet-grid">
+      <div class="frame-card gold" style="transform: rotate(-1.5deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#b56576,#8B4A6B)">M</div>
+              <div class="info">
+                <div class="name">Mum &amp; Dad</div>
+                <div class="date">25 Jul 2026</div>
+              </div>
+            </div>
+            <div class="msg">So proud of you both! May God bless your union abundantly 🕊️</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card silver" style="transform: rotate(1.2deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#4a8c6f,#2d6b4f)">S</div>
+              <div class="info">
+                <div class="name">Shiny</div>
+                <div class="date">26 Jul 2026</div>
+              </div>
+            </div>
+            <div class="msg">So happy for you both! Welcome to the family, James 🤗💕</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card rose" style="transform: rotate(-0.8deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#8a6e9e,#6a4e7e)">R</div>
+              <div class="info">
+                <div class="name">Rachel</div>
+                <div class="date">27 Jul 2026</div>
+              </div>
+            </div>
+            <div class="msg">Such a beautiful couple! Wishing you a lifetime of togetherness 🫶💒</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card sage" style="transform: rotate(1.8deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#c4906a,#a07050)">D</div>
+              <div class="info">
+                <div class="name">David</div>
+                <div class="date">28 Jul 2026</div>
+              </div>
+            </div>
+            <div class="sticker-badge">🎊 Congrats!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card dark" style="transform: rotate(-2deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#5a8aaa,#3a6a8a)">P</div>
+              <div class="info">
+                <div class="name">Priya</div>
+                <div class="date">29 Jul 2026</div>
+              </div>
+            </div>
+            <div class="sticker-badge">💕 Love!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card gold" style="transform: rotate(0.5deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#b08a5a,#8a6a3a)">A</div>
+              <div class="info">
+                <div class="name">Aunty Grace</div>
+                <div class="date">29 Jul 2026</div>
+              </div>
+            </div>
+            <div class="msg">God bless the happy couple! 🙏🌹</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-card silver" style="transform: rotate(-1deg);">
+        <div class="hanging-ring"></div>
+        <div class="frame-outer">
+          <div class="frame-inner">
+            <div class="avatar-frame">
+              <div class="initials" style="background:linear-gradient(135deg,#b56576,#8B4A6B)">J</div>
+              <div class="info">
+                <div class="name">Joseph</div>
+                <div class="date">30 Jul 2026</div>
+              </div>
+            </div>
+            <div class="msg">Much love to you both! Wishing you a wonderful journey ahead ✨</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     THEME 2 — GARDEN WALL
+     ================================================================ -->
+<section id="theme-garden" class="wall-section">
+  <div class="wall-header">
+    <h2>Garden of Blessings</h2>
+    <p class="count"><span>7</span> heartfelt wishes from your loved ones</p>
+  </div>
+  <div class="garden-bg">
+    <div class="garden-grid">
+      <div class="tag-card ribbon-blush" style="transform: rotate(-1deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🌿</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#b56576,#8B4A6B)">M</div>
+            <div>
+              <div class="name-garden">Mum &amp; Dad</div>
+              <div class="date-garden">25 Jul 2026</div>
+            </div>
+          </div>
+          <div class="msg-garden">So proud of you both! May God bless your union abundantly 🕊️</div>
+        </div>
+        <span class="leaf-accent br">🌱</span>
+      </div>
+
+      <div class="tag-card ribbon-gold" style="transform: rotate(1.5deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🍃</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#4a8c6f,#2d6b4f)">S</div>
+            <div>
+              <div class="name-garden">Shiny</div>
+              <div class="date-garden">26 Jul 2026</div>
+            </div>
+          </div>
+          <div class="msg-garden">So happy for you! Welcome to the family, James 🤗💕</div>
+        </div>
+        <span class="leaf-accent br">🌿</span>
+      </div>
+
+      <div class="tag-card ribbon-sage" style="transform: rotate(-0.5deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🌱</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#8a6e9e,#6a4e7e)">R</div>
+            <div>
+              <div class="name-garden">Rachel</div>
+              <div class="date-garden">27 Jul 2026</div>
+            </div>
+          </div>
+          <div class="msg-garden">Beautiful couple! Wishing you a lifetime of togetherness 🫶</div>
+        </div>
+        <span class="leaf-accent br">🍃</span>
+      </div>
+
+      <div class="tag-card ribbon-lavender" style="transform: rotate(1.8deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🌿</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#c4906a,#a07050)">D</div>
+            <div>
+              <div class="name-garden">David</div>
+              <div class="date-garden">28 Jul 2026</div>
+            </div>
+          </div>
+          <div class="sticker-badge">🎊 Congrats!</div>
+        </div>
+        <span class="leaf-accent br">🌱</span>
+      </div>
+
+      <div class="tag-card ribbon-blush" style="transform: rotate(-1.3deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🍃</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#5a8aaa,#3a6a8a)">P</div>
+            <div>
+              <div class="name-garden">Priya</div>
+              <div class="date-garden">29 Jul 2026</div>
+            </div>
+          </div>
+          <div class="sticker-badge">💕 Love!</div>
+        </div>
+        <span class="leaf-accent br">🌿</span>
+      </div>
+
+      <div class="tag-card ribbon-gold" style="transform: rotate(0.7deg);">
+        <span class="ribbon"></span>
+        <span class="leaf-accent tl">🌱</span>
+        <div class="tag-body">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-garden" style="background:linear-gradient(135deg,#b08a5a,#8a6a3a)">A</div>
+            <div>
+              <div class="name-garden">Aunty Grace</div>
+              <div class="date-garden">29 Jul 2026</div>
+            </div>
+          </div>
+          <div class="msg-garden">God bless the happy couple! 🙏🌹</div>
+        </div>
+        <span class="leaf-accent br">🍃</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     THEME 3 — VINTAGE COLLAGE (Cork + Polaroid + Notes)
+     ================================================================ -->
+<section id="theme-collage" class="wall-section">
+  <div class="wall-header">
+    <h2>Our Memory Wall</h2>
+    <p class="count"><span>9</span> precious messages pinned with love</p>
+  </div>
+  <div class="collage-bg">
+    <div class="collage-grid">
+      <!-- Polaroid 1 -->
+      <div class="collage-item polaroid-mix" style="transform: rotate(-3deg);">
+        <div class="polaroid-photo" style="background:linear-gradient(135deg,#fce4d6,#edc8b0);">
+          <div class="photo-initials" style="background:linear-gradient(135deg,#b56576,#8B4A6B)">M</div>
+        </div>
+        <div class="polaroid-msg">So proud of you both! 🕊️</div>
+        <div class="polaroid-name">Mum &amp; Dad · 25 Jul</div>
+      </div>
+
+      <!-- Sticky note 1 -->
+      <div class="collage-item sticky-mix sticky-pink" style="transform: rotate(1.5deg);">
+        <span class="pin-icon">📌</span>
+        <div>
+          <span class="sticky-name">Shiny</span>
+          <span class="sticky-date">· 26 Jul</span>
+        </div>
+        <div class="sticky-msg">Welcome to the family, James! So happy for you both 🤗💕</div>
+      </div>
+
+      <!-- Polaroid 2 -->
+      <div class="collage-item polaroid-mix" style="transform: rotate(2deg);">
+        <div class="polaroid-photo" style="background:linear-gradient(135deg,#d4e8d0,#b8d4b0);">
+          <div class="photo-initials" style="background:linear-gradient(135deg,#4a8c6f,#2d6b4f)">R</div>
+        </div>
+        <div class="polaroid-msg">Beautiful couple! 🫶💒</div>
+        <div class="polaroid-name">Rachel · 27 Jul</div>
+      </div>
+
+      <!-- Sticky note 2 -->
+      <div class="collage-item sticky-mix sticky-mint" style="transform: rotate(-2deg);">
+        <span class="pin-icon">📌</span>
+        <div>
+          <span class="sticky-name">David</span>
+          <span class="sticky-date">· 28 Jul</span>
+        </div>
+        <div class="sticker-badge">🎊 Congrats!</div>
+      </div>
+
+      <!-- Photo print -->
+      <div class="collage-item photo-print" style="transform: rotate(-1deg);">
+        <div class="print-gradient" style="background:linear-gradient(135deg,#2a4a3a,#1a3a2a);">
+          <span class="print-name">Priya</span>
+          <span class="print-msg-overlay">Congrats! 🎊</span>
+        </div>
+      </div>
+
+      <!-- Sticky note 3 -->
+      <div class="collage-item sticky-mix sticky-lavender" style="transform: rotate(1.2deg);">
+        <span class="pin-icon">📌</span>
+        <div>
+          <span class="sticky-name">Aunty Grace</span>
+          <span class="sticky-date">· 29 Jul</span>
+        </div>
+        <div class="sticky-msg">God bless the happy couple! May your home be filled with joy 🙏</div>
+      </div>
+
+      <!-- Polaroid 3 -->
+      <div class="collage-item polaroid-mix" style="transform: rotate(-2.5deg);">
+        <div class="polaroid-photo" style="background:linear-gradient(135deg,#e8d4f0,#d4bce0);">
+          <div class="photo-initials" style="background:linear-gradient(135deg,#8a6e9e,#6a4e7e)">J</div>
+        </div>
+        <div class="polaroid-msg">Much love to you both! 🌹</div>
+        <div class="polaroid-name">Joseph · 30 Jul</div>
+      </div>
+
+      <!-- Sticky note 4 -->
+      <div class="collage-item sticky-mix sticky-peach" style="transform: rotate(-0.5deg);">
+        <span class="pin-icon">📌</span>
+        <div>
+          <span class="sticky-name">Sarah</span>
+          <span class="sticky-date">· 30 Jul</span>
+        </div>
+        <div class="sticky-msg">Truly a match made in heaven! Many blessings ✨💍</div>
+      </div>
+
+      <!-- Sticky note 5 -->
+      <div class="collage-item sticky-mix sticky-blue" style="transform: rotate(1.8deg);">
+        <span class="pin-icon">📌</span>
+        <div>
+          <span class="sticky-name">Samuel</span>
+          <span class="sticky-date">· 30 Jul</span>
+        </div>
+        <div class="sticker-badge">🥂 Cheers!</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Picker ─── -->
+<div class="picker-area">
+  <h3>Which design direction should we build?</h3>
+  <div class="pick-buttons">
+    <button onclick="pickTheme('✨ Velvet Gallery — Ornate frames, moody dark romance')">✨ Velvet Gallery</button>
+    <button onclick="pickTheme('🌿 Garden Tags — Ribbon tags on stone wall')">🌿 Garden Tags</button>
+    <button onclick="pickTheme('📌 Vintage Collage — Mixed polaroids, notes & prints on cork')">📌 Vintage Collage</button>
+  </div>
+  <div id="pick-result-v3" class="pick-result"></div>
+</div>
+
+<script>
+  // Theme tab switching
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.wall-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('theme-' + btn.dataset.theme).classList.add('active');
+    });
+  });
+
+  function pickTheme(name) {
+    document.getElementById('pick-result-v3').textContent = `✨ You picked ${name}! Tell me in the chat and I'll build the real component.`;
+  }
+</script>
+
+</body>
+</html>

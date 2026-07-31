@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { safeGetItem } from "@/lib/storage";
+import { GOLD_GRADIENT, DamaskDivider, ConfettiBurst } from "@/components/ui/OrnamentalMotifs";
+import AnimatedSection from "@/components/ui/AnimatedSection";
 
 interface Comment {
   id: string;
@@ -32,6 +34,17 @@ const STICKERS = [
   { id: "wishes", label: "Best Wishes", emoji: "⭐" },
 ];
 
+/** Frame colours cycled per card */
+const FRAME_STYLES = [
+  { name: "gold", gradient: "linear-gradient(145deg, #c8a86a, #a88848, #c8a86a)" },
+  { name: "silver", gradient: "linear-gradient(145deg, #b0b0b0, #909090, #b0b0b0)" },
+  { name: "rose", gradient: "linear-gradient(145deg, #c89090, #a87070, #c89090)" },
+  { name: "sage", gradient: "linear-gradient(145deg, #8a9e80, #6a7e60, #8a9e80)" },
+  { name: "dark", gradient: "linear-gradient(145deg, #4a3a3a, #2a1a1a, #4a3a3a)" },
+];
+
+const CARD_ROTATIONS = ["-0.8deg", "0.6deg", "-1.2deg", "0.9deg", "-0.5deg", "1.1deg", "-0.3deg", "0.4deg"];
+
 function authHeaders(): HeadersInit {
   const token = typeof window !== "undefined" ? safeGetItem("session_token") : null;
   return { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
@@ -61,27 +74,16 @@ interface Props {
   isOwner?: boolean;
 }
 
-// ─── Decorative divider ──────────────────────────────────────────
-function DecorativeDivider() {
-  return (
-    <div className="flex items-center justify-center gap-3 mb-6">
-      <span className="h-px w-12 bg-gradient-to-r from-transparent via-sage/30 to-transparent" />
-      <span className="text-2xl text-sage/60" aria-hidden>🌿</span>
-      <span className="h-px w-12 bg-gradient-to-r from-transparent via-sage/30 to-transparent" />
-    </div>
-  );
-}
-
-// ─── Stagger animation on mount ──────────────────────────────────
-function useStagger(delay = 60) {
+// ─── Stagger animation ───────────────────────────────────────────
+function useStagger(delay = 80) {
   const [visible, setVisible] = useState<Set<string>>(new Set());
   const addId = useCallback((id: string) => {
     setVisible((prev) => { if (prev.has(id)) return prev; const n = new Set(prev); n.add(id); return n; });
   }, []);
   const style = useCallback((id: string): React.CSSProperties => ({
     opacity: visible.has(id) ? 1 : 0,
-    transform: visible.has(id) ? "translateY(0) rotate(0deg)" : "translateY(16px) rotate(-0.5deg)",
-    transition: `opacity 0.45s ease, transform 0.5s ease`,
+    transform: visible.has(id) ? "translateY(0) scale(1)" : "translateY(16px) scale(0.95)",
+    transition: `opacity 0.5s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)`,
   }), [visible]);
 
   const enter = useCallback((id: string, i: number) => {
@@ -91,9 +93,7 @@ function useStagger(delay = 60) {
   return { enter, style };
 }
 
-// ─── Guest Book Card ─────────────────────────────────────────────
-const CARD_ROTATIONS = ["-0.3deg", "0.2deg", "-0.1deg", "0.4deg", "-0.2deg", "0.1deg"];
-
+// ─── Main Component ──────────────────────────────────────────────
 export default function Comments({ guestName, guestId, isOwner }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [message, setMessage] = useState("");
@@ -105,9 +105,10 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   const [emojiTab, setEmojiTab] = useState(0);
   const [showStickers, setShowStickers] = useState(false);
   const [, setTick] = useState(0);
+  const [confetti, setConfetti] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
-  const { enter: enterStagger, style: staggerStyle } = useStagger(70);
+  const { enter: enterStagger, style: staggerStyle } = useStagger(80);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/comments");
@@ -121,7 +122,6 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     return () => clearInterval(t);
   }, []);
 
-  // Stagger animation on new comments
   useEffect(() => {
     comments.forEach((c, i) => enterStagger(c.id, i));
   }, [comments, enterStagger]);
@@ -158,7 +158,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
       body: JSON.stringify({ message: `[sticker:${sticker.id}]` }),
     });
     setPosting(false);
-    if (res.ok) { await load(); }
+    if (res.ok) { setConfetti(true); await load(); }
     else {
       const d = await res.json().catch(() => ({}));
       if (d.error === "blocked_peace") setError(d.message);
@@ -177,7 +177,7 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
       body: JSON.stringify({ message }),
     });
     setPosting(false);
-    if (res.ok) { setMessage(""); await load(); }
+    if (res.ok) { setMessage(""); setConfetti(true); await load(); }
     else {
       const d = await res.json();
       if (d.error === "blocked_peace") setError(d.message);
@@ -213,230 +213,432 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
     await load();
   }
 
-  // Share your message UI when not logged in
-  const NotLoggedInPrompt = () => (
-    <div className="text-center py-12 px-6 bg-white/60 rounded-2xl border border-dashed border-champagne/60">
-      <span className="text-4xl block mb-3">💌</span>
-      <p className="font-body text-deep-rose/50 text-sm mb-1">Want to leave a message?</p>
-      <p className="font-body text-deep-rose/40 text-xs">
-        Register your name on the home page to share your wishes.
-      </p>
-    </div>
-  );
-
+  // ── Shared button styles ───────────────────────────────────────
   const iconBtn: React.CSSProperties = {
-    fontSize: 20, background: "#faf5f0", border: "none", borderRadius: 8,
-    width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 18, background: "rgba(139,74,107,0.06)", border: "1px solid rgba(139,74,107,0.12)",
+    borderRadius: 8, width: 34, height: 34, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "#8B4A6B", transition: "all 0.2s",
   };
 
   const pickerBox: React.CSSProperties = {
-    position: "absolute", bottom: "calc(100% + 8px)", left: 0, background: "#fff",
-    border: "1px solid #e8ddd4", borderRadius: 14, padding: 12, width: 280,
-    boxShadow: "0 4px 24px rgba(0,0,0,0.10)", zIndex: 100,
+    position: "absolute", bottom: "calc(100% + 8px)", left: 0, background: "#faf5ec",
+    border: "1px solid rgba(180,150,130,0.15)", borderRadius: 14, padding: 12, width: 280,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 100,
   };
 
+  const goldGradient = GOLD_GRADIENT;
+
   return (
-    <section id="wall-of-love" className="py-24 px-6" style={{ background: "linear-gradient(180deg, #faf8f5 0%, #f5f0eb 100%)" }}>
-      <div className="max-w-2xl mx-auto">
-        {/* Heading */}
-        <div className="text-center mb-6">
-          <h2 className="font-heading text-3xl md:text-4xl text-deep-rose mb-2">
+    <section
+      id="wall-of-love"
+      className="py-24 px-6"
+      style={{
+        background: `
+          radial-gradient(ellipse 100% 60% at 50% 0%, rgba(181,101,118,0.05) 0%, transparent 100%),
+          radial-gradient(ellipse 80% 50% at 20% 100%, rgba(200,180,160,0.06) 0%, transparent 100%),
+          linear-gradient(180deg, #fcf8f3 0%, #f5eee6 50%, #efe6db 100%)
+        `,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Damask pattern overlay */}
+      <div
+        style={{
+          position: "absolute", inset: 0, opacity: 0.04, pointerEvents: "none",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M60 15 Q70 35 60 55 Q50 35 60 15z M60 55 Q70 75 60 95 Q50 75 60 55z M15 60 Q35 70 55 60 Q35 50 15 60z M55 60 Q75 70 95 60 Q75 50 55 60z' fill='%238B4A6B'/%3E%3C/svg%3E")`,
+          backgroundSize: "160px 160px",
+        }}
+      />
+
+      <ConfettiBurst active={confetti} onDone={() => setConfetti(false)} />
+
+      <div className="max-w-5xl mx-auto" style={{ position: "relative", zIndex: 1 }}>
+        {/* ── Heading ────────────────────────────────────────────── */}
+        <AnimatedSection variant="fade-up" as="div" className="text-center mb-8">
+          <h2
+            className="font-heading text-3xl md:text-4xl mb-1"
+            style={{ color: "#3a2528", letterSpacing: "0.5px", fontFamily: "'Playfair Display', serif" }}
+          >
             Wall of Love
           </h2>
-          <DecorativeDivider />
-          <p className="font-script italic text-sage text-lg">
+          <DamaskDivider />
+          <p className="font-script italic text-lg" style={{ color: "rgba(100,80,85,0.6)" }}>
             Leave your blessings for James &amp; Sharon 💛
           </p>
-        </div>
+          {comments.length > 0 && (
+            <p style={{
+              fontSize: 12, color: "rgba(100,80,85,0.4)", marginTop: 6,
+              letterSpacing: "1px", fontFamily: "Inter, sans-serif",
+            }}>
+              <span style={{ color: "#b56576", fontWeight: 600 }}>{comments.length}</span> blessing{comments.length !== 1 ? "s" : ""} from your loved ones
+            </p>
+          )}
+        </AnimatedSection>
 
-        {/* Write message area */}
+        {/* ── Write message area ─────────────────────────────────── */}
         {guestName ? (
           <div
-            className="bg-white rounded-2xl p-6 mb-10"
-            style={{
-              boxShadow: "0 2px 16px rgba(139,74,107,0.06), 0 1px 4px rgba(0,0,0,0.04)",
-              transform: "rotate(-0.1deg)",
-            }}
+            className="mx-auto mb-12"
+            style={{ maxWidth: 540, position: "relative" }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #8B4A6B, #b56576)" }}
-              >
-                {guestName![0].toUpperCase()}
-              </div>
-              <span className="font-heading text-deep-rose text-sm tracking-wider">{guestName}</span>
-            </div>
-            <textarea
-              ref={textRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); post(); } }}
-              placeholder="Write a sweet message… (Enter to send)"
-              rows={3}
-              className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body transition-colors"
-              style={{ borderColor: "#e8ddd4", color: "#1a1a1a", background: "#fdfbf9" }}
-            />
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <div style={{ position: "relative" }}>
-                <button onClick={() => { setShowEmoji(!showEmoji); setShowStickers(false); }} style={iconBtn}>😊</button>
-                {showEmoji && (
-                  <div style={pickerBox}>
-                    <div className="flex gap-1 mb-2 flex-wrap">
-                      {EMOJI_GROUPS.map((g, i) => (
-                        <button key={i} onClick={() => setEmojiTab(i)} className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer transition-colors" style={{ background: emojiTab === i ? "#8B4A6B" : "#f5efe8", color: emojiTab === i ? "#fff" : "#666" }}>
-                          {g.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
-                        <button key={em} onClick={() => insertEmoji(em)} className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none">{em}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Ornamental frame around form */}
+            <div
+              style={{
+                padding: 5, borderRadius: 6,
+                background: goldGradient,
+                boxShadow: "0 4px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.1)",
+                position: "relative",
+              }}
+            >
+              {/* gold shimmer */}
+              <div style={{
+                position: "absolute", inset: 2, borderRadius: 4, pointerEvents: "none",
+                background: "linear-gradient(135deg, transparent 30%, rgba(255,215,0,0.04) 40%, transparent 50%, rgba(255,215,0,0.03) 60%, transparent 70%)",
+              }} />
 
-              <div style={{ position: "relative" }}>
-                <button onClick={() => { setShowStickers(!showStickers); setShowEmoji(false); }} style={iconBtn}>🎁</button>
-                {showStickers && (
-                  <div style={{ ...pickerBox, width: 260 }}>
-                    <p className="text-[11px] text-deep-rose/50 mb-2 font-body">Tap a sticker to send</p>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {STICKERS.map((s) => (
-                        <button key={s.id} onClick={() => sendSticker(s)} className="bg-[#fdf6ff] border border-[#e8d8f0] rounded-xl p-2 cursor-pointer text-center flex flex-col items-center gap-0.5 hover:border-blush transition-colors">
-                          <span className="text-2xl">{s.emoji}</span>
-                          <span className="text-[9px] text-deep-rose/60">{s.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* hanging ring */}
+              <div style={{
+                position: "absolute", top: -22, left: "50%", transform: "translateX(-50%)",
+                width: 12, height: 12, borderRadius: "50%",
+                border: "2px solid #8a7a5a", background: "transparent",
+                boxShadow: "0 0 4px rgba(0,0,0,0.2)", zIndex: 2,
+              }} />
 
-              <div className="flex-1" />
-              <button
-                onClick={post}
-                disabled={posting || !message.trim()}
-                className="font-heading text-sm tracking-wider px-5 py-2 rounded-full border-none cursor-pointer transition-all"
-                style={{
-                  background: message.trim() ? "linear-gradient(135deg, #8B4A6B, #b56576)" : "#ddd",
-                  color: "#fff",
-                  opacity: posting ? 0.7 : 1,
-                }}
-              >
-                {posting ? "Sending…" : "Send 💌"}
-              </button>
+              <div style={{
+                background: "#faf5ec", borderRadius: 4, padding: "20px 22px 16px",
+                position: "relative",
+              }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                    style={{ background: goldGradient }}
+                  >
+                    {guestName![0].toUpperCase()}
+                  </div>
+                  <span className="text-sm tracking-wider" style={{ color: "#3a2528", fontFamily: "'Playfair Display', serif" }}>
+                    {guestName}
+                  </span>
+                </div>
+                <textarea
+                  ref={textRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); post(); } }}
+                  placeholder="Write a sweet message… (Enter to send)"
+                  rows={3}
+                  className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body transition-colors"
+                  style={{
+                    borderColor: "rgba(180,150,130,0.25)", color: "#2a1a1a",
+                    background: "#fdfbf9",
+                    caretColor: "#8B4A6B",
+                  }}
+                />
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <div style={{ position: "relative" }}>
+                    <button onClick={() => { setShowEmoji(!showEmoji); setShowStickers(false); }} style={iconBtn}>😊</button>
+                    {showEmoji && (
+                      <div style={pickerBox}>
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {EMOJI_GROUPS.map((g, i) => (
+                            <button key={i} onClick={() => setEmojiTab(i)}
+                              className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer transition-colors"
+                              style={{
+                                background: emojiTab === i ? goldGradient : "rgba(200,168,139,0.1)",
+                                color: emojiTab === i ? "#fff" : "rgba(200,184,168,0.5)",
+                              }}>
+                              {g.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
+                            <button key={em} onClick={() => insertEmoji(em)}
+                              className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none"
+                              style={{ filter: "brightness(1.2)" }}>
+                              {em}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ position: "relative" }}>
+                    <button onClick={() => { setShowStickers(!showStickers); setShowEmoji(false); }} style={iconBtn}>🎁</button>
+                    {showStickers && (
+                      <div style={{ ...pickerBox, width: 260 }}>
+                        <p className="text-[11px] mb-2 font-body" style={{ color: "rgba(200,184,168,0.4)" }}>Tap a sticker to send</p>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {STICKERS.map((s) => (
+                            <button key={s.id} onClick={() => sendSticker(s)}
+                              className="rounded-xl p-2 cursor-pointer text-center flex flex-col items-center gap-0.5 hover:border-blush transition-colors"
+                              style={{
+                                background: "rgba(200,168,139,0.06)", border: "1px solid rgba(200,168,139,0.1)",
+                              }}>
+                              <span className="text-2xl">{s.emoji}</span>
+                              <span className="text-[9px]" style={{ color: "rgba(200,184,168,0.4)" }}>{s.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1" />
+                  <button
+                    onClick={post}
+                    disabled={posting || !message.trim()}
+                    className="font-heading text-sm tracking-wider px-5 py-2 rounded-full border-none cursor-pointer transition-all"
+                    style={{
+                      background: message.trim() ? goldGradient : "rgba(180,150,130,0.2)",
+                      color: "#fff",
+                      opacity: posting ? 0.7 : 1,
+                      boxShadow: message.trim() ? "0 2px 12px rgba(200,168,106,0.2)" : "none",
+                    }}
+                  >
+                    {posting ? "Sending…" : "Send 💌"}
+                  </button>
+                </div>
+                {error && <p className="mt-2 text-[13px]" style={{ color: "#c0392b" }}>{error}</p>}
+              </div>
             </div>
-            {error && <p className="mt-2 text-[13px]" style={{ color: "#c0392b" }}>{error}</p>}
           </div>
         ) : (
-          <div className="mb-10">
-            <NotLoggedInPrompt />
+          <div className="mx-auto mb-12 max-w-lg">
+            <div
+              className="text-center py-12 px-6 rounded-2xl"
+              style={{
+                background: "rgba(250,245,236,0.6)",
+                border: "1px dashed rgba(139,74,107,0.15)",
+              }}
+            >
+              <span className="text-4xl block mb-3">💌</span>
+              <p className="font-body text-sm mb-1" style={{ color: "rgba(100,80,85,0.5)" }}>Want to leave a message?</p>
+              <p className="font-body text-xs" style={{ color: "rgba(100,80,85,0.3)" }}>
+                Register your name on the home page to share your wishes.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Messages */}
-        <div className="flex flex-col gap-5">
-          {comments.map((c, idx) => {
-            const isMe = guestId ? c.guest_id === guestId : false;
-            const left = isMe ? timeLeft(c.created_at) : 0;
-            const canEdit = isMe && left > 0;
-            const sticker = isSticker(c.message) ? stickerData(c.message) : null;
-            const rotation = CARD_ROTATIONS[idx % CARD_ROTATIONS.length];
+        {/* ── Messages Grid ──────────────────────────────────────── */}
+        {comments.length > 0 ? (
+          <AnimatedSection variant="pop" className="flex flex-wrap justify-center gap-6 items-start" as="div">
+            {comments.map((c, idx) => {
+              const isMe = guestId ? c.guest_id === guestId : false;
+              const left = isMe ? timeLeft(c.created_at) : 0;
+              const canEdit = isMe && left > 0;
+              const sticker = isSticker(c.message) ? stickerData(c.message) : null;
+              const frame = FRAME_STYLES[idx % FRAME_STYLES.length];
+              const rotation = CARD_ROTATIONS[idx % CARD_ROTATIONS.length];
+              const isEditing = editingId === c.id;
 
-            return (
-              <div
-                key={c.id}
-                className="bg-white rounded-xl p-5 transition-shadow hover:shadow-md"
-                style={{
-                  ...staggerStyle(c.id),
-                  boxShadow: "0 1px 6px rgba(139,74,107,0.05), 0 1px 3px rgba(0,0,0,0.03)",
-                  transform: sticker?.id ? staggerStyle(c.id).transform : `${staggerStyle(c.id).transform} rotate(${rotation})`,
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
+              return (
+                <div
+                  key={c.id}
+                  className="frame-card"
+                  style={{
+                    ...staggerStyle(c.id),
+                    transform: staggerStyle(c.id).transform
+                      ? `${staggerStyle(c.id).transform} rotate(${rotation})`
+                      : `rotate(${rotation})`,
+                    width: 270,
+                    position: "relative",
+                    transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s",
+                    cursor: "default",
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = `scale(1.04) rotate(${rotation})`;
+                    e.currentTarget.style.zIndex = "5";
+                  }}
+                  onMouseLeave={(e) => {
+                    const v = staggerStyle(c.id).opacity;
+                    e.currentTarget.style.transform = v === 0 ? `rotate(${rotation})` : `scale(1) rotate(${rotation})`;
+                    e.currentTarget.style.zIndex = "1";
+                  }}
+                >
+                  {/* Frame outer */}
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                    style={{ background: isMe ? "linear-gradient(135deg, #8B4A6B, #b56576)" : "linear-gradient(135deg, #a8b8a0, #8a9e80)" }}
+                    style={{
+                      padding: 5, borderRadius: 4,
+                      background: frame.gradient,
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                      position: "relative",
+                    }}
                   >
-                    {c.guest_name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-heading text-sm text-deep-rose">{c.guest_name}</span>
-                    <div className="flex items-center gap-2 text-[11px] text-deep-rose/40">
-                      <span>{new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                      {c.updated_at !== c.created_at && <span className="italic">· edited</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {canEdit && editingId !== c.id && (
-                      <button onClick={() => { setEditingId(c.id); setEditText(c.message); }} className="text-[11px] px-2 py-1 rounded-full border-none cursor-pointer transition-colors" style={{ color: "#8B4A6B", background: "rgba(139,74,107,0.08)" }}>
-                        Edit · {formatCountdown(left)}
-                      </button>
-                    )}
-                    {(isOwner || isMe) && editingId !== c.id && (
-                      <button onClick={() => { if (confirm("Delete this message?")) deleteComment(c.id); }} className="text-[14px] opacity-30 hover:opacity-60 border-none cursor-pointer bg-none" style={{ color: "#8B4A6B" }}>✕</button>
-                    )}
-                  </div>
-                </div>
+                    {/* gold shimmer */}
+                    <div style={{
+                      position: "absolute", inset: 2, borderRadius: 3, pointerEvents: "none",
+                      background: "linear-gradient(135deg, transparent 30%, rgba(255,215,0,0.03) 40%, transparent 50%, rgba(255,215,0,0.02) 60%, transparent 70%)",
+                    }} />
 
-                {sticker ? (
-                  <div className="text-center py-2">
-                    <div className="text-5xl">{sticker.emoji}</div>
-                    <div className="text-sm font-heading text-sage mt-1">{sticker.label}</div>
-                  </div>
-                ) : editingId === c.id ? (
-                  <div>
-                    <div className="flex gap-2 mb-2">
-                      <div style={{ position: "relative" }}>
-                        <button onClick={() => setShowEmoji(!showEmoji)} style={iconBtn}>😊</button>
-                        {showEmoji && (
-                          <div style={pickerBox}>
-                            <div className="flex gap-1 mb-2 flex-wrap">
-                              {EMOJI_GROUPS.map((g, i) => (
-                                <button key={i} onClick={() => setEmojiTab(i)} className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer" style={{ background: emojiTab === i ? "#8B4A6B" : "#f5efe8", color: emojiTab === i ? "#fff" : "#666" }}>
-                                  {g.label}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
-                                <button key={em} onClick={() => insertEmoji(em, true)} className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none">{em}</button>
-                              ))}
+                    {/* hanging ring */}
+                    <div style={{
+                      position: "absolute", top: -22, left: "50%", transform: "translateX(-50%)",
+                      width: 10, height: 10, borderRadius: "50%",
+                      border: "2px solid #8a7a5a", background: "transparent",
+                      boxShadow: "0 0 4px rgba(0,0,0,0.15)", zIndex: 2,
+                    }} />
+                    <div style={{
+                      position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+                      width: 1, height: 10, background: "rgba(138,122,90,0.2)", zIndex: 1,
+                    }} />
+
+                    {/* Frame inner */}
+                    <div style={{
+                      background: "#faf5ec", borderRadius: 2, padding: "16px 18px 14px",
+                      position: "relative",
+                    }}>
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                          style={{
+                            background: isMe ? goldGradient : "linear-gradient(135deg, #8a7a6a, #6a5a4a)",
+                            fontFamily: "'Marcellus SC', serif",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+                          }}
+                        >
+                          {c.guest_name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className="text-xs tracking-wider truncate"
+                            style={{
+                              color: "#2a1a1a",
+                              fontFamily: "'Marcellus SC', serif",
+                              letterSpacing: "1px",
+                              textTransform: "uppercase",
+                              fontSize: 11,
+                            }}
+                          >
+                            {c.guest_name}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span style={{ fontSize: 9, color: "#b0a090", fontFamily: "Inter, sans-serif", letterSpacing: "0.5px" }}>
+                              {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            {c.updated_at !== c.created_at && (
+                              <span style={{ fontSize: 9, color: "#b0a090", fontStyle: "italic" }}>· edited</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {canEdit && !isEditing && (
+                            <button
+                              onClick={() => { setEditingId(c.id); setEditText(c.message); }}
+                              className="text-[11px] px-2 py-1 rounded-full border-none cursor-pointer transition-colors"
+                              style={{ color: "#8B4A6B", background: "rgba(139,74,107,0.08)", fontSize: 10 }}
+                            >
+                              Edit · {formatCountdown(left)}
+                            </button>
+                          )}
+                          {(isOwner || isMe) && !isEditing && (
+                            <button
+                              onClick={() => { if (confirm("Delete this message?")) deleteComment(c.id); }}
+                              className="text-[14px] border-none cursor-pointer bg-none"
+                              style={{ color: "#8B4A6B", opacity: 0.3 }}
+                            >✕</button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      {sticker ? (
+                        <div className="text-center py-2">
+                          <div className="text-5xl">{sticker.emoji}</div>
+                          <div className="text-sm mt-1" style={{ color: "#6a5a4a", fontFamily: "'Caveat', cursive", fontWeight: 700 }}>
+                            {sticker.label}
+                          </div>
+                        </div>
+                      ) : isEditing ? (
+                        <div>
+                          <div className="flex gap-2 mb-2">
+                            <div style={{ position: "relative" }}>
+                              <button onClick={() => setShowEmoji(!showEmoji)} style={iconBtn}>😊</button>
+                              {showEmoji && (
+                                <div style={pickerBox}>
+                                  <div className="flex gap-1 mb-2 flex-wrap">
+                                    {EMOJI_GROUPS.map((g, i) => (
+                                      <button key={i} onClick={() => setEmojiTab(i)}
+                                        className="text-xs px-2 py-1 rounded-lg border-none cursor-pointer"
+                                        style={{
+                                          background: emojiTab === i ? goldGradient : "rgba(200,168,139,0.1)",
+                                          color: emojiTab === i ? "#fff" : "rgba(200,184,168,0.5)",
+                                        }}>
+                                        {g.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {EMOJI_GROUPS[emojiTab].emojis.map((em) => (
+                                      <button key={em} onClick={() => insertEmoji(em, true)}
+                                        className="text-xl bg-none border-none cursor-pointer p-0.5 rounded leading-none"
+                                        style={{ filter: "brightness(1.2)" }}>
+                                        {em}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    <textarea
-                      ref={editRef}
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={3}
-                      className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body"
-                      style={{ borderColor: "#c084a0", background: "#fdfbf9" }}
-                    />
-                    <div className="flex gap-3 mt-2 items-center">
-                      <button onClick={() => saveEdit(c.id)} className="font-heading text-xs tracking-wider px-4 py-2 rounded-full border-none cursor-pointer text-white" style={{ background: "linear-gradient(135deg, #8B4A6B, #b56576)" }}>Save</button>
-                      <button onClick={() => setEditingId(null)} className="font-body text-xs px-4 py-2 rounded-full border-none cursor-pointer" style={{ background: "#f0e8e0", color: "#888" }}>Cancel</button>
-                      <span className="font-body text-xs" style={{ color: "#aaa" }}>· {formatCountdown(left)} left</span>
+                          <textarea
+                            ref={editRef}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            rows={3}
+                            className="w-full border rounded-xl px-4 py-3 text-sm resize-none outline-none font-body"
+                            style={{ borderColor: "rgba(200,168,139,0.3)", background: "#fdfbf9", color: "#1a1a1a" }}
+                          />
+                          <div className="flex gap-3 mt-2 items-center">
+                            <button
+                              onClick={() => saveEdit(c.id)}
+                              className="font-heading text-xs tracking-wider px-4 py-2 rounded-full border-none cursor-pointer text-white"
+                              style={{ background: goldGradient }}
+                            >Save</button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="font-body text-xs px-4 py-2 rounded-full border-none cursor-pointer"
+                              style={{ background: "rgba(180,150,130,0.1)", color: "rgba(100,80,85,0.5)" }}
+                            >Cancel</button>
+                            <span className="font-body text-xs" style={{ color: "rgba(100,80,85,0.3)" }}>
+                              · {formatCountdown(left)} left
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p
+                          className="font-body leading-relaxed"
+                          style={{
+                            color: "#2a1a1a",
+                            fontSize: 15,
+                            fontFamily: "'Caveat', cursive",
+                            lineHeight: 1.55,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {c.message}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <p className="font-body text-[15px] leading-relaxed" style={{ color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.message}</p>
-                )}
-              </div>
-            );
-          })}
-          {comments.length === 0 && (
-            <div className="text-center py-16">
-              <span className="text-5xl block mb-4">💫</span>
-              <p className="font-body text-deep-rose/40 text-sm">No messages yet — be the first blessing!</p>
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </AnimatedSection>
+        ) : (
+          <div className="text-center py-20">
+            <span className="text-5xl block mb-4">💫</span>
+            <p className="font-body text-sm" style={{ color: "rgba(100,80,85,0.4)" }}>
+              No messages yet — be the first blessing!
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

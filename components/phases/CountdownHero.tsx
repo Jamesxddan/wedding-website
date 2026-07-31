@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useScroll, useTransform, motion } from "motion/react";
 import { WEDDING_DATE, MUSIC_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import ParticleCanvas from "@/components/ui/ParticleCanvas";
@@ -103,6 +104,14 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
   // Luminance tracking
   const luminanceCache = useRef<Map<string, number>>(new Map());
   const [currentLuminance, setCurrentLuminance] = useState(0.2); // default: dark → white text
+
+  // Scroll-driven parallax — background scales subtly as user scrolls past hero
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroBgScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
+  const heroBgTranslate = useTransform(scrollYProgress, [0, 1], [0, 60]);
 
   // Animated countdown — counts up from 0 to real value on mount
   const [animDone, setAnimDone] = useState(false);
@@ -270,13 +279,21 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
         id="home"
         className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden"
       >
-        <CinematicSlideshow
-          photos={photos}
-          parallaxX={px}
-          parallaxY={py}
-          onPhotoChange={handlePhotoChange}
-          lightBackdrop={isLight}
-        />
+        <motion.div
+          style={{
+            position: "absolute", inset: 0,
+            scale: heroBgScale,
+            y: heroBgTranslate,
+          }}
+        >
+          <CinematicSlideshow
+            photos={photos}
+            parallaxX={px}
+            parallaxY={py}
+            onPhotoChange={handlePhotoChange}
+            lightBackdrop={isLight}
+          />
+        </motion.div>
         <ParticleCanvas mouseX={mousePos.x} mouseY={mousePos.y} />
 
         {MUSIC_URL && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AnimatedSection from "@/components/ui/AnimatedSection";
 
 interface Props {
   url: string;
@@ -38,46 +39,48 @@ export default function LiveStream({ url, label, channel, delaySeconds = 0 }: Pr
   const youtubeId = extractYoutubeId(url);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-        <h3 className="font-heading text-xl text-deep-rose">{channel}</h3>
-      </div>
-      <p className="font-body text-deep-rose/70 text-sm">{label}</p>
-
-      {youtubeId ? (
-        <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ paddingBottom: "56.25%" }}>
-          {ready ? (
-            <iframe
-              className="absolute inset-0 w-full h-full"
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
-              title={channel}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ background: "#0a0a0a" }}
-            >
-              <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, letterSpacing: 2 }}>
-                Stream loading…
-              </span>
-            </div>
-          )}
+    <AnimatedSection variant="blur-in" as="div">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+          <h3 className="font-heading text-xl text-deep-rose">{channel}</h3>
         </div>
-      ) : (
-        /* Non-YouTube URL — show Watch Live button */
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity self-start"
-        >
-          <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
-          Watch Live
-        </a>
-      )}
-    </div>
+        <p className="font-body text-deep-rose/70 text-sm">{label}</p>
+
+        {youtubeId ? (
+          <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ paddingBottom: "56.25%" }}>
+            {ready ? (
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+                title={channel}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ background: "#0a0a0a" }}
+              >
+                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, letterSpacing: 2 }}>
+                  Stream loading…
+                </span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Non-YouTube URL — show Watch Live button */
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-deep-rose text-cream font-heading tracking-widest uppercase text-sm hover:opacity-90 transition-opacity self-start"
+          >
+            <span className="w-2 h-2 rounded-full bg-red-300 animate-pulse" />
+            Watch Live
+          </a>
+        )}
+      </div>
+    </AnimatedSection>
   );
 }

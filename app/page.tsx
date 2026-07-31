@@ -25,6 +25,8 @@ const Comments    = dynamic(() => import("@/components/sections/Comments"),    {
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
+const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
+const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
 function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => void; initialName?: string; initialCity?: string }) {
   const [name, setName] = useState(initialName ?? "");
@@ -218,19 +220,53 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
         <div className="flex flex-col items-center gap-5">
-          {/* Animated rings */}
-          <div className="relative w-16 h-16">
+          {/* Floral bloom */}
+          <div className="relative w-20 h-20" style={{ animation: "float-flower 3s ease-in-out infinite" }}>
+            {/* Petals */}
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+              <div
+                key={angle}
+                className="absolute"
+                style={{
+                  left: "calc(50% - 11px)",
+                  top: "calc(50% - 11px)",
+                  width: 22, height: 22,
+                  transform: `rotate(${angle}deg)`,
+                  animation: `bloom-petal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.15 + i * 0.08}s forwards`,
+                  transformOrigin: "center center",
+                }}
+              >
+                <div
+                  className="w-full h-full rounded-full"
+                  style={{
+                    background: "radial-gradient(circle at 40% 40%, #F4C2C2, #B56576)",
+                    transform: "translateY(-18px)",
+                  }}
+                />
+              </div>
+            ))}
+            {/* Center */}
             <div
-              className="absolute inset-0 rounded-full border-2 border-blush animate-loading-ring"
-              style={{ animationDuration: "1.4s" }}
+              className="absolute rounded-full"
+              style={{
+                width: 14, height: 14,
+                left: "calc(50% - 7px)",
+                top: "calc(50% - 7px)",
+                background: "radial-gradient(circle at 35% 35%, #F5E6C8, #D4AF37)",
+                boxShadow: "0 0 8px rgba(212,175,55,0.4), 0 0 20px rgba(212,175,55,0.15)",
+                animation: "pulse-core 2s ease-in-out infinite",
+              }}
             />
+            {/* Subtle shimmer ring */}
             <div
-              className="absolute inset-2 rounded-full border border-deep-rose/25 animate-loading-ring"
-              style={{ animationDuration: "2.1s", animationDirection: "reverse" }}
-            />
-            <div
-              className="absolute inset-[18px] rounded-full"
-              style={{ background: "radial-gradient(circle, rgba(181,101,118,0.2), transparent)" }}
+              className="absolute rounded-full"
+              style={{
+                width: 48, height: 48,
+                left: "calc(50% - 24px)",
+                top: "calc(50% - 24px)",
+                border: "1px solid rgba(212,175,55,0.12)",
+                animation: "shimmer-spin 4s linear infinite",
+              }}
             />
           </div>
           <p className="font-script italic text-deep-rose/50 text-lg">
@@ -244,7 +280,7 @@ export default function Home() {
   return (
     <SiteContentProvider>
     <main className="min-h-screen bg-cream">
-      <BackgroundMusic src="/song.mp3" />
+      <BackgroundMusic />
 
       {phase === Phase.FIRST_VISIT && (
         <OpeningScreen onComplete={() => { refresh(); }} />
@@ -256,13 +292,18 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && (
         <>
+          <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
           {(relinkPending || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
+          <ScrollFloralDivider />
           <AboutSection />
+          <ScrollFloralDivider />
           <Families />
+          <ScrollFloralDivider />
           <Venue />
+          <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
         </>

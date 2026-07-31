@@ -196,3 +196,24 @@ body {
   background-clip: text;
   animation: shimmer-slide 4s linear infinite;
 }
+
+/* ── Floral bloom loading ──────────────────────────────────────────────────── */
+@keyframes bloom-petal {
+  0%   { transform: rotate(var(--r)) translateY(12px) scale(0); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: rotate(var(--r)) translateY(0px) scale(1); opacity: 1; }
+}
+
+@keyframes pulse-core {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50%      { transform: scale(1.15); opacity: 0.8; }
+}
+
+@keyframes float-flower {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes shimmer-spin {
+  to { transform: rotate(360deg); }
+}

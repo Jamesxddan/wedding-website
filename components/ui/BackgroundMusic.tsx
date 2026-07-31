@@ -2,26 +2,44 @@
 
 import { useEffect, useState } from "react";
 
-// Module-level singleton — never destroyed across renders or phase changes
+// Playlist order: current song → gratitude → goodness of god → loop back
+const PLAYLIST = [
+  "/song.mp3",
+  "/audio/Gratitude  Brandon Lake  Piano Cover by James Wong.mp3",
+  "/audio/Goodness of God - piano instrumental cover with lyrics.mp3",
+];
+
+// Module-level singleton — persists across renders and phase changes
 let _audio: HTMLAudioElement | null = null;
 let _unlocked = false;
+let _currentIndex = 0;
 
-export function getBackgroundAudio(src: string) {
+function getBackgroundAudio() {
   if (!_audio) {
-    _audio = new Audio(src);
-    _audio.loop = true;
+    _audio = new Audio(PLAYLIST[0]);
+    _audio.loop = false; // we handle looping manually via playlist
     _audio.volume = 0.35;
     _audio.preload = "auto";
     _audio.load();
+
+    // When a song ends, advance to next in playlist
+    _audio.addEventListener("ended", () => {
+      _currentIndex = (_currentIndex + 1) % PLAYLIST.length;
+      if (_audio) {
+        _audio.src = PLAYLIST[_currentIndex];
+        _audio.load();
+        _audio.play().catch(() => {});
+      }
+    });
   }
   return _audio;
 }
 
 // Call this from any guaranteed user-gesture (e.g. form submit button)
-export function startBackgroundMusic(src: string) {
+export function startBackgroundMusic() {
   if (_unlocked) return;
   _unlocked = true;
-  const audio = getBackgroundAudio(src);
+  const audio = getBackgroundAudio();
   const doPlay = () => audio.play().catch(() => {});
   if (audio.readyState >= 2) {
     doPlay();
@@ -32,18 +50,18 @@ export function startBackgroundMusic(src: string) {
 
 const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === "production";
 
-export default function BackgroundMusic({ src }: { src: string }) {
+export default function BackgroundMusic() {
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     if (!isProd) return;
-    const audio = getBackgroundAudio(src);
+    const audio = getBackgroundAudio();
 
     // Try autoplay (desktop / Android without restrictions)
     audio.play().catch(() => {});
 
     const unlock = () => {
-      startBackgroundMusic(src);
+      startBackgroundMusic();
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
@@ -56,11 +74,11 @@ export default function BackgroundMusic({ src }: { src: string }) {
       document.removeEventListener("touchstart", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
-  }, [src]);
+  }, []);
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const audio = getBackgroundAudio(src);
+    const audio = getBackgroundAudio();
     if (muted) {
       audio.volume = 0.35;
       audio.play().catch(() => {});

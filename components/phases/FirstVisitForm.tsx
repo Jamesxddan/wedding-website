@@ -107,7 +107,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
 
       const data = await res.json();
 
-      startBackgroundMusic("/song.mp3");
+      startBackgroundMusic();
       safeSetItem("guest_name", name.trim());
       safeSetItem("guest_city", selectedCity.name);
       safeSetItem("guest_email", email.trim().toLowerCase());
