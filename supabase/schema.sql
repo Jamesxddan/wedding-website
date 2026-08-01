@@ -121,3 +121,24 @@ create table if not exists rsvps (
 
 create index if not exists rsvps_guest_id_idx on rsvps(guest_id);
 create index if not exists rsvps_response_idx  on rsvps(response);
+
+-- Live ticker (wedding-day updates posted by admin)
+create table if not exists ticker_updates (
+  id          uuid primary key default gen_random_uuid(),
+  message     text not null check (char_length(message) <= 160),
+  icon        text not null default '✨',
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists ticker_updates_created_at_idx on ticker_updates(created_at desc);
+
+-- Emoji reactions on ticker updates (toggle: one per emoji per guest per update)
+create table if not exists ticker_reactions (
+  update_id   uuid not null references ticker_updates(id) on delete cascade,
+  guest_id    uuid not null references guests(id) on delete cascade,
+  emoji       text not null,
+  created_at  timestamptz not null default now(),
+  primary key (update_id, guest_id, emoji)
+);
+
+create index if not exists ticker_reactions_update_id_idx on ticker_reactions(update_id);

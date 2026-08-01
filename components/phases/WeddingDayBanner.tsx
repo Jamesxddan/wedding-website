@@ -10,6 +10,7 @@ import Gallery from "@/components/sections/Gallery";
 import Venue from "@/components/sections/Venue";
 import Comments from "@/components/sections/Comments";
 import { DamaskOverlay, OrnamentalFrame, ConfettiBurst } from "@/components/ui/OrnamentalMotifs";
+import LiveTicker from "@/components/sections/LiveTicker";
 
 const GOLD = "#D4AF37";
 const GA = (a: number) => `rgba(212,175,55,${a})`;
@@ -282,6 +283,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
           <div className="w-px h-10 animate-scroll-line" style={{ background: `linear-gradient(to bottom, ${RA(0.45)}, transparent)` }} />
         </div>
       </section>
+
+      <LiveTicker />
 
       {/* ── LIVE STREAMS ─────────────────────────────────────────────────────── */}
       {hasAnyStream && (
