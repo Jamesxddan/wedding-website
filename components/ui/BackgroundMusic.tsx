@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 // Module-level singleton — never destroyed across renders or phase changes
 let _audio: HTMLAudioElement | null = null;
 let _unlocked = false;
+let _muted = false;
 
 export function getBackgroundAudio(src: string) {
   if (!_audio) {
@@ -33,7 +34,7 @@ export function startBackgroundMusic(src: string) {
 const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === "production";
 
 export default function BackgroundMusic({ src }: { src: string }) {
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(_muted);
 
   useEffect(() => {
     if (!isProd) return;
@@ -64,9 +65,11 @@ export default function BackgroundMusic({ src }: { src: string }) {
     if (muted) {
       audio.volume = 0.35;
       audio.play().catch(() => {});
+      _muted = false;
       setMuted(false);
     } else {
       audio.volume = 0;
+      _muted = true;
       setMuted(true);
     }
   };
