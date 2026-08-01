@@ -48,7 +48,7 @@ export default function WeddingDayTeaser({ guestName }: Props) {
     const wallEl = document.getElementById("wall-of-love");
     if (!wallEl) return;
 
-    const pillTimer = { id: 0 as ReturnType<typeof setTimeout> };
+    const pillTimer = { id: null as ReturnType<typeof setTimeout> | null };
 
     const pillObserver = new IntersectionObserver(
       ([entry]) => {
@@ -77,7 +77,7 @@ export default function WeddingDayTeaser({ guestName }: Props) {
     }
 
     return () => {
-      clearTimeout(pillTimer.id);
+      if (pillTimer.id !== null) clearTimeout(pillTimer.id);
       pillObserver.disconnect();
       footerObserver?.disconnect();
     };
