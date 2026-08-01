@@ -6,6 +6,18 @@ import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
+type RsvpResponse = "attending" | "not_attending" | "maybe";
+interface RsvpData { response: RsvpResponse; plus_one: boolean; plus_one_name: string | null; updated_at: string; }
+function rsvpHeaders(): HeadersInit {
+  const token = typeof window !== "undefined" ? safeGetItem("session_token") : null;
+  return { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
+}
+const RSVP_OPTIONS: { value: RsvpResponse; label: string; emoji: string }[] = [
+  { value: "attending",     label: "Wouldn't miss it!", emoji: "💍" },
+  { value: "maybe",         label: "I'll try my best",  emoji: "🤞" },
+  { value: "not_attending", label: "Sadly can't make it", emoji: "💌" },
+];
+
 const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
 interface Props {
@@ -204,6 +216,14 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const [hasVideo, setHasVideo]       = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // RSVP state
+  const [rsvpSaved, setRsvpSaved]     = useState<RsvpData | null>(null);
+  const [rsvpResp, setRsvpResp]       = useState<RsvpResponse | null>(null);
+  const [rsvpPlus, setRsvpPlus]       = useState(false);
+  const [rsvpName, setRsvpName]       = useState("");
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+  const [rsvpDone, setRsvpDone]       = useState(false);
+
   const { invitation } = useSiteContent();
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
 
@@ -220,6 +240,36 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   }, []);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  useEffect(() => {
+    fetch("/api/rsvp", { headers: rsvpHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { rsvp: RsvpData | null } | null) => {
+        if (d?.rsvp) {
+          setRsvpSaved(d.rsvp);
+          setRsvpResp(d.rsvp.response);
+          setRsvpPlus(d.rsvp.plus_one);
+          setRsvpName(d.rsvp.plus_one_name ?? "");
+          setRsvpDone(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function submitRsvp() {
+    if (!rsvpResp || rsvpSubmitting) return;
+    setRsvpSubmitting(true);
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: rsvpHeaders(),
+        body: JSON.stringify({ response: rsvpResp, plus_one: rsvpPlus, plus_one_name: rsvpName.trim() || null }),
+      });
+      const data = await res.json() as { rsvp?: RsvpData };
+      if (res.ok && data.rsvp) { setRsvpSaved(data.rsvp); setRsvpDone(true); }
+    } catch { /* best-effort */ }
+    finally { setRsvpSubmitting(false); }
+  }
 
   // Tap on front → coin-flip to reveal sealed back
   function tapFront() {
@@ -673,6 +723,113 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                   Apple / Windows
                 </a>
               </div>
+            </div>
+
+            {/* RSVP */}
+            <div style={{ animation: "blur-reveal 0.9s ease 0.9s both", marginBottom: 16 }}>
+              <Divider />
+              <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), margin: "14px 0 12px" }}>
+                Will you be joining us?
+              </p>
+
+              {rsvpDone ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 22 }}>
+                    {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.emoji}
+                  </span>
+                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: ROSE, margin: 0 }}>
+                    {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.label}
+                  </p>
+                  {rsvpSaved?.plus_one && (
+                    <p style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.45), margin: 0 }}>
+                      +1{rsvpSaved.plus_one_name ? ` — ${rsvpSaved.plus_one_name}` : ""}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setRsvpDone(false)}
+                    style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Change response
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {RSVP_OPTIONS.map(opt => {
+                    const sel = rsvpResp === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setRsvpResp(opt.value)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", borderRadius: 10, cursor: "pointer",
+                          border: sel ? `1.5px solid ${GA(0.7)}` : `1px solid ${GA(0.25)}`,
+                          background: sel ? `rgba(212,175,55,0.08)` : "transparent",
+                          transition: "all 0.18s ease", textAlign: "left",
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{opt.emoji}</span>
+                        <span style={{ fontFamily: "Georgia, serif", fontSize: 13, color: ROSE }}>{opt.label}</span>
+                        {sel && <span style={{ marginLeft: "auto", color: GOLD, fontSize: 11 }}>✦</span>}
+                      </button>
+                    );
+                  })}
+
+                  {(rsvpResp === "attending" || rsvpResp === "maybe") && (
+                    <div style={{ marginTop: 4 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: rsvpPlus ? 8 : 0 }}>
+                        <span
+                          onClick={() => setRsvpPlus(v => !v)}
+                          style={{
+                            width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: "pointer",
+                            border: rsvpPlus ? `1.5px solid ${GOLD}` : `1.5px solid ${GA(0.4)}`,
+                            background: rsvpPlus ? GA(0.12) : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 10, color: GOLD, transition: "all 0.15s ease",
+                          }}
+                        >{rsvpPlus && "✓"}</span>
+                        <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: RA(0.65) }}>
+                          Bringing a +1?
+                        </span>
+                      </label>
+                      {rsvpPlus && (
+                        <input
+                          type="text"
+                          value={rsvpName}
+                          onChange={e => setRsvpName(e.target.value)}
+                          placeholder="Companion's name (optional)"
+                          style={{
+                            width: "100%", padding: "8px 12px", boxSizing: "border-box",
+                            borderRadius: 8, border: `1px solid ${GA(0.3)}`,
+                            background: "rgba(253,246,236,0.6)",
+                            fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, outline: "none",
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={!rsvpResp || rsvpSubmitting}
+                    onClick={submitRsvp}
+                    style={{
+                      marginTop: 4, padding: "11px",
+                      border: "none", borderRadius: 10, cursor: rsvpResp ? "pointer" : "default",
+                      background: rsvpResp ? `linear-gradient(135deg, ${ROSE} 0%, #8B4A6B 100%)` : RA(0.15),
+                      color: rsvpResp ? "#fef9f0" : RA(0.35),
+                      fontFamily: "Georgia, serif", fontSize: 10,
+                      letterSpacing: "2px", textTransform: "uppercase",
+                      opacity: rsvpSubmitting ? 0.6 : 1,
+                      transition: "all 0.2s ease",
+                      boxShadow: rsvpResp ? `0 3px 14px ${RA(0.2)}` : "none",
+                    }}
+                  >
+                    {rsvpSubmitting ? "Saving…" : "Send RSVP"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <button onClick={handleExplore}
