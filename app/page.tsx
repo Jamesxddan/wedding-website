@@ -21,6 +21,7 @@ const Gallery     = dynamic(() => import("@/components/sections/Gallery"),     {
 const AboutSection = dynamic(() => import("@/components/sections/AboutSection"), { ssr: false });
 const Families    = dynamic(() => import("@/components/sections/Families"),    { ssr: false });
 const Venue       = dynamic(() => import("@/components/sections/Venue"),       { ssr: false });
+const RSVP        = dynamic(() => import("@/components/sections/RSVP"),        { ssr: false });
 const Comments    = dynamic(() => import("@/components/sections/Comments"),    { ssr: false });
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
@@ -304,6 +305,8 @@ export default function Home() {
           <Families />
           <ScrollFloralDivider />
           <Venue />
+          <ScrollFloralDivider />
+          <RSVP guestName={guestName} />
           <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />

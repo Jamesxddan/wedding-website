@@ -106,3 +106,18 @@ insert into settings (key, value) values
   ('youtube_reception_url',  ''),
   ('announcement',           '')
 on conflict (key) do nothing;
+
+-- RSVPs (one per guest, upserted)
+create table if not exists rsvps (
+  id             uuid primary key default gen_random_uuid(),
+  guest_id       uuid not null unique references guests(id) on delete cascade,
+  response       text not null check (response in ('attending', 'not_attending', 'maybe')),
+  plus_one       boolean not null default false,
+  plus_one_name  text,
+  dietary_notes  text,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create index if not exists rsvps_guest_id_idx on rsvps(guest_id);
+create index if not exists rsvps_response_idx  on rsvps(response);
