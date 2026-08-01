@@ -25,6 +25,7 @@ const Comments    = dynamic(() => import("@/components/sections/Comments"),    {
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
+const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
@@ -306,6 +307,7 @@ export default function Home() {
           <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
+          <WeddingDayTeaser guestName={guestName} />
         </>
       )}
 
