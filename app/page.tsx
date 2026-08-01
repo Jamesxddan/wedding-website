@@ -24,6 +24,7 @@ const Comments    = dynamic(() => import("@/components/sections/Comments"),    {
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
+const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
 
 function RelinkForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("");
@@ -149,6 +150,7 @@ export default function Home() {
           <Venue />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
+          <WeddingDayTeaser guestName={guestName} />
         </>
       )}
 
