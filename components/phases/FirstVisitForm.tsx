@@ -242,6 +242,10 @@ export default function FirstVisitForm({ onComplete }: Props) {
         </p>
       )}
 
+      <p className="text-center font-body text-[11px]" style={{ color: "rgba(90,31,46,0.45)", letterSpacing: "0.02em", marginBottom: -8 }}>
+        🎵 Background music will play when you open your invitation
+      </p>
+
       <button
         type="submit"
         disabled={!canSubmit}
