@@ -142,3 +142,15 @@ create table if not exists ticker_reactions (
 );
 
 create index if not exists ticker_reactions_update_id_idx on ticker_reactions(update_id);
+
+-- Admin audit log (immutable append-only; written by lib/admin-audit.ts)
+create table if not exists admin_audit_logs (
+  id          uuid primary key default gen_random_uuid(),
+  admin_email text not null,
+  action      text not null,
+  details     jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists admin_audit_logs_admin_email_idx on admin_audit_logs(admin_email);
+create index if not exists admin_audit_logs_created_at_idx  on admin_audit_logs(created_at desc);
