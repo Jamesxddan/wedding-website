@@ -30,8 +30,13 @@ export function getPhase(
   // Unknown device (incognito, new browser, cleared cookies) → pre-wedding page only.
   // Registration is disabled for unrecognized devices to prevent impersonation.
   if (!guestName) return Phase.RETURN_VISIT;
-  if (!invitationSeen) return Phase.INVITATION;
+
+  // Date-based phases take priority over the invitation gate — on the wedding
+  // day or after, even a relinking user should see the correct live phase.
   if (isSameDay(now, WEDDING_DATE)) return Phase.WEDDING_DAY;
   if (isAfterDay(now, WEDDING_DATE)) return Phase.POST_WEDDING;
+
+  // Pre-wedding: show invitation until the guest has opened it
+  if (!invitationSeen) return Phase.INVITATION;
   return Phase.RETURN_VISIT;
 }

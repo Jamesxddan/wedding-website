@@ -2,7 +2,7 @@
 
 import AboutJames from "./AboutJames";
 import AboutSharon from "./AboutSharon";
-import Reveal from "@/components/ui/Reveal";
+import AnimatedSection from "@/components/ui/AnimatedSection";
 
 export default function AboutSection() {
   return (
@@ -29,14 +29,14 @@ export default function AboutSection() {
         />
       </div>
 
-      <Reveal>
-        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">
+      <AnimatedSection variant="fade-up" className="text-center mb-16">
+        <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-4">
           About
         </h2>
-        <p className="font-script italic text-sage text-center text-xl mb-16">
+        <p className="font-script italic text-sage text-xl">
           The Groom &amp; The Bride
         </p>
-      </Reveal>
+      </AnimatedSection>
 
       <AboutJames />
       <AboutSharon />

@@ -26,6 +26,10 @@ const INDIA_CITIES = new Set([
   "Secunderabad","Pimpri","Chinchwad","New Delhi",
 ].map(c => c.toLowerCase()));
 
+export function isIndianCity(name: string): boolean {
+  return INDIA_CITIES.has(name.trim().toLowerCase());
+}
+
 export function searchCities(query: string): City[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];

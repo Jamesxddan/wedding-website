@@ -41,8 +41,8 @@ export interface SiteContent {
   venue: {
     heading: string;
     subtitle: string;
-    ceremony: { tag: string; name: string; address: string; time: string; dress: string };
-    reception: { tag: string; name: string; address: string; time: string; dress: string };
+    ceremony: { tag: string; name: string; address: string; time: string };
+    reception: { tag: string; name: string; address: string; time: string };
   };
   itinerary: {
     heading: string;
@@ -67,7 +67,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     scripture: "He has made everything beautiful in His time.",
     scripture_ref: "Ecclesiastes 4:9-12",
     hosts_groom: "Mr. Joseph Washington & Mrs. Sophia Joseph",
-    hosts_bride: "Mr. Yesurathinam & Mrs. Singapogu Rizma",
+    hosts_bride: "Mr. Yesuratnam & Mrs. Rizmasusi",
     body: "We greet you in the name of the Lord Jesus Christ. With great joy in our hearts, we invite you to celebrate the wedding of our children",
     couple_name: "James Daniel & Sharon",
     quote: "Two are better than one, because they have a good return for their labor — a cord of three strands is not quickly broken.",
@@ -94,25 +94,25 @@ export const DEFAULT_CONTENT: SiteContent = {
   sharon: {
     name: "Sharon",
     photo: "/images/sharon-profile.jpg",
-    bio: "Raised in Guntur, Sharon grew up with a heart anchored in faith and a mind drawn to excellence. A graduate in Electronics and Communication Engineering from Vasireddy Venkatadri Institute of Technology, she built a career that reflects both her sharp intellect and her commitment to doing things right. With over five years of experience across Amazon and Uber, she now serves as an AI Evaluation Specialist — shaping the quality and integrity of AI systems at a global scale. It was through their shared church community that, by His sovereign will, God wove these two families together.",
+    bio: "Born in 1999 and raised in a loving Christian family, Sharon grew up with her parents, Mr. Yesuratnam and Mrs. Rizmasusi, and her younger sister in a home rooted in faith, kindness, prayer, and respect. Her grandparents, Mr. Jacob and Mrs. Ruth, lovingly led the family to the Laymen's Evangelical Fellowship (LEF), where her spiritual foundation was nurtured from an early age. She holds a B.Tech degree and currently serves as an AI Evaluation Specialist with a leading multinational company in Hyderabad. She values faith, family, and meaningful relationships, and looks forward to building a Christ-centered life filled with love, purpose, and God's grace. It was through their shared church community that, by His sovereign will, God wove these two families together.",
     facts: [
       { label: "Hometown", value: "Guntur, Andhra Pradesh" },
       { label: "Education", value: "B.Tech, Electronics & Communication Engineering" },
       { label: "Profession", value: "AI Evaluation Specialist, Uber" },
-      { label: "Faith", value: "Christian" },
+      { label: "Faith", value: "Christian — Laymen's Evangelical Fellowship" },
     ],
   },
   venue: {
     heading: "Venue & Details",
     subtitle: "Chennai, October 8th, 2026",
-    ceremony: { tag: "Ceremony", name: "St Andrews Kirk", address: "Poonamallee High Rd, Vepery, Chennai 600 007", time: "TBD", dress: "Formals / Ethnic" },
-    reception: { tag: "Reception", name: "BKN Auditorium", address: "Chennai, Tamil Nadu", time: "TBD", dress: "Formals / Ethnic" },
+    ceremony: { tag: "Ceremony", name: "St Andrews Kirk", address: "Poonamallee High Rd, Vepery, Chennai 600 007", time: "4:30 PM" },
+    reception: { tag: "Reception", name: "BKN Auditorium", address: "Chennai, Tamil Nadu", time: "7:00 PM" },
   },
   itinerary: {
     heading: "Day Itinerary",
     items: [
-      { time: "TBD", label: "Ceremony", venue: "St Andrews Kirk" },
-      { time: "TBD", label: "Reception", venue: "BKN Auditorium" },
+      { time: "4:30 PM", label: "Ceremony", venue: "St Andrews Kirk" },
+      { time: "7:00 PM", label: "Reception", venue: "BKN Auditorium" },
     ],
   },
   families: {
@@ -124,8 +124,8 @@ export const DEFAULT_CONTENT: SiteContent = {
       { name: "John Jebasingh", role: "Brother of the Groom" },
     ],
     sharon: [
-      { name: "Mr. Yesurathinam", role: "Father of the Bride" },
-      { name: "Mrs. Singapogu Rizma", role: "Mother of the Bride" },
+      { name: "Mr. Yesuratnam", role: "Father of the Bride" },
+      { name: "Mrs. Rizmasusi", role: "Mother of the Bride" },
       { name: "Shiny Singapogu", role: "Sister of the Bride" },
     ],
   },

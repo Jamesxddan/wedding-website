@@ -1607,7 +1607,6 @@ function ContentTab() {
                     <div>{label("Address")}<input style={inp} value={content.venue[side].address} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], address: e.target.value } })} /></div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <div style={{ flex: 1, minWidth: 130 }}>{label("Time")}<input style={inp} value={content.venue[side].time} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], time: e.target.value } })} /></div>
-                      <div style={{ flex: 1, minWidth: 130 }}>{label("Dress code")}<input style={inp} value={content.venue[side].dress} onChange={(e) => patch("venue", { [side]: { ...content.venue[side], dress: e.target.value } })} /></div>
                     </div>
                   </div>
                 </div>

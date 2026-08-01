@@ -4,11 +4,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
+import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
 interface Props {
   guestName: string;
+  guestId?: string | null;
   onExplore: () => void;
 }
 
@@ -190,7 +192,7 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function InvitationCard({ guestName, onExplore }: Props) {
+export default function InvitationCard({ guestName, guestId, onExplore }: Props) {
   const [stage, setStage]             = useState<Stage>("front");
   const [flipPhase, setFlipPhase]     = useState<FlipPhase>("idle");
   const [sealBreaking, setSealBreaking] = useState(false);
@@ -206,11 +208,11 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
 
   useEffect(() => {
-    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    setGuestCity(safeGetItem("guest_city") ?? "");
     setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
     const t = setTimeout(() => setReady(true), 400);
     // Set gallery_token cookie so /api/drive-image auth passes for the couple photo
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }
@@ -238,8 +240,20 @@ export default function InvitationCard({ guestName, onExplore }: Props) {
     timers.current.push(t1, t2, t3);
   }
 
-  function handleExplore() {
-    localStorage.setItem("invitation_seen", "true");
+  async function handleExplore() {
+    safeSetItem("invitation_seen", "true");
+    // Persist to DB so it follows the user across devices.
+    // Await it so the session check that runs after onExplore()
+    // reads the updated value from Supabase.
+    if (guestId) {
+      try {
+        await fetch("/api/guest/invitation-seen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_id: guestId }),
+        });
+      } catch { /* best-effort */ }
+    }
     onExplore();
   }
 

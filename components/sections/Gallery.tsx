@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { DrivePhoto, DriveAlbum } from "@/lib/drive";
-import Reveal from "@/components/ui/Reveal";
+import AnimatedSection from "@/components/ui/AnimatedSection";
 import { albumPriority } from "@/lib/album-priority";
 import { gsap } from "gsap";
 import { Observer } from "gsap/Observer";
+import { safeGetItem } from "@/lib/storage";
 
 gsap.registerPlugin(Observer);
 
@@ -657,7 +658,7 @@ function SlideshowPlayer({
     document.querySelectorAll("iframe").forEach((iframe) => {
       try { iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', "*"); } catch {}
     });
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     const headers: HeadersInit = { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) };
     fetch("/api/gallery-event", {
       method: "POST", headers,
@@ -759,7 +760,7 @@ function SlideshowPlayer({
     const nextPlaying = !isPlaying;
     setIsPlaying(nextPlaying);
     if (!nextPlaying) {
-      const token = localStorage.getItem("session_token");
+      const token = safeGetItem("session_token");
       fetch("/api/gallery-event", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
@@ -1080,8 +1081,8 @@ function AlbumBook({
   const [guestCity, setGuestCity] = useState<string>("");
   const openedAtRef = useRef<string>("");
   useEffect(() => {
-    setGuestName(localStorage.getItem("guest_name") ?? "");
-    setGuestCity(localStorage.getItem("guest_city") ?? "");
+    setGuestName(safeGetItem("guest_name") ?? "");
+    setGuestCity(safeGetItem("guest_city") ?? "");
     openedAtRef.current = new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata",
       hour: "2-digit",
@@ -1137,7 +1138,7 @@ function AlbumBook({
 
   // Screenshot / print logging
   useEffect(() => {
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     const headers: HeadersInit = {
       "Content-Type": "application/json",
       ...(token ? { "x-session-token": token } : {}),
@@ -1716,21 +1717,21 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
   const [wmText, setWmText] = useState("James & Sharon");
 
   useEffect(() => {
-    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    const parts = ["James & Sharon", safeGetItem("guest_name"), safeGetItem("guest_city")].filter(Boolean);
     setWmText(parts.join("  ·  "));
   }, []);
 
   // Set gallery_token cookie early so thumbnail img tags (which can't use custom
   // headers) pass the drive-image auth check as soon as the section mounts.
   useEffect(() => {
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }
   }, []);
 
   useEffect(() => {
-    const sessionToken = localStorage.getItem("session_token");
+    const sessionToken = safeGetItem("session_token");
     const headers: HeadersInit = sessionToken ? { "x-session-token": sessionToken } : {};
 
     const url = `/api/drive-photos?folder=${folder}&view=albums`;
@@ -1764,7 +1765,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
     const idx = photos.findIndex(p => p.id === photo.id);
     setLightboxIndex(idx !== -1 ? idx : 0);
     // Set a short-lived cookie so drive-image route can authenticate img tag requests
-    const token = localStorage.getItem("session_token");
+    const token = safeGetItem("session_token");
     if (token) {
       document.cookie = `gallery_token=${token}; path=/api/drive-image; SameSite=Strict; max-age=3600`;
     }
@@ -1805,10 +1806,10 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
 
   return (
     <section id="gallery" className="py-24 px-6 max-w-6xl mx-auto">
-      <Reveal>
+      <AnimatedSection variant="fade-up" className="text-center">
         <h2 className="font-heading text-4xl md:text-5xl text-deep-rose text-center mb-4">{title}</h2>
         <p className="font-script italic text-sage text-center text-xl mb-12">{subtitle}</p>
-      </Reveal>
+      </AnimatedSection>
 
       {state.loading && (
         <div className="flex justify-center py-16">
@@ -1834,15 +1835,15 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
 
       {/* Engagement: Spotlight mosaic */}
       {folder === "engagement" && !state.loading && state.configured && !state.error && spotlightVisible.length > 0 && (
-        <Reveal delay={150}>
+        <AnimatedSection variant="fade-up" delay={0.15} as="div">
           <SpotlightGrid photos={spotlightVisible} onPhotoClick={openLightbox} wmText={wmText} />
           {spotlightHasMore && <LoadMoreButton onClick={() => setPage((p) => p + 1)} />}
-        </Reveal>
+        </AnimatedSection>
       )}
 
       {/* Wedding: album cards */}
       {folder === "wedding" && !state.loading && !openAlbum && state.albums.length > 0 && (
-        <Reveal delay={150}>
+        <AnimatedSection variant="fade-up" delay={0.15} as="div">
           <div className={`grid gap-6 ${
             state.albums.length === 1 ? "grid-cols-1 max-w-sm mx-auto"
             : state.albums.length === 2 ? "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto"
@@ -1852,7 +1853,7 @@ export default function Gallery({ folder, title = "Gallery" }: Props) {
               <AlbumCard key={album.id} album={album} onClick={() => setOpenAlbum(album)} />
             ))}
           </div>
-        </Reveal>
+        </AnimatedSection>
       )}
 
       {/* Wedding: open album detail */}

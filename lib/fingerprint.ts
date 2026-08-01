@@ -1,5 +1,7 @@
 "use client";
 
+import { safeGetItem, safeSetItem } from "@/lib/storage";
+
 const IDB_NAME = "wedding_fp";
 const IDB_STORE = "kv";
 const IDB_KEY = "device_uuid";
@@ -7,7 +9,7 @@ const COOKIE_NAME = "device_uuid";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export async function getOrCreateDeviceUUID(): Promise<string> {
-  let uuid = localStorage.getItem("device_uuid");
+  let uuid = safeGetItem("device_uuid");
   if (uuid) { _syncAll(uuid); return uuid; }
 
   uuid = _getCookie(COOKIE_NAME);
@@ -36,7 +38,7 @@ export async function getBrowserSignalsHash(): Promise<string> {
 }
 
 function _syncAll(uuid: string): void {
-  try { localStorage.setItem("device_uuid", uuid); } catch {}
+  try { safeSetItem("device_uuid", uuid); } catch {}
   try {
     document.cookie = `${COOKIE_NAME}=${uuid}; max-age=${COOKIE_MAX_AGE}; path=/; SameSite=Lax`;
   } catch {}

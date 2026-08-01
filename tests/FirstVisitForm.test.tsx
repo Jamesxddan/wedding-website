@@ -6,6 +6,7 @@ vi.mock("@/lib/cities", () => ({
   searchCities: vi.fn((q: string) =>
     q ? [{ name: "Chennai" }, { name: "Chicago" }] : []
   ),
+  isIndianCity: vi.fn((name: string) => true),
 }));
 
 vi.mock("@/lib/fingerprint", () => ({

@@ -48,3 +48,6 @@ graphify-out/
 /playwright-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# local tooling state
+/.claude-flow/

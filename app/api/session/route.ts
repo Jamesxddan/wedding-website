@@ -50,5 +50,29 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Fallback: check by browser_signals_hash — catches incognito users whose
+  // device UUID was cleared but browser profile (userAgent, timezone, screen) matches.
+  if (browser_signals_hash) {
+    const { data: fpByHash } = await supabase
+      .from("device_fingerprints")
+      .select(`guest_id, guests ( id, name, city, invitation_seen, is_owner )`)
+      .eq("browser_signals_hash", browser_signals_hash)
+      .order("last_seen_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fpByHash?.guests) {
+      const guest = fpByHash.guests as unknown as {
+        id: string; name: string; city: string; invitation_seen: boolean; is_owner: boolean;
+      };
+      return NextResponse.json({
+        status: "relink_required",
+        name: guest.name,
+        city: guest.city,
+        guest_id: guest.id,
+      });
+    }
+  }
+
   return NextResponse.json({ status: "new" });
 }

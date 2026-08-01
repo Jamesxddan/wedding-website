@@ -9,6 +9,7 @@ import Footer from "@/components/ui/Footer";
 import Gallery from "@/components/sections/Gallery";
 import Venue from "@/components/sections/Venue";
 import Comments from "@/components/sections/Comments";
+import { DamaskOverlay, OrnamentalFrame, ConfettiBurst } from "@/components/ui/OrnamentalMotifs";
 
 const GOLD = "#D4AF37";
 const GA = (a: number) => `rgba(212,175,55,${a})`;
@@ -55,10 +56,12 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
   const [kirkUrl, setKirkUrl] = useState(KIRK_STREAM_URL);
   const [bknUrl, setBknUrl] = useState(BKN_STREAM_URL);
   const [appeared, setAppeared] = useState(false);
+  const [confetti, setConfetti] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
-    return () => clearTimeout(t);
+    const c = setTimeout(() => setConfetti(true), 500);
+    return () => { clearTimeout(t); clearTimeout(c); };
   }, []);
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
   return (
     <>
       <Nav />
+      <ConfettiBurst active={confetti} onDone={() => setConfetti(false)} />
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section
@@ -94,6 +98,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
           ].join(", "),
         }}
       >
+        <DamaskOverlay opacity={0.035} />
+
         {/* Floating petals */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
           {PETALS.map((p, i) => (
@@ -279,8 +285,9 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
 
       {/* ── LIVE STREAMS ─────────────────────────────────────────────────────── */}
       {hasAnyStream && (
-        <section className="py-24 px-6" style={{ background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}>
-          <div className="max-w-4xl mx-auto flex flex-col gap-14">
+        <section className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}>
+          <DamaskOverlay opacity={0.03} />
+          <div className="relative max-w-4xl mx-auto flex flex-col gap-16">
             <div className="text-center">
               <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: "rgba(135,168,120,0.8)" }}>
                 Live coverage
@@ -288,28 +295,32 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
               <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Watch the Ceremony</h2>
               <p className="font-script italic text-sage text-xl">Wherever you are, you are with us 🌸</p>
             </div>
-            <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} />
-            <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} />
+            <OrnamentalFrame hangingRing padding={6}>
+              <div style={{ padding: "26px 26px 22px" }}>
+                <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} />
+              </div>
+            </OrnamentalFrame>
+            <OrnamentalFrame hangingRing padding={6}>
+              <div style={{ padding: "26px 26px 22px" }}>
+                <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} />
+              </div>
+            </OrnamentalFrame>
           </div>
         </section>
       )}
 
       {!hasAnyStream && (
         <section className="py-16 px-6" style={{ background: "#fffdf9" }}>
-          <div
-            className="max-w-xl mx-auto flex flex-col items-center gap-5 text-center p-14 rounded-3xl"
-            style={{
-              background: "rgba(255,255,255,0.7)",
-              border: `1px solid ${GA(0.25)}`,
-              backdropFilter: "blur(8px)",
-              boxShadow: "0 8px 40px rgba(90,31,46,0.07)",
-            }}
-          >
-            <div style={{ fontSize: 40, animation: "pulse-glow 3s ease-in-out infinite" }}>📡</div>
-            <h3 className="font-heading text-deep-rose text-xl">Live streams coming soon</h3>
-            <p className="font-body text-deep-rose/60 text-sm max-w-xs leading-relaxed">
-              Stream links will appear here once the media teams go live. Refresh in a few minutes.
-            </p>
+          <div className="max-w-xl mx-auto">
+            <OrnamentalFrame hangingRing padding={6}>
+              <div className="flex flex-col items-center gap-5 text-center py-14 px-10">
+                <div style={{ fontSize: 40, animation: "pulse-glow 3s ease-in-out infinite" }}>📡</div>
+                <h3 className="font-heading text-deep-rose text-xl">Live streams coming soon</h3>
+                <p className="font-body text-deep-rose/60 text-sm max-w-xs leading-relaxed">
+                  Stream links will appear here once the media teams go live. Refresh in a few minutes.
+                </p>
+              </div>
+            </OrnamentalFrame>
           </div>
         </section>
       )}

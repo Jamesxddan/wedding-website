@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wall of Love — Design Samples</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&family=Style+Script&family=Caveat:wght@400;600;700&family=Homemade+Apple&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f7f3ef;
+    color: #2c2c2c;
+    padding: 0;
+  }
+
+  /* ─── Nav Tabs ─── */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 28px 20px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e8ddd4;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 100px;
+    border: 1.5px solid #ddd0c5;
+    background: #fff;
+    color: #7a5a5a;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .tab-btn:hover { border-color: #b56576; color: #8B4A6B; }
+  .tab-btn.active {
+    background: linear-gradient(135deg, #8B4A6B, #b56576);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .section {
+    display: none;
+    padding: 60px 24px 100px;
+  }
+  .section.active { display: block; }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .section-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    color: #8B4A6B;
+    margin-bottom: 6px;
+  }
+  .section-header p {
+    font-size: 14px;
+    color: #a89890;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .comment-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ─── Shared comment data: avatar + name + date ─── */
+  .comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .name {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    color: #5a3d3d;
+  }
+  .date {
+    font-size: 11px;
+    color: #b8a8a0;
+    letter-spacing: 0.2px;
+  }
+  .msg-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #2c2c2c;
+  }
+
+  /* ─── Sticker badges ─── */
+  .sticker-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fdf6ff;
+    border: 1px solid #e8d8f0;
+    border-radius: 100px;
+    padding: 4px 14px 4px 10px;
+    font-size: 13px;
+  }
+
+  /* =================================================================
+     1.  CORK BOARD — Pinned Notes
+     ================================================================= */
+  #cork-board .section {
+    background: #d4c4a8;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 40px,
+        rgba(0,0,0,0.02) 40px,
+        rgba(0,0,0,0.02) 41px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 40px,
+        rgba(0,0,0,0.02) 40px,
+        rgba(0,0,0,0.02) 41px
+      );
+  }
+
+  .cork-board {
+    background: #bfa98a;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 20% 30%, rgba(0,0,0,0.04) 0%, transparent 100%),
+      radial-gradient(ellipse 50% 60% at 80% 70%, rgba(0,0,0,0.05) 0%, transparent 100%),
+      repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(139,119,85,0.12) 38px, rgba(139,119,85,0.12) 40px),
+      repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(139,119,85,0.12) 38px, rgba(139,119,85,0.12) 40px);
+    border-radius: 12px;
+    padding: 50px 30px;
+    max-width: 650px;
+    margin: 0 auto;
+    box-shadow:
+      inset 0 2px 20px rgba(0,0,0,0.15),
+      0 4px 20px rgba(0,0,0,0.1);
+    position: relative;
+    border: 6px solid #8a7358;
+  }
+
+  /* cork texture overlay */
+  .cork-board::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background:
+      repeating-conic-gradient(rgba(0,0,0,0.015) 0% 25%, transparent 0% 50%)
+      0 0 / 8px 8px;
+    pointer-events: none;
+  }
+
+  .cork-note {
+    background: #fffef5;
+    padding: 18px 20px 16px;
+    border-radius: 2px;
+    width: 100%;
+    position: relative;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.08),
+      0 1px 2px rgba(0,0,0,0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cork-note:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+
+  /* push-pin */
+  .cork-note::before {
+    content: '📌';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));
+    z-index: 2;
+  }
+
+  .cork-note .msg-text {
+    font-family: 'Caveat', cursive;
+    font-size: 19px;
+    line-height: 1.5;
+    color: #2a2a2a;
+    margin-top: 4px;
+  }
+
+  .cork-note .name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .cork-note .date {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+  }
+
+  /* color variants */
+  .cork-note.pink { background: #fef0f0; }
+  .cork-note.mint { background: #effaf3; }
+  .cork-note.lavender { background: #f5f0fc; }
+  .cork-note.peach { background: #fef5e6; }
+  .cork-note.blue { background: #edf4fc; }
+
+  /* new-note animation */
+  .cork-note.new-note {
+    animation: pinIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes pinIn {
+    0% { opacity: 0; transform: translateY(-30px) scale(0.8) rotate(5deg); }
+    100% { opacity: 1; transform: translateY(0) scale(1) rotate(var(--rot, 0deg)); }
+  }
+
+  /* =================================================================
+     2.  STRING LIGHTS — Clothespin Comments
+     ================================================================= */
+  #string-lights {
+    background: #fcf8f2;
+  }
+
+  .string-wall {
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    padding: 30px 10px 10px;
+  }
+
+  /* the string line */
+  .string-row {
+    position: relative;
+    margin-bottom: 110px;
+  }
+  .string-row:last-child { margin-bottom: 0; }
+
+  .string-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #b8a090 10%, #b8a090 90%, transparent);
+    position: relative;
+    margin-top: -1px;
+  }
+  /* sag */
+  .string-line.sag {
+    height: 14px;
+    background: radial-gradient(ellipse 80% 14px at 50% 0, transparent 0%, transparent 100%);
+    position: relative;
+    overflow: visible;
+  }
+  .string-line.sag::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 5%; right: 5%;
+    height: 2px;
+    background: #c4b4a8;
+    border-radius: 2px;
+    /* catenary approximation */
+    transform: translateY(0);
+    box-shadow: 0 4px 0 #c4b4a8, 0 8px 0 #c4b4a8, 0 12px 0 #c4b4a8;
+    /* We'll simulate with a real SVG approach instead */
+  }
+
+  .sag-svg {
+    display: block;
+    width: 100%;
+    height: 30px;
+    margin-top: -15px;
+  }
+
+  .clothesline-item {
+    position: absolute;
+    top: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform-origin: top center;
+    transition: transform 0.3s;
+  }
+  .clothesline-item:hover {
+    transform: scale(1.04) !important;
+  }
+
+  .clothespin {
+    width: 8px;
+    height: 18px;
+    background: linear-gradient(180deg, #d4c4a8, #bfa88a, #d4c4a8);
+    border-radius: 2px 2px 4px 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+    margin-bottom: -1px;
+    z-index: 2;
+  }
+
+  .clothespin-spring {
+    width: 10px;
+    height: 3px;
+    background: #8a7a6a;
+    border-radius: 1px;
+    margin-top: -2px;
+    z-index: 3;
+  }
+
+  .clothesline-card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 14px 16px;
+    width: 200px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+    position: relative;
+  }
+  .clothesline-card::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid #fff;
+    z-index: 1;
+  }
+
+  .clothesline-card .msg-text {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .clothesline-card .name {
+    font-size: 13px;
+  }
+  .clothesline-card .date {
+    font-size: 10px;
+  }
+
+  /* fairy lights */
+  .fairy-light {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    top: -4px;
+    z-index: 5;
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  .fairy-light::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0.3;
+    filter: blur(4px);
+  }
+  .fairy-light.warm { background: #ffd700; box-shadow: 0 0 8px #ffd70066; }
+  .fairy-light.cool { background: #ff9ec4; box-shadow: 0 0 8px #ff9ec466; }
+  .fairy-light.warm2 { background: #ffb347; box-shadow: 0 0 8px #ffb34766; }
+
+  @keyframes glow {
+    0% { opacity: 0.6; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1.1); }
+  }
+
+  .fairy-light:nth-child(odd) { animation-delay: 0.7s; }
+  .fairy-light:nth-child(3n) { animation-delay: 1.4s; }
+
+  /* =================================================================
+     3.  POLAROID WALL
+     ================================================================= */
+  #polaroid {
+    background: linear-gradient(180deg, #f7f0e8 0%, #ede4da 100%);
+  }
+
+  .polaroid-wall {
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 10px;
+  }
+
+  .polaroid {
+    background: #fff;
+    padding: 10px 10px 42px;
+    box-shadow:
+      0 3px 14px rgba(0,0,0,0.08),
+      0 1px 3px rgba(0,0,0,0.04);
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    cursor: default;
+  }
+  .polaroid:hover {
+    transform: scale(1.03) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  }
+
+  /* polaroid photo area — gradient placeholder for "photo" */
+  .polaroid-photo {
+    width: 100%;
+    height: 120px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .polaroid-photo.gradient-1 { background: linear-gradient(135deg, #fce4d6, #f8d5c0); }
+  .polaroid-photo.gradient-2 { background: linear-gradient(135deg, #d4e8d0, #c0dcc0); }
+  .polaroid-photo.gradient-3 { background: linear-gradient(135deg, #e8d4f0, #dcc4e8); }
+  .polaroid-photo.gradient-4 { background: linear-gradient(135deg, #fce8d0, #f8dcc4); }
+  .polaroid-photo.gradient-5 { background: linear-gradient(135deg, #d0e4f0, #c0d8e8); }
+
+  .polaroid-photo .avatar-big {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .polaroid .name {
+    font-size: 12px;
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    text-align: center;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .polaroid .msg-text {
+    font-family: 'Caveat', cursive;
+    font-size: 16px;
+    line-height: 1.4;
+    padding: 8px 0 6px;
+    text-align: center;
+    color: #333;
+  }
+
+  .polaroid .date {
+    font-size: 9px;
+    text-align: center;
+    color: #b8a8a0;
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+  }
+
+  /* tape on polaroid */
+  .polaroid .tape {
+    position: absolute;
+    width: 30px; height: 12px;
+    background: rgba(200,190,180,0.4);
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(0deg);
+    border-radius: 1px;
+    opacity: 0.6;
+  }
+
+  /* =================================================================
+     4.  CHALKBOARD
+     ================================================================= */
+  #chalkboard {
+    background: #2a3a2a;
+  }
+
+  .chalkboard-bg {
+    background: #1f2f1f;
+    border-radius: 12px;
+    padding: 50px 30px;
+    max-width: 650px;
+    margin: 0 auto;
+    box-shadow:
+      inset 0 0 60px rgba(0,0,0,0.4),
+      0 4px 20px rgba(0,0,0,0.2);
+    border: 8px solid #5a4a3a;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* chalk dust texture */
+  .chalkboard-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-conic-gradient(rgba(255,255,255,0.015) 0% 25%, transparent 0% 50%)
+      0 0 / 6px 6px;
+    pointer-events: none;
+  }
+  .chalkboard-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 30% 20%, rgba(255,255,255,0.03) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .chalk-header h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 36px;
+    color: rgba(255,255,240,0.85);
+    text-align: center;
+    margin-bottom: 4px;
+    text-shadow: 0 0 4px rgba(255,255,240,0.1);
+  }
+  .chalk-header p {
+    font-family: 'Caveat', cursive;
+    font-size: 16px;
+    color: rgba(255,255,240,0.45);
+    text-align: center;
+  }
+
+  .chalk-divider {
+    text-align: center;
+    color: rgba(255,255,240,0.2);
+    font-size: 20px;
+    margin: 10px 0;
+  }
+
+  .chalk-comment {
+    padding: 10px 16px;
+    position: relative;
+  }
+  .chalk-comment .msg-text {
+    font-family: 'Caveat', cursive;
+    font-size: 20px;
+    line-height: 1.5;
+    color: rgba(255,255,240,0.8);
+    text-shadow: 0 0 3px rgba(255,255,240,0.05);
+  }
+  .chalk-comment .name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 17px;
+    color: rgba(255,240,200,0.75);
+  }
+  .chalk-comment .date {
+    font-family: 'Caveat', cursive;
+    font-size: 13px;
+    color: rgba(255,255,240,0.3);
+  }
+
+  .chalk-hearts {
+    text-align: center;
+    color: rgba(255,180,180,0.25);
+    font-size: 14px;
+    letter-spacing: 4px;
+    margin: 4px 0;
+  }
+
+  /* =================================================================
+     5.  WISHING TREE
+     ================================================================= */
+  #wishing-tree {
+    background: linear-gradient(180deg, #f0ebe3 0%, #e8e0d4 50%, #d8ccbc 100%);
+    overflow: hidden;
+  }
+
+  .tree-container {
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+    min-height: 500px;
+    padding: 0 20px;
+  }
+
+  .tree-svg-wrap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .tree-svg-wrap svg {
+    width: 280px;
+    height: auto;
+    opacity: 0.6;
+    margin-top: -20px;
+  }
+
+  .tree-tags {
+    position: relative;
+    margin-top: -80px;
+    padding-bottom: 20px;
+  }
+
+  .tree-tag {
+    background: #fffef5;
+    border: 1px solid #e8ddd4;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    max-width: 360px;
+    position: relative;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .tree-tag:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+
+  .tree-tag::before {
+    content: '🎀';
+    position: absolute;
+    font-size: 18px;
+  }
+  .tree-tag.left {
+    margin-right: auto;
+  }
+  .tree-tag.left::before {
+    right: -20px;
+    top: -6px;
+    transform: rotate(15deg);
+  }
+  .tree-tag.right {
+    margin-left: auto;
+  }
+  .tree-tag.right::before {
+    left: -20px;
+    top: -6px;
+    transform: rotate(-15deg) scaleX(-1);
+  }
+  .tree-tag.center {
+    margin: 0 auto 12px;
+  }
+  .tree-tag.center::before {
+    right: -20px;
+    top: -6px;
+    transform: rotate(10deg);
+  }
+
+  .tree-tag .msg-text {
+    font-family: 'Caveat', cursive;
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  .tree-tag .name {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  /* ─── Labels ─── */
+  .design-label {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .design-label span {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #b8a898;
+    background: #f7f3ef;
+    padding: 4px 14px;
+    border-radius: 100px;
+    border: 1px solid #e8ddd4;
+  }
+  #chalkboard .design-label span {
+    background: #2a3a2a;
+    border-color: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 600px) {
+    .cork-board { padding: 30px 16px; }
+    .clothesline-card { width: 160px; padding: 10px 12px; }
+    .polaroid { width: 160px; }
+    .chalkboard-bg { padding: 30px 16px; }
+    .tree-svg-wrap svg { width: 200px; }
+  }
+
+  /* ─── Subtitle / picker prompt ─── */
+  .picker-prompt {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  }
+  .picker-prompt p {
+    font-size: 13px;
+    color: #7a5a5a;
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  .picker-prompt .vote-options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .picker-prompt .vote-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1.5px solid #ddd0c5;
+    background: #fff;
+    color: #7a5a5a;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .picker-prompt .vote-btn:hover {
+    border-color: #b56576;
+    background: #fdf6f3;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ─── Tabs ─── -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="cork-board">📌 Cork Board</button>
+  <button class="tab-btn" data-tab="string-lights">💡 String Lights</button>
+  <button class="tab-btn" data-tab="polaroid">📸 Polaroid Wall</button>
+  <button class="tab-btn" data-tab="chalkboard">🖍️ Chalkboard</button>
+  <button class="tab-btn" data-tab="wishing-tree">🌳 Wishing Tree</button>
+</div>
+
+<!-- =================================================================
+     1. CORK BOARD
+     ================================================================= -->
+<div id="cork-board" class="section active">
+  <div class="section-header">
+    <h2>📌 Cork Board</h2>
+    <p>Comments pinned like sticky notes on a real cork board. Each note gets a random pastel colour and slight tilt.</p>
+  </div>
+  <div class="cork-board">
+    <div class="comment-row">
+      <div class="cork-note pink new-note" style="--rot: -1.5deg">
+        <div class="comment-meta">
+          <div class="avatar" style="background: #b56576">M</div>
+          <div><span class="name">Mum &amp; Dad</span><br><span class="date">25 Jul 2026</span></div>
+        </div>
+        <div class="msg-text">So proud of you both! May your life together be filled with joy, laughter and God's abundant blessings ❤️</div>
+      </div>
+
+      <div class="cork-note mint new-note" style="--rot: 1.2deg">
+        <div class="comment-meta">
+          <div class="avatar" style="background: #4a8c6f">S</div>
+          <div><span class="name">Shiny</span><br><span class="date">26 Jul 2026</span></div>
+        </div>
+        <div class="msg-text">So happy for you both! Welcome to the family, James 🤗💕</div>
+      </div>
+
+      <div class="cork-note lavender new-note" style="--rot: -0.8deg">
+        <div class="comment-meta">
+          <div class="avatar" style="background: #8a6e9e">R</div>
+          <div><span class="name">Rachel</span><br><span class="date">27 Jul 2026</span></div>
+        </div>
+        <div class="msg-text">Such a beautiful couple! Wishing you a lifetime of togetherness 🫶💒</div>
+      </div>
+
+      <div class="cork-note peach new-note" style="--rot: 0.5deg">
+        <div class="comment-meta">
+          <div class="avatar" style="background: #c4906a">D</div>
+          <div><span class="name">David</span><br><span class="date">28 Jul 2026</span></div>
+        </div>
+        <div class="msg-text">James &amp; Sharon — truly a match made in heaven! Many congratulations 🎊🎉</div>
+      </div>
+
+      <div class="cork-note blue new-note" style="--rot: -1.0deg">
+        <div class="comment-meta">
+          <div class="avatar" style="background: #5a8aaa">P</div>
+          <div><span class="name">Priya</span><br><span class="date">29 Jul 2026</span></div>
+        </div>
+        <div class="sticker-badge">🎊 Congrats!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     2. STRING LIGHTS
+     ================================================================= -->
+<div id="string-lights" class="section">
+  <div class="section-header">
+    <h2>💡 String Lights</h2>
+    <p>Comments clipped to glowing string lights with clothespins. The strings sag naturally with fairy lights woven through.</p>
+  </div>
+  <div class="string-wall">
+    <div class="design-label"><span>✦ Row 1</span></div>
+    <!-- Row 1 -->
+    <div class="string-row" style="height: 170px;">
+      <svg class="sag-svg" viewBox="0 0 600 30" preserveAspectRatio="none">
+        <path d="M 0 15 Q 300 40 600 15" fill="none" stroke="#c4b4a8" stroke-width="2"/>
+      </svg>
+      <div class="clothesline-item" style="left: 6%; top: 12px; transform: rotate(-2deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #b56576; width:28px;height:28px;font-size:11px;">M</div>
+            <div><span class="name">Mum &amp; Dad</span><br><span class="date">25 Jul</span></div>
+          </div>
+          <div class="msg-text">So proud of you both! ❤️</div>
+        </div>
+      </div>
+
+      <div class="clothesline-item" style="left: 32%; top: 16px; transform: rotate(1deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #4a8c6f; width:28px;height:28px;font-size:11px;">S</div>
+            <div><span class="name">Shiny</span><br><span class="date">26 Jul</span></div>
+          </div>
+          <div class="msg-text">Welcome to the family, James! 🤗</div>
+        </div>
+      </div>
+
+      <div class="clothesline-item" style="left: 58%; top: 14px; transform: rotate(-1.5deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #8a6e9e; width:28px;height:28px;font-size:11px;">R</div>
+            <div><span class="name">Rachel</span><br><span class="date">27 Jul</span></div>
+          </div>
+          <div class="msg-text">Beautiful couple! 🫶💒</div>
+        </div>
+      </div>
+
+      <div class="clothesline-item" style="left: 80%; top: 18px; transform: rotate(0.5deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #c4906a; width:28px;height:28px;font-size:11px;">D</div>
+            <div><span class="name">David</span><br><span class="date">28 Jul</span></div>
+          </div>
+          <div class="msg-text">Many congratulations! 🎊</div>
+        </div>
+      </div>
+
+      <!-- fairy lights -->
+      <div class="fairy-light warm" style="left: 2%; top: 6px;"></div>
+      <div class="fairy-light cool" style="left: 15%; top: 8px;"></div>
+      <div class="fairy-light warm2" style="left: 28%; top: 5px;"></div>
+      <div class="fairy-light warm" style="left: 42%; top: 7px;"></div>
+      <div class="fairy-light cool" style="left: 55%; top: 4px;"></div>
+      <div class="fairy-light warm2" style="left: 68%; top: 8px;"></div>
+      <div class="fairy-light warm" style="left: 82%; top: 6px;"></div>
+      <div class="fairy-light cool" style="left: 93%; top: 9px;"></div>
+    </div>
+
+    <div class="design-label"><span>✦ Row 2</span></div>
+    <div class="string-row" style="height: 170px;">
+      <svg class="sag-svg" viewBox="0 0 600 30" preserveAspectRatio="none">
+        <path d="M 0 15 Q 300 40 600 15" fill="none" stroke="#c4b4a8" stroke-width="2"/>
+      </svg>
+      <div class="clothesline-item" style="left: 14%; top: 14px; transform: rotate(1.2deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #5a8aaa; width:28px;height:28px;font-size:11px;">P</div>
+            <div><span class="name">Priya</span><br><span class="date">29 Jul</span></div>
+          </div>
+          <div class="sticker-badge" style="font-size:12px;">🎊 Congrats!</div>
+        </div>
+      </div>
+
+      <div class="clothesline-item" style="left: 44%; top: 16px; transform: rotate(-0.8deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #b08a5a; width:28px;height:28px;font-size:11px;">A</div>
+            <div><span class="name">Aunty Grace</span><br><span class="date">29 Jul</span></div>
+          </div>
+          <div class="msg-text">God bless the happy couple! 🙏</div>
+        </div>
+      </div>
+
+      <div class="clothesline-item" style="left: 72%; top: 12px; transform: rotate(0.3deg);">
+        <div class="clothespin"></div>
+        <div class="clothesline-card">
+          <div class="comment-meta">
+            <div class="avatar" style="background: #b56576; width:28px;height:28px;font-size:11px;">J</div>
+            <div><span class="name">Joseph</span><br><span class="date">30 Jul</span></div>
+          </div>
+          <div class="msg-text">Much love to you both! 🌹</div>
+        </div>
+      </div>
+
+      <div class="fairy-light warm2" style="left: 8%; top: 8px;"></div>
+      <div class="fairy-light cool" style="left: 25%; top: 5px;"></div>
+      <div class="fairy-light warm" style="left: 38%; top: 7px;"></div>
+      <div class="fairy-light warm2" style="left: 52%; top: 6px;"></div>
+      <div class="fairy-light cool" style="left: 65%; top: 9px;"></div>
+      <div class="fairy-light warm" style="left: 78%; top: 5px;"></div>
+      <div class="fairy-light warm2" style="left: 90%; top: 7px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     3. POLAROID WALL
+     ================================================================= -->
+<div id="polaroid" class="section">
+  <div class="section-header">
+    <h2>📸 Polaroid Wall</h2>
+    <p>Each comment is a Polaroid snapshot pinned to the wall. The "photo" area has a soft gradient and the guest's initial.</p>
+  </div>
+  <div class="polaroid-wall">
+    <div class="polaroid" style="transform: rotate(-2.5deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(-8deg);"></div>
+      <div class="polaroid-photo gradient-1">
+        <div class="avatar-big" style="background: #b56576;">M</div>
+      </div>
+      <div class="msg-text">So proud of you both!</div>
+      <div class="name">Mum &amp; Dad</div>
+      <div class="date">25 Jul 2026</div>
+    </div>
+
+    <div class="polaroid" style="transform: rotate(1.8deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(5deg);"></div>
+      <div class="polaroid-photo gradient-2">
+        <div class="avatar-big" style="background: #4a8c6f;">S</div>
+      </div>
+      <div class="msg-text">Welcome to the family!</div>
+      <div class="name">Shiny</div>
+      <div class="date">26 Jul 2026</div>
+    </div>
+
+    <div class="polaroid" style="transform: rotate(-1.2deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(-3deg);"></div>
+      <div class="polaroid-photo gradient-3">
+        <div class="avatar-big" style="background: #8a6e9e;">R</div>
+      </div>
+      <div class="msg-text">Beautiful couple! 🫶</div>
+      <div class="name">Rachel</div>
+      <div class="date">27 Jul 2026</div>
+    </div>
+
+    <div class="polaroid" style="transform: rotate(2.0deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(6deg);"></div>
+      <div class="polaroid-photo gradient-4">
+        <div class="avatar-big" style="background: #c4906a;">D</div>
+      </div>
+      <div class="msg-text">Many congratulations! 🎊</div>
+      <div class="name">David</div>
+      <div class="date">28 Jul 2026</div>
+    </div>
+
+    <div class="polaroid" style="transform: rotate(-3.0deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(-10deg);"></div>
+      <div class="polaroid-photo gradient-5">
+        <div class="avatar-big" style="background: #5a8aaa;">P</div>
+      </div>
+      <div class="sticker-badge" style="font-size:12px; display:inline-flex; margin: 4px auto;">🎊 Congrats!</div>
+      <div class="name" style="margin-top:4px;">Priya</div>
+      <div class="date">29 Jul 2026</div>
+    </div>
+
+    <div class="polaroid" style="transform: rotate(1.5deg);">
+      <div class="tape" style="transform: translateX(-50%) rotate(4deg);"></div>
+      <div class="polaroid-photo gradient-2">
+        <div class="avatar-big" style="background: #b08a5a;">A</div>
+      </div>
+      <div class="msg-text">God bless you both! 🙏</div>
+      <div class="name">Aunty Grace</div>
+      <div class="date">29 Jul 2026</div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     4. CHALKBOARD
+     ================================================================= -->
+<div id="chalkboard" class="section">
+  <div class="section-header" style="color: rgba(255,255,240,0.85);">
+    <h2 style="color: rgba(255,255,240,0.85); font-family: 'Caveat', cursive; font-size: 36px;">🖍️ Chalkboard</h2>
+    <p style="color: rgba(255,255,240,0.45);">Comments appear like handwritten chalk on a rustic wedding sign-in board. Complete with chalk dust texture.</p>
+  </div>
+  <div class="chalkboard-bg">
+    <div class="chalk-header">
+      <h2>Wall of Love ✨</h2>
+      <p>— leave your blessings for the happy couple —</p>
+    </div>
+    <div class="chalk-divider">♡ ♡ ♡</div>
+
+    <div class="chalk-comment">
+      <div class="comment-meta">
+        <span class="name">Mum &amp; Dad</span>
+        <span class="date">· 25 Jul</span>
+      </div>
+      <div class="msg-text">So proud of you both! May God bless your union abundantly 🕊️</div>
+      <div class="chalk-hearts">♡ ♡ ♡</div>
+    </div>
+
+    <div class="chalk-comment">
+      <div class="comment-meta">
+        <span class="name">Shiny</span>
+        <span class="date">· 26 Jul</span>
+      </div>
+      <div class="msg-text">So happy for you both! Welcome to the family, James 🤗💕</div>
+      <div class="chalk-hearts">♡ ♡ ♡</div>
+    </div>
+
+    <div class="chalk-comment">
+      <div class="comment-meta">
+        <span class="name">Rachel</span>
+        <span class="date">· 27 Jul</span>
+      </div>
+      <div class="msg-text">Such a beautiful couple! Wishing you a lifetime of togetherness 🫶💒</div>
+      <div class="chalk-hearts">♡ ♡ ♡</div>
+    </div>
+
+    <div class="chalk-comment">
+      <div class="comment-meta">
+        <span class="name">David</span>
+        <span class="date">· 28 Jul</span>
+      </div>
+      <div class="msg-text">James &amp; Sharon — truly a match made in heaven! Many congratulations 🎊</div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     5. WISHING TREE
+     ================================================================= -->
+<div id="wishing-tree" class="section">
+  <div class="section-header">
+    <h2>🌳 Wishing Tree</h2>
+    <p>Blessings hang from a tree like gift tags on ribbons. Each tag sways gently with a ribbon bow at the top.</p>
+  </div>
+  <div class="tree-container">
+    <!-- SVG tree -->
+    <div class="tree-svg-wrap">
+      <svg viewBox="0 0 200 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Trunk -->
+        <path d="M90 220 Q88 200 85 170 Q80 140 82 120 Q84 100 90 80 Q95 60 100 40 Q105 60 110 80 Q116 100 118 120 Q120 140 115 170 Q112 200 110 220 Z" fill="#7a6a5a" opacity="0.5"/>
+        <!-- Canopy -->
+        <ellipse cx="100" cy="70" rx="65" ry="55" fill="#5a7a4a" opacity="0.35"/>
+        <ellipse cx="70" cy="90" rx="45" ry="40" fill="#6a8a5a" opacity="0.3"/>
+        <ellipse cx="130" cy="90" rx="45" ry="40" fill="#4a7a4a" opacity="0.25"/>
+        <ellipse cx="100" cy="50" rx="40" ry="35" fill="#7a9a6a" opacity="0.3"/>
+        <ellipse cx="55" cy="110" rx="30" ry="25" fill="#5a7a4a" opacity="0.2"/>
+        <ellipse cx="145" cy="110" rx="30" ry="25" fill="#6a8a5a" opacity="0.2"/>
+      </svg>
+    </div>
+
+    <!-- Tags -->
+    <div class="tree-tags">
+      <div class="tree-tag left" style="transform: rotate(-0.5deg);">
+        <div class="comment-meta">
+          <span class="name">Mum &amp; Dad</span>
+        </div>
+        <div class="msg-text">May your life together be filled with joy, laughter and God's abundant blessings ❤️</div>
+      </div>
+
+      <div class="tree-tag right" style="transform: rotate(0.8deg);">
+        <div class="comment-meta">
+          <span class="name">Shiny</span>
+        </div>
+        <div class="msg-text">So happy for you both! Welcome to the family 🤗💕</div>
+      </div>
+
+      <div class="tree-tag center" style="transform: rotate(-0.3deg);">
+        <div class="comment-meta">
+          <span class="name">Rachel</span>
+        </div>
+        <div class="msg-text">Beautiful couple! Wishing you a lifetime of togetherness 🫶</div>
+      </div>
+
+      <div class="tree-tag left" style="transform: rotate(0.5deg);">
+        <div class="comment-meta">
+          <span class="name">David</span>
+        </div>
+        <div class="msg-text">Many congratulations James &amp; Sharon! 🎊🎉</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Pick your favourite ─── -->
+<div class="picker-prompt" style="margin: 20px auto 40px;">
+  <p><strong>Which design speaks to you?</strong><br>
+  Tap one below and I'll build the real UI for the wedding site.</p>
+  <div class="vote-options">
+    <button class="vote-btn" onclick="pickDesign('📌 Cork Board')">📌 Cork Board</button>
+    <button class="vote-btn" onclick="pickDesign('💡 String Lights')">💡 String Lights</button>
+    <button class="vote-btn" onclick="pickDesign('📸 Polaroid Wall')">📸 Polaroid Wall</button>
+    <button class="vote-btn" onclick="pickDesign('🖍️ Chalkboard')">🖍️ Chalkboard</button>
+    <button class="vote-btn" onclick="pickDesign('🌳 Wishing Tree')">🌳 Wishing Tree</button>
+  </div>
+  <p id="pick-result" style="margin-top: 12px; font-size: 13px; color: #8B4A6B; font-weight: 500;"></p>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function pickDesign(name) {
+    document.getElementById('pick-result').textContent = `✨ You picked ${name}! Tell me in the chat and I'll build it.`;
+  }
+</script>
+
+</body>
+</html>

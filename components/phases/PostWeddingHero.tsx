@@ -5,6 +5,8 @@ import Nav from "@/components/ui/Nav";
 import Gallery from "@/components/sections/Gallery";
 import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
+import { safeGetItem } from "@/lib/storage";
+import { DamaskOverlay, OrnamentalFrame } from "@/components/ui/OrnamentalMotifs";
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -54,6 +56,7 @@ export default function PostWeddingHero({ guestName }: Props) {
   const [photosUrl, setPhotosUrl] = useState("");
   const [videosUrl, setVideosUrl] = useState("");
   const [wmText, setWmText] = useState("James & Sharon");
+  const [heroPhoto, setHeroPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
@@ -65,8 +68,15 @@ export default function PostWeddingHero({ guestName }: Props) {
         setVideosUrl(s.post_wedding_videos_url ?? "");
       })
       .catch(() => {});
-    const parts = ["James & Sharon", localStorage.getItem("guest_name"), localStorage.getItem("guest_city")].filter(Boolean);
+    const parts = ["James & Sharon", safeGetItem("guest_name"), safeGetItem("guest_city")].filter(Boolean);
     setWmText(parts.join("  ·  "));
+    fetch("/api/drive-photos?folder=wedding&device=desktop&view=albums")
+      .then((r) => r.json())
+      .then((data) => {
+        const first = (data.albums ?? []).flatMap((a: { photos?: { thumbnailUrl: string }[] }) => a.photos ?? [])[0];
+        if (first?.thumbnailUrl) setHeroPhoto(first.thumbnailUrl);
+      })
+      .catch(() => {});
     return () => clearTimeout(t);
   }, []);
 

@@ -2,21 +2,42 @@
 
 import { useState, useEffect } from "react";
 
+// Order matches the section order on the pre-wedding page, so the nav
+// "marches" down the page in the same sequence as the content.
 const LINKS = [
   { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
   { label: "Gallery", href: "#gallery" },
-  { label: "Venue", href: "#venue" },
+  { label: "About", href: "#about" },
   { label: "Families", href: "#families" },
+  { label: "Venue", href: "#venue" },
   { label: "Wall of Love", href: "#wall-of-love" },
 ];
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("");
 
   useEffect(() => {
-    function onScroll() { setScrolled(window.scrollY > 40); }
+    function onScroll() {
+      setScrolled(window.scrollY > 40);
+
+      // Scroll-spy: highlight the link of the section currently in view, so the
+      // top bar marches through the page in order (Home → Gallery → About → …).
+      const ids = LINKS.map((l) => l.href.slice(1));
+      let current = "";
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= 120) current = id;
+      }
+      // Near the very bottom, always land on the last section.
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 4) {
+        current = ids[ids.length - 1] || current;
+      }
+      setActive(current);
+    }
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -41,16 +62,21 @@ export default function Nav() {
 
         {/* Desktop links */}
         <ul className="hidden md:flex gap-8">
-          {LINKS.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${scrolled || open ? "text-deep-rose/80 hover:text-deep-rose" : "text-white/90 hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"}`}
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
+          {LINKS.map((link) => {
+            const id = link.href.slice(1);
+            const isActive = active === id;
+            return (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  aria-current={isActive ? "true" : undefined}
+                  className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${scrolled || open ? "text-deep-rose/80 hover:text-deep-rose" : "text-white/90 hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"} ${isActive ? "font-semibold border-b-2 border-[#D4AF37]" : "border-b-2 border-transparent"}`}
+                >
+                  {link.label}
+                </a>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Hamburger */}
@@ -73,17 +99,21 @@ export default function Nav() {
         }`}
       >
         <ul className="flex flex-col px-6 gap-1">
-          {LINKS.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="block py-3 font-body text-sm text-deep-rose/80 hover:text-deep-rose tracking-widest uppercase border-b border-champagne transition-colors"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
+          {LINKS.map((link) => {
+            const isActive = active === link.href.slice(1);
+            return (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive ? "true" : undefined}
+                  className={`block py-3 font-body text-sm text-deep-rose/80 hover:text-deep-rose tracking-widest uppercase border-b border-champagne transition-colors ${isActive ? "font-semibold text-deep-rose" : ""}`}
+                >
+                  {link.label}
+                </a>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </nav>

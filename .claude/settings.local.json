@@ -28,7 +28,14 @@
       "Bash(git push *)",
       "Bash(timeout 8)",
       "Bash(ping -n 6 127.0.0.1)",
-      "Bash(type \"C:\\\\Users\\\\jjame\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-jjame-OneDrive---Globus-Medical-Documents-Personal-wedding-website\\\\42d5939d-8f65-4a20-9542-e98404b3bb9e\\\\tasks\\\\bjfyike7o.output\")"
+      "Bash(type \"C:\\\\Users\\\\jjame\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-jjame-OneDrive---Globus-Medical-Documents-Personal-wedding-website\\\\42d5939d-8f65-4a20-9542-e98404b3bb9e\\\\tasks\\\\bjfyike7o.output\")",
+      "Bash(git rev-list *)",
+      "Bash(where omniroute *)",
+      "Bash(node \".claude/helpers/auto-memory-hook.mjs\" status)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ]
 }

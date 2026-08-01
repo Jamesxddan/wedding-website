@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { searchCities, type City } from "@/lib/cities";
+import { searchCities, isIndianCity, type City } from "@/lib/cities";
 import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
+import { safeSetItem } from "@/lib/storage";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -28,10 +29,13 @@ export default function FirstVisitForm({ onComplete }: Props) {
     }
     const results = searchCities(cityQuery);
 
-    // Auto-select when typed text is an exact match (case-insensitive)
+    // Auto-select when typed text is an exact match of a real Indian city.
+    // (Otherwise a partial prefix like "Hyder" could match an obscure
+    // non-Indian town in the world list — e.g. "Hyder" — and silently lock
+    // the field instead of requiring a real city like "Hyderabad".)
     const q = cityQuery.trim().toLowerCase();
     const exactMatch = results.find((c) => c.name.toLowerCase() === q);
-    if (exactMatch) {
+    if (exactMatch && isIndianCity(exactMatch.name)) {
       setSelectedCity(exactMatch);
       setCityQuery(exactMatch.name); // normalize casing
       setSuggestions([]);
@@ -64,14 +68,14 @@ export default function FirstVisitForm({ onComplete }: Props) {
     setSelectedCity(null);
   }
 
-  const isEmailValid = email.trim() === "" ? true : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const isMobileValid = mobile.trim() === "" ? true : /^\+?[0-9\s-()]{7,20}$/.test(mobile.trim());
-  const hasAtLeastOne = email.trim().length > 0 || mobile.trim().length > 0;
-  const isFormValid = hasAtLeastOne && isEmailValid && isMobileValid;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const mobileDigits = mobile.trim().replace(/\D/g, "");
+  const isMobileValid = /^[\d\s\-()+]*$/.test(mobile.trim()) && mobileDigits.length >= 10 && mobileDigits.length <= 15;
+  const hasAtLeastOne = isEmailValid || isMobileValid;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !selectedCity || !isFormValid || isSubmitting) return;
+    if (!name.trim() || !selectedCity || !hasAtLeastOne || isSubmitting) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -87,8 +91,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
         body: JSON.stringify({
           name: name.trim(),
           city: selectedCity.name,
-          email: email.trim() ? email.trim().toLowerCase() : undefined,
-          mobile: mobile.trim() ? mobile.trim() : undefined,
+          email: email.trim().toLowerCase(),
+          mobile: mobile.trim(),
           device_uuid,
           browser_signals_hash,
           user_agent: navigator.userAgent,
@@ -106,12 +110,12 @@ export default function FirstVisitForm({ onComplete }: Props) {
 
       const data = await res.json();
 
-      startBackgroundMusic("/song.mp3");
-      localStorage.setItem("guest_name", name.trim());
-      localStorage.setItem("guest_city", selectedCity.name);
-      if (email.trim()) localStorage.setItem("guest_email", email.trim().toLowerCase());
-      if (mobile.trim()) localStorage.setItem("guest_mobile", mobile.trim());
-      if (data.session_token) localStorage.setItem("session_token", data.session_token);
+      startBackgroundMusic();
+      safeSetItem("guest_name", name.trim());
+      safeSetItem("guest_city", selectedCity.name);
+      safeSetItem("guest_email", email.trim().toLowerCase());
+      safeSetItem("guest_mobile", mobile.trim());
+      if (data.session_token) safeSetItem("session_token", data.session_token);
       onComplete(name.trim());
     } catch {
       setError("Something went wrong — please try again.");
@@ -120,7 +124,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
     }
   }
 
-  const canSubmit = name.trim().length > 0 && selectedCity !== null && isFormValid && !isSubmitting;
+  const canSubmit = name.trim().length > 0 && selectedCity !== null && hasAtLeastOne && !isSubmitting;
 
   const inputCls = "border border-champagne rounded-lg px-4 py-3 bg-[rgba(253,246,236,0.85)] text-deep-rose font-body placeholder:text-deep-rose/35 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[rgba(212,175,55,0.25)] transition-all duration-200";
 
@@ -154,8 +158,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-email" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-            Email <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
-          </label>
+            Email          </label>
           <input
             id="guest-email"
             type="email"
@@ -181,8 +184,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
-            Mobile <span className="normal-case tracking-normal text-deep-rose/35 text-[9px]">optional</span>
-          </label>
+            Mobile          </label>
           <input
             id="guest-mobile"
             type="tel"
