@@ -7,7 +7,7 @@ export default function Families() {
   const { families } = useSiteContent();
 
   const sides = [
-    { label: "James's Family", members: families.james },
+    { label: "James Daniel's Family", members: families.james },
     { label: "Sharon's Family", members: families.sharon },
   ];
 

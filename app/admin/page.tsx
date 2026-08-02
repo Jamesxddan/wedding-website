@@ -137,6 +137,9 @@ export default function AdminPage() {
   const [videosInput, setVideosInput] = useState("");
   const [videosSaving, setVideosSaving] = useState(false);
   const [videosSaved, setVideosSaved] = useState(false);
+  const [commentVideoInput, setCommentVideoInput] = useState("");
+  const [commentVideoSaving, setCommentVideoSaving] = useState(false);
+  const [commentVideoSaved, setCommentVideoSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
 
   const [expandedGuest, setExpandedGuest] = useState<string | null>(null);
@@ -183,6 +186,7 @@ export default function AdminPage() {
     setHighlightsInput(data.highlights_video_url ?? "");
     setPhotosInput(data.post_wedding_photos_url ?? "");
     setVideosInput(data.post_wedding_videos_url ?? "");
+    setCommentVideoInput(data.youtube_comment_video_id ?? "");
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -291,6 +295,13 @@ export default function AdminPage() {
     await saveSetting("post_wedding_videos_url", videosInput.trim());
     setVideosSaving(false); setVideosSaved(true);
     setTimeout(() => setVideosSaved(false), 2500);
+  }
+
+  async function saveCommentVideoId() {
+    setCommentVideoSaving(true);
+    await saveSetting("youtube_comment_video_id", commentVideoInput.trim());
+    setCommentVideoSaving(false); setCommentVideoSaved(true);
+    setTimeout(() => setCommentVideoSaved(false), 2500);
   }
 
   async function saveAnnouncement() {
@@ -944,6 +955,25 @@ export default function AdminPage() {
                   allowFullScreen title="Reception preview" />
               </div>
             )}
+          </div>
+
+          {/* YouTube comments source */}
+          <div style={card}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "#1a1a1a" }}>💬 YouTube Comments (video ID)</h3>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "#888" }}>
+              The video whose comments are shown in the site&apos;s YouTube Comments section. Paste the ID only (the part after <code style={{ background: "#f1ede8", padding: "1px 4px", borderRadius: 4 }}>?v=</code>), or a full watch URL.
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input
+                style={{ ...inputStyle, minWidth: 0 }}
+                value={commentVideoInput}
+                onChange={(e) => { setCommentVideoInput(e.target.value); setCommentVideoSaved(false); }}
+                placeholder="e.g. iJzBd0U-D1U or full https://www.youtube.com/watch?v=..."
+              />
+              <button style={saveBtn(commentVideoSaving, commentVideoSaved)} onClick={saveCommentVideoId} disabled={commentVideoSaving}>
+                {commentVideoSaved ? "Saved ✓" : commentVideoSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1650,7 +1680,7 @@ function ContentTab() {
               </div>
               {(["james", "sharon"] as const).map((side) => (
                 <div key={side} style={{ background: "#faf9f7", borderRadius: 8, padding: 12, border: "1px solid #ede8e2" }}>
-                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8B4A6B" }}>{side === "james" ? "James's Family" : "Sharon's Family"}</p>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8B4A6B" }}>{side === "james" ? "James Daniel's Family" : "Sharon's Family"}</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {content.families[side].map((m: FamilyMember, i: number) => (
                       <div key={i} style={{ display: "flex", gap: 8 }}>

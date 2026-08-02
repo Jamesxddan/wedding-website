@@ -104,5 +104,6 @@ insert into settings (key, value) values
   ('youtube_live_url',       ''),
   ('youtube_ceremony_url',   ''),
   ('youtube_reception_url',  ''),
+  ('youtube_comment_video_id',''),
   ('announcement',           '')
 on conflict (key) do nothing;

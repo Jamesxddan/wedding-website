@@ -31,7 +31,7 @@ describe("AboutSharon", () => {
 describe("Families", () => {
   it("renders both family side headings", () => {
     render(<Families />);
-    expect(screen.getByText("James's Family")).toBeInTheDocument();
+    expect(screen.getByText("James Daniel's Family")).toBeInTheDocument();
     expect(screen.getByText("Sharon's Family")).toBeInTheDocument();
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { safeGetItem } from "@/lib/storage";
 import { GOLD_GRADIENT, DamaskDivider, ConfettiBurst } from "@/components/ui/OrnamentalMotifs";
 import AnimatedSection from "@/components/ui/AnimatedSection";
@@ -13,6 +13,20 @@ interface Comment {
   created_at: string;
   updated_at: string;
 }
+
+interface YoutubeComment {
+  id: string;
+  authorName: string;
+  authorAvatar: string;
+  text: string;
+  likeCount: number;
+  publishedAt: string;
+}
+
+/** Shared display item for the Wall of Love — guest messages and (optional) YouTube comments. */
+type WallItem =
+  | ({ source: "guest" } & Comment)
+  | ({ source: "youtube"; authorName: string; authorAvatar: string; text: string; likeCount: number } & Pick<Comment, "id" | "created_at" | "updated_at">);
 
 const EDIT_MS = 2 * 60 * 1000;
 
@@ -106,13 +120,35 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   const [showStickers, setShowStickers] = useState(false);
   const [, setTick] = useState(0);
   const [confetti, setConfetti] = useState(false);
+  const [ytComments, setYtComments] = useState<YoutubeComment[]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
   const { enter: enterStagger, style: staggerStyle } = useStagger(80);
 
+  // Merge the configured video's YouTube comments into the same feed, if any.
+  const display: WallItem[] = useMemo(() => {
+    const items: WallItem[] = [
+      ...comments.map((c): WallItem => ({ source: "guest", ...c })),
+      ...ytComments.map((c): WallItem => ({
+        source: "youtube",
+        id: c.id,
+        created_at: c.publishedAt,
+        updated_at: c.publishedAt,
+        authorName: c.authorName,
+        authorAvatar: c.authorAvatar,
+        text: c.text,
+        likeCount: c.likeCount,
+      })),
+    ];
+    return items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [comments, ytComments]);
+
   const load = useCallback(async () => {
     const res = await fetch("/api/comments");
     if (res.ok) setComments(await res.json());
+    const yt = await fetch("/api/youtube-comments").then((r) => r.json().catch(() => ({})));
+    const list = Array.isArray(yt) ? [] : (yt.comments ?? []);
+    setYtComments(Array.isArray(list) ? list : []);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -123,8 +159,8 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
   }, []);
 
   useEffect(() => {
-    comments.forEach((c, i) => enterStagger(c.id, i));
-  }, [comments, enterStagger]);
+    display.forEach((c, i) => enterStagger(c.id, i));
+  }, [display, enterStagger]);
 
   function insertEmoji(emoji: string, forEdit = false) {
     if (forEdit) {
@@ -424,15 +460,97 @@ export default function Comments({ guestName, guestId, isOwner }: Props) {
         )}
 
         {/* ── Messages Grid ──────────────────────────────────────── */}
-        {comments.length > 0 ? (
+        {display.length > 0 ? (
           <AnimatedSection variant="pop" className="flex flex-wrap justify-center gap-6 items-start" as="div">
-            {comments.map((c, idx) => {
-              const isMe = guestId ? c.guest_id === guestId : false;
+            {display.map((c, idx) => {
+              const isYt = c.source === "youtube";
+              let isMe = false;
+              if (!isYt && guestId) isMe = c.guest_id === guestId;
               const left = isMe ? timeLeft(c.created_at) : 0;
               const canEdit = isMe && left > 0;
-              const sticker = isSticker(c.message) ? stickerData(c.message) : null;
+              let sticker: ReturnType<typeof stickerData> | null = null;
+              if (!isYt) sticker = isSticker(c.message) ? stickerData(c.message) : null;
               const frame = FRAME_STYLES[idx % FRAME_STYLES.length];
               const rotation = CARD_ROTATIONS[idx % CARD_ROTATIONS.length];
+
+              // YouTube comments are read-only — no edit/delete/emoji/sticker controls.
+              if (isYt) {
+                return (
+                  <div
+                    key={`yt-${c.id}`}
+                    className="frame-card"
+                    style={{
+                      ...staggerStyle(c.id),
+                      transform: staggerStyle(c.id).transform
+                        ? `${staggerStyle(c.id).transform} rotate(${rotation})`
+                        : `rotate(${rotation})`,
+                      width: 270,
+                      position: "relative",
+                      transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s",
+                      cursor: "default",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: 5, borderRadius: 4,
+                        background: frame.gradient,
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                        position: "relative",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "#faf5ef", borderRadius: 2, padding: "16px 18px 14px",
+                          position: "relative",
+                        }}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={c.authorAvatar || ""}
+                            alt={c.authorName}
+                            className="w-8 h-8 rounded-full flex-shrink-0 object-cover"
+                            style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="text-xs tracking-wider truncate"
+                              style={{ color: "#2a1a1a", fontFamily: "'Marcellus SC', serif", letterSpacing: "1px", textTransform: "uppercase", fontSize: 11 }}
+                            >
+                              {c.authorName}
+                            </div>
+                            <span style={{ fontSize: 9, color: "#b0a090", fontFamily: "Inter, sans-serif" }}>
+                              {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                              {c.likeCount > 0 && <> · ♥ {c.likeCount}</>}
+                            </span>
+                          </div>
+                          <span
+                            className="flex-shrink-0 text-[8px] px-1.5 py-0.5 rounded-full text-white"
+                            style={{ background: "#c4302b", fontFamily: "Inter, sans-serif", letterSpacing: "0.5px" }}
+                          >
+                            YouTube
+                          </span>
+                        </div>
+                        <p
+                          className="font-body leading-relaxed"
+                          style={{
+                            color: "#2a1a1a",
+                            fontSize: 15,
+                            fontFamily: "'Caveat', cursive",
+                            lineHeight: 1.55,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {c.text}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               const isEditing = editingId === c.id;
 
               return (

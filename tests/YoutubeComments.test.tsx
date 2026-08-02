@@ -97,7 +97,7 @@ describe("fetchYoutubeComments", () => {
   });
 
   it("throws on non-ok response", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 403 });
+    fetchMock.mockResolvedValue({ ok: false, status: 403, text: async () => "" });
     const { fetchYoutubeComments } = await import("@/lib/youtube");
     await expect(fetchYoutubeComments("vid", "key")).rejects.toThrow("403");
   });

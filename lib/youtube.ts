@@ -27,7 +27,8 @@ export async function fetchYoutubeComments(
   });
 
   if (!res.ok) {
-    throw new Error(`YouTube API error: ${res.status}`);
+    const bodyText = await res.text().catch(() => "");
+    throw new Error(`YouTube API error ${res.status}: ${bodyText.slice(0, 250)}`);
   }
 
   const data = await res.json() as {

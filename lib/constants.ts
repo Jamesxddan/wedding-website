@@ -32,8 +32,8 @@ export const MUSIC_URL = "";
 
 // Replace with actual stream URLs from each media team on the day.
 // YouTube URLs are auto-embedded; any other URL gets a "Watch Live" button.
-export const KIRK_STREAM_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"; // TEST — replace before wedding
-export const BKN_STREAM_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk";  // TEST — replace before wedding
+export const KIRK_STREAM_URL = "https://www.youtube.com/watch?v=25ffO_JAjRo"; // church/ceremony
+export const BKN_STREAM_URL = "https://www.youtube.com/watch?v=qYmSQd4ZnuA";  // reception
 
 export const ITINERARY = [
   { time: "TBD", label: "Ceremony", venue: "St Andrews Kirk" },
@@ -46,8 +46,11 @@ export const ITINERARY = [
 // Wedding highlights reel — YouTube URL, shown in POST_WEDDING phase.
 export const HIGHLIGHTS_VIDEO_URL = "";
 
-// Set to a YouTube video ID (the part after ?v=) to show its comments.
-// Can be a pre-wedding video now; swap to the live stream ID after the wedding.
+// Set to a YouTube video ID (the part after ?v=) whose COMMENTS are enabled.
+// Leave empty to hide the section. Note: the video must have comments turned
+// on — live streams' chat is NOT readable via an API key (needs OAuth) and the
+// sample stream/test videos above all have comments disabled, so we keep this
+// off until the real post-wedding video (with comments enabled) is ready.
 export const YOUTUBE_COMMENT_VIDEO_ID = "";
 
 export const GISCUS_CONFIG = {
