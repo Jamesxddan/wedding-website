@@ -109,18 +109,19 @@ on conflict (key) do nothing;
 
 -- RSVPs (one per guest, upserted)
 create table if not exists rsvps (
-  id             uuid primary key default gen_random_uuid(),
-  guest_id       uuid not null unique references guests(id) on delete cascade,
-  response       text not null check (response in ('attending', 'not_attending', 'maybe')),
-  plus_one       boolean not null default false,
-  plus_one_name  text,
-  dietary_notes  text,
-  created_at     timestamptz not null default now(),
-  updated_at     timestamptz not null default now()
+  id               uuid primary key default gen_random_uuid(),
+  guest_id         uuid not null unique references guests(id) on delete cascade,
+  response         text not null check (response in ('attending', 'not_attending', 'maybe')),
+  guest_count      integer not null default 1 check (guest_count >= 1 and guest_count <= 20),
+  meal_pref        text check (meal_pref in ('veg', 'non_veg')),
+  attending_events text check (attending_events in ('ceremony', 'reception', 'both')),
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
 );
 
-create index if not exists rsvps_guest_id_idx on rsvps(guest_id);
-create index if not exists rsvps_response_idx  on rsvps(response);
+create index if not exists rsvps_guest_id_idx       on rsvps(guest_id);
+create index if not exists rsvps_response_idx        on rsvps(response);
+create index if not exists rsvps_attending_events_idx on rsvps(attending_events);
 
 -- Live ticker (wedding-day updates posted by admin)
 create table if not exists ticker_updates (

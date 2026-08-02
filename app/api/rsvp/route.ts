@@ -3,6 +3,9 @@ import { supabase } from "@/lib/supabase";
 import { validateSession } from "@/lib/session-check";
 
 const VALID_RESPONSES = ["attending", "not_attending", "maybe"] as const;
+const VALID_MEAL_PREFS = ["veg", "non_veg"] as const;
+const VALID_EVENTS = ["ceremony", "reception", "both"] as const;
+
 type RsvpResponse = (typeof VALID_RESPONSES)[number];
 
 export async function GET(req: NextRequest) {
@@ -12,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabase
     .from("rsvps")
-    .select("response, plus_one, plus_one_name, dietary_notes, updated_at")
+    .select("response, guest_count, meal_pref, attending_events, updated_at")
     .eq("guest_id", session.guest_id)
     .maybeSingle();
 
@@ -25,11 +28,11 @@ export async function POST(req: NextRequest) {
   if (!session.guest_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { response, plus_one, plus_one_name, dietary_notes } = body as {
+  const { response, guest_count, meal_pref, attending_events } = body as {
     response?: string;
-    plus_one?: boolean;
-    plus_one_name?: string;
-    dietary_notes?: string;
+    guest_count?: number;
+    meal_pref?: string;
+    attending_events?: string;
   };
 
   if (!response || !VALID_RESPONSES.includes(response as RsvpResponse)) {
@@ -37,9 +40,17 @@ export async function POST(req: NextRequest) {
   }
 
   const isAttending = response === "attending" || response === "maybe";
-  const hasPlusOne = isAttending && plus_one === true;
-  const cleanPlusOneName = hasPlusOne ? (plus_one_name?.trim() ?? null) : null;
-  const cleanNotes = dietary_notes?.trim() || null;
+
+  if (isAttending) {
+    if (!meal_pref || !VALID_MEAL_PREFS.includes(meal_pref as typeof VALID_MEAL_PREFS[number])) {
+      return NextResponse.json({ error: "meal_pref_required" }, { status: 400 });
+    }
+    if (!attending_events || !VALID_EVENTS.includes(attending_events as typeof VALID_EVENTS[number])) {
+      return NextResponse.json({ error: "attending_events_required" }, { status: 400 });
+    }
+  }
+
+  const count = isAttending ? Math.max(1, Math.min(20, Number(guest_count) || 1)) : 1;
 
   const { data, error } = await supabase
     .from("rsvps")
@@ -47,14 +58,14 @@ export async function POST(req: NextRequest) {
       {
         guest_id: session.guest_id,
         response,
-        plus_one: hasPlusOne,
-        plus_one_name: cleanPlusOneName,
-        dietary_notes: cleanNotes,
+        guest_count: count,
+        meal_pref: isAttending ? meal_pref : null,
+        attending_events: isAttending ? attending_events : null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "guest_id" }
     )
-    .select("response, plus_one, plus_one_name, dietary_notes, updated_at")
+    .select("response, guest_count, meal_pref, attending_events, updated_at")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
