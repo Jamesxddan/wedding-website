@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { usePhase } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
-import { safeSetItem } from "@/lib/storage";
+import { safeSetItem, safeGetItem } from "@/lib/storage";
 
 // Statically loaded — shown immediately on first/return visit
 import OpeningScreen from "@/components/phases/OpeningScreen";
@@ -25,6 +25,7 @@ const Comments    = dynamic(() => import("@/components/sections/Comments"),    {
 const Footer      = dynamic(() => import("@/components/ui/Footer"),            { ssr: false });
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
+const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
@@ -212,6 +213,27 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 export default function Home() {
   const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, acknowledgeInvitation } = usePhase();
   const [showInvitationModal, setShowInvitationModal] = useState(false);
+  const [showRsvpNudge, setShowRsvpNudge] = useState(false);
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (phase !== Phase.RETURN_VISIT || !guestId) return;
+    // Don't nudge if already dismissed this session
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("rsvp_nudge_dismissed")) return;
+
+    const token = safeGetItem("session_token");
+    const headers: HeadersInit = token ? { "x-session-token": token } : {};
+    fetch("/api/rsvp", { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { rsvp: unknown } | null) => {
+        if (!d?.rsvp) {
+          nudgeTimerRef.current = setTimeout(() => setShowRsvpNudge(true), 4000);
+        }
+      })
+      .catch(() => {});
+
+    return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
+  }, [phase, guestId]);
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
@@ -306,6 +328,7 @@ export default function Home() {
           <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
+          <WeddingDayTeaser guestName={guestName} />
         </>
       )}
 
@@ -316,6 +339,120 @@ export default function Home() {
       {phase === Phase.POST_WEDDING && (
         <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
+      {/* RSVP nudge — shown to logged-in guests who haven't RSVP'd yet */}
+      {showRsvpNudge && !showInvitationModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 900,
+            background: "rgba(15,8,5,0.78)", backdropFilter: "blur(12px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "24px 20px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowRsvpNudge(false);
+              sessionStorage.setItem("rsvp_nudge_dismissed", "1");
+            }
+          }}
+        >
+          <div style={{
+            background: "linear-gradient(160deg, #2a1410 0%, #1e0e0b 100%)",
+            border: "1px solid rgba(212,175,55,0.25)",
+            borderRadius: 18,
+            padding: "36px 32px",
+            maxWidth: 380,
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.08)",
+            position: "relative",
+          }}>
+            {/* Dismiss X */}
+            <button
+              onClick={() => {
+                setShowRsvpNudge(false);
+                sessionStorage.setItem("rsvp_nudge_dismissed", "1");
+              }}
+              style={{
+                position: "absolute", top: 14, right: 16,
+                background: "none", border: "none",
+                color: "rgba(253,246,236,0.3)", fontSize: 20,
+                cursor: "pointer", lineHeight: 1, padding: 4,
+              }}
+              aria-label="Dismiss"
+            >×</button>
+
+            {/* Icon */}
+            <div style={{ fontSize: 38, marginBottom: 16 }}>💌</div>
+
+            {/* Heading */}
+            <h2 style={{
+              fontFamily: "var(--font-heading, Georgia, serif)",
+              fontSize: "clamp(1.1rem, 3vw, 1.4rem)",
+              color: "#D4AF37",
+              margin: "0 0 10px",
+              letterSpacing: "0.03em",
+            }}>
+              You haven&apos;t RSVP&apos;d yet
+            </h2>
+
+            {/* Body */}
+            <p style={{
+              fontFamily: "Georgia, serif",
+              fontStyle: "italic",
+              fontSize: 14,
+              color: "rgba(253,246,236,0.6)",
+              lineHeight: 1.65,
+              margin: "0 0 24px",
+            }}>
+              We need your response to plan seating, meals, and the day.
+              It only takes a moment — please let us know if you&apos;re joining us!
+            </p>
+
+            {/* Primary CTA */}
+            <button
+              onClick={() => {
+                setShowRsvpNudge(false);
+                setShowInvitationModal(true);
+              }}
+              style={{
+                width: "100%",
+                padding: "13px",
+                background: "linear-gradient(135deg, #5a1f2e 0%, #8B4A6B 100%)",
+                border: "none", borderRadius: 12,
+                color: "#fef9f0",
+                fontFamily: "Georgia, serif",
+                fontSize: 11, letterSpacing: "2.5px",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                boxShadow: "0 4px 18px rgba(90,31,46,0.35)",
+                marginBottom: 10,
+              }}
+            >
+              Open Invitation &amp; RSVP
+            </button>
+
+            {/* Secondary — remind later */}
+            <button
+              onClick={() => {
+                setShowRsvpNudge(false);
+                sessionStorage.setItem("rsvp_nudge_dismissed", "1");
+              }}
+              style={{
+                background: "none", border: "none",
+                fontFamily: "Georgia, serif",
+                fontStyle: "italic",
+                fontSize: 12,
+                color: "rgba(253,246,236,0.3)",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Remind me next time
+            </button>
+          </div>
+        </div>
+      )}
+
       {showInvitationModal && (
         <div
           style={{

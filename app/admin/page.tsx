@@ -142,6 +142,14 @@ export default function AdminPage() {
   const [commentVideoSaved, setCommentVideoSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
 
+  // Ticker state
+  interface TickerUpdate { id: string; message: string; icon: string; created_at: string; }
+  const [tickerUpdates, setTickerUpdates] = useState<TickerUpdate[]>([]);
+  const [tickerMsg, setTickerMsg] = useState("");
+  const [tickerIcon, setTickerIcon] = useState("✨");
+  const [tickerSending, setTickerSending] = useState(false);
+  const [tickerError, setTickerError] = useState("");
+
   const [expandedGuest, setExpandedGuest] = useState<string | null>(null);
   const [deviceMap, setDeviceMap] = useState<Record<string, DeviceRow[]>>({});
   const [devicesLoading, setDevicesLoading] = useState<string | null>(null);
@@ -194,8 +202,13 @@ export default function AdminPage() {
     if (res.ok) setAdmins(await res.json());
   }, []);
 
+  const loadTicker = useCallback(async () => {
+    const res = await fetch("/api/admin/ticker");
+    if (res.ok) setTickerUpdates(await res.json());
+  }, []);
+
   const load = useCallback(async (t: Tab) => {
-    if (t === "live" || t === "control") { await loadSettings(); return; }
+    if (t === "live" || t === "control") { await loadSettings(); await loadTicker(); return; }
     if (t === "preview" || t === "audit" || t === "comments" || t === "content") return;
     if (t === "admins") { await loadAdmins(); return; }
     setLoading(true);
@@ -216,7 +229,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [logFilter, loadSettings, loadAdmins]);
+  }, [logFilter, loadSettings, loadAdmins, loadTicker]);
 
   useEffect(() => { if (authed) load(tab); }, [authed, tab, load]);
 
@@ -898,6 +911,92 @@ export default function AdminPage() {
       {/* ── LIVE STREAM ── */}
       {tab === "live" && (
         <div style={{ maxWidth: 680 }}>
+
+          {/* Live Ticker */}
+          <div style={card}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "#1a1a1a" }}>📡 Live Ticker</h3>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "#888" }}>
+              Post real-time updates guests see on the Wedding Day page. Max 160 characters.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {["✨","⛪","💍","📸","🎉","🥂","🕊️","🎵","💐","🙏"].map(e => (
+                  <button
+                    key={e}
+                    onClick={() => setTickerIcon(e)}
+                    style={{
+                      padding: "6px 8px", borderRadius: 8, border: "none",
+                      background: tickerIcon === e ? "#D4AF37" : "#f5f5f5",
+                      fontSize: 16, cursor: "pointer",
+                      boxShadow: tickerIcon === e ? "0 2px 8px rgba(212,175,55,0.4)" : "none",
+                    }}
+                  >{e}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <textarea
+                value={tickerMsg}
+                onChange={e => { setTickerMsg(e.target.value.slice(0, 160)); setTickerError(""); }}
+                placeholder="e.g. The bride has arrived at the church!"
+                rows={2}
+                style={{ ...inputStyle, flex: "1 1 300px", resize: "vertical", fontFamily: "inherit" }}
+              />
+              <button
+                disabled={!tickerMsg.trim() || tickerSending}
+                onClick={async () => {
+                  setTickerSending(true);
+                  setTickerError("");
+                  const res = await fetch("/api/admin/ticker", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: tickerMsg.trim(), icon: tickerIcon }),
+                  });
+                  if (res.ok) {
+                    setTickerMsg("");
+                    await loadTicker();
+                  } else {
+                    const d = await res.json() as { error?: string };
+                    setTickerError(d.error ?? "Failed");
+                  }
+                  setTickerSending(false);
+                }}
+                style={{ ...saveBtn(tickerSending, false), alignSelf: "flex-start", whiteSpace: "nowrap" }}
+              >
+                {tickerSending ? "Posting…" : "Post update"}
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: tickerMsg.length > 140 ? "#e74c3c" : "#aaa", margin: "4px 0 0" }}>
+              {tickerMsg.length}/160
+            </p>
+            {tickerError && <p style={{ fontSize: 13, color: "#e74c3c", margin: "6px 0 0" }}>{tickerError}</p>}
+
+            {tickerUpdates.length > 0 && (
+              <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+                <p style={{ fontSize: 12, color: "#aaa", margin: 0 }}>Posted updates (newest first):</p>
+                {tickerUpdates.map(u => (
+                  <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: "#f9f9f9", border: "1px solid #eee" }}>
+                    <span style={{ fontSize: 18 }}>{u.icon}</span>
+                    <span style={{ flex: 1, fontSize: 13, color: "#333" }}>{u.message}</span>
+                    <span style={{ fontSize: 11, color: "#bbb", whiteSpace: "nowrap" }}>
+                      {new Date(u.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/admin/ticker", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: u.id }),
+                        });
+                        await loadTicker();
+                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#e74c3c", fontSize: 13 }}
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Ceremony */}
           <div style={card}>
