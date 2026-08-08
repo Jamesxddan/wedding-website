@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 
-type Tab = "guests" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
+type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
 
 interface Guest {
   id: string;
@@ -113,6 +113,11 @@ export default function AdminPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [flags, setFlags] = useState<Flag[]>([]);
+
+  interface RsvpRow { id: string; response: string; guest_count: number; meal_pref: string | null; attending_events: string | null; updated_at: string; name: string; city: string; email: string | null; }
+  interface RsvpSummary { total_rsvps: number; attending_count: number; maybe_count: number; declined_count: number; total_people: number; veg_count: number; non_veg_count: number; ceremony_count: number; reception_count: number; }
+  const [rsvpRows, setRsvpRows] = useState<RsvpRow[]>([]);
+  const [rsvpSummary, setRsvpSummary] = useState<RsvpSummary | null>(null);
   const [logFilter, setLogFilter] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -212,6 +217,9 @@ export default function AdminPage() {
       if (t === "guests") {
         const res = await fetch("/api/admin/guests");
         if (res.ok) setGuests(await res.json());
+      } else if (t === "rsvp") {
+        const res = await fetch("/api/admin/rsvps");
+        if (res.ok) { const d = await res.json(); setRsvpSummary(d.summary); setRsvpRows(d.rows); }
       } else if (t === "logs") {
         const url = logFilter
           ? `/api/admin/logs?guest=${encodeURIComponent(logFilter)}`
@@ -568,6 +576,7 @@ export default function AdminPage() {
 
   const superTabs: { key: Tab; label: string }[] = [
     { key: "guests", label: "Guests" },
+    { key: "rsvp", label: "💌 RSVPs" },
     { key: "logs", label: "Logs" },
     { key: "flags", label: "Flags" },
     { key: "live", label: "🔴 Live Stream" },
@@ -636,7 +645,7 @@ export default function AdminPage() {
                 {label}
               </button>
             ))}
-            {(["guests", "logs", "flags"] as Tab[]).includes(tab) && (
+            {(["guests", "rsvp", "logs", "flags"] as Tab[]).includes(tab) && (
               <button
                 onClick={() => load(tab)}
                 style={{ marginLeft: "auto", fontSize: 12, color: "#8B4A6B", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}
@@ -781,6 +790,74 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── RSVPs ── */}
+      {tab === "rsvp" && (
+        <>
+          {rsvpSummary && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 12, marginBottom: 24 }}>
+              {[
+                { label: "Total RSVPs",    value: rsvpSummary.total_rsvps },
+                { label: "Attending",      value: rsvpSummary.attending_count },
+                { label: "Maybe",          value: rsvpSummary.maybe_count },
+                { label: "Declined",       value: rsvpSummary.declined_count },
+                { label: "Total People",   value: rsvpSummary.total_people },
+                { label: "Veg",            value: rsvpSummary.veg_count },
+                { label: "Non-Veg",        value: rsvpSummary.non_veg_count },
+                { label: "Church",         value: rsvpSummary.ceremony_count },
+                { label: "Reception",      value: rsvpSummary.reception_count },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.07)" }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#8B4A6B", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {loading ? (
+            <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>
+          ) : rsvpRows.length === 0 ? (
+            <p style={{ color: "#bbb", fontSize: 13 }}>No RSVPs yet.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f0e8f0", textAlign: "left" }}>
+                    {["Name", "City", "Response", "People", "Meal", "Events", "Updated"].map((h) => (
+                      <th key={h} style={{ padding: "8px 12px", fontWeight: 600, color: "#8B4A6B", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rsvpRows.map((r, i) => {
+                    const respColor = r.response === "attending" ? "#1a7a4a" : r.response === "maybe" ? "#b8860b" : "#c0392b";
+                    const respLabel = r.response === "attending" ? "Attending" : r.response === "maybe" ? "Maybe" : "Declined";
+                    const mealLabel = r.meal_pref === "veg" ? "🥦 Veg" : r.meal_pref === "non_veg" ? "🍗 Non-Veg" : "—";
+                    const evtLabel  = r.attending_events === "ceremony" ? "⛪ Church" : r.attending_events === "reception" ? "🥂 Reception" : r.attending_events === "both" ? "✨ Both" : "—";
+                    return (
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf8f6", verticalAlign: "middle" }}>
+                        <td style={{ padding: "8px 12px", fontWeight: 500 }}>
+                          {r.name}
+                          {r.email && <div style={{ fontSize: 11, color: "#aaa" }}>{r.email}</div>}
+                        </td>
+                        <td style={{ padding: "8px 12px", color: "#666" }}>{r.city}</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ background: `${respColor}18`, color: respColor, borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 600 }}>{respLabel}</span>
+                        </td>
+                        <td style={{ padding: "8px 12px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{r.response !== "not_attending" ? r.guest_count : "—"}</td>
+                        <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>{mealLabel}</td>
+                        <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>{evtLabel}</td>
+                        <td style={{ padding: "8px 12px", color: "#999", whiteSpace: "nowrap" }}>{new Date(r.updated_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </>
