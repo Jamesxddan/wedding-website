@@ -237,6 +237,8 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const [rsvpEvents, setRsvpEvents]       = useState<AttendingEvents | null>(null);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpDone, setRsvpDone]           = useState(false);
+  const [guestHasEmail, setGuestHasEmail] = useState<boolean | null>(null); // null = loading
+  const [rsvpEmail, setRsvpEmail]         = useState("");
 
   const { invitation } = useSiteContent();
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
@@ -258,7 +260,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   useEffect(() => {
     fetch("/api/rsvp", { headers: rsvpHeaders() })
       .then(r => r.ok ? r.json() : null)
-      .then((d: { rsvp: RsvpData | null } | null) => {
+      .then((d: { rsvp: RsvpData | null; has_email?: boolean } | null) => {
         if (d?.rsvp) {
           setRsvpSaved(d.rsvp);
           setRsvpResp(d.rsvp.response);
@@ -267,6 +269,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
           setRsvpEvents(d.rsvp.attending_events ?? null);
           setRsvpDone(true);
         }
+        setGuestHasEmail(d?.has_email ?? false);
       })
       .catch(() => {});
   }, []);
@@ -286,12 +289,14 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
           guest_count: rsvpCount,
           meal_pref: rsvpMeal,
           attending_events: rsvpEvents,
+          ...(rsvpEmail.trim() ? { email: rsvpEmail.trim() } : {}),
         }),
       });
-      const data = await res.json() as { rsvp?: RsvpData };
+      const data = await res.json() as { rsvp?: RsvpData; has_email?: boolean };
       if (res.ok && data.rsvp) {
         setRsvpSaved(data.rsvp);
         setRsvpDone(true);
+        if (data.has_email) setGuestHasEmail(true);
         // Prevent the nudge popup from re-appearing after RSVP is saved
         try { sessionStorage.setItem("rsvp_nudge_dismissed", "1"); } catch { /* */ }
       }
@@ -779,9 +784,11 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                       {EVENT_OPTIONS.find(e => e.value === rsvpSaved.attending_events)?.label}
                     </p>
                   )}
-                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), margin: "4px 0 0", textAlign: "center" }}>
-                    A confirmation email has been sent to you.
-                  </p>
+                  {guestHasEmail && (
+                    <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), margin: "4px 0 0", textAlign: "center" }}>
+                      A confirmation email has been sent to you.
+                    </p>
+                  )}
                   <button
                     onClick={() => setRsvpDone(false)}
                     style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.35), cursor: "pointer", textDecoration: "underline" }}
@@ -901,6 +908,33 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                         </div>
                       </div>
 
+                    </div>
+                  )}
+
+                  {/* Email capture — shown when no email on file */}
+                  {guestHasEmail === false && (
+                    <div style={{ marginTop: 8, paddingTop: 12, borderTop: `1px solid ${GA(0.12)}` }}>
+                      <p style={{ fontFamily: "Georgia, serif", fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: RA(0.4), margin: "0 0 8px" }}>
+                        Your email address
+                      </p>
+                      <input
+                        type="email"
+                        value={rsvpEmail}
+                        onChange={e => setRsvpEmail(e.target.value)}
+                        placeholder="so we can send you a confirmation"
+                        style={{
+                          width: "100%", padding: "10px 12px",
+                          background: "rgba(255,255,255,0.04)",
+                          border: `1px solid ${GA(rsvpEmail ? 0.45 : 0.2)}`,
+                          borderRadius: 8, color: ROSE,
+                          fontFamily: "Georgia, serif", fontSize: 13,
+                          outline: "none", boxSizing: "border-box",
+                          transition: "border-color 0.18s ease",
+                        }}
+                      />
+                      <p style={{ fontFamily: "Georgia, serif", fontSize: 10, color: RA(0.28), margin: "5px 0 0", fontStyle: "italic" }}>
+                        Optional — we'll send reminder emails as the wedding approaches
+                      </p>
                     </div>
                   )}
 
