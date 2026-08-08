@@ -237,6 +237,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const [rsvpEvents, setRsvpEvents]       = useState<AttendingEvents | null>(null);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpDone, setRsvpDone]           = useState(false);
+  const [rsvpError, setRsvpError]         = useState<string | null>(null);
   const [guestHasEmail, setGuestHasEmail] = useState<boolean | null>(null); // null = loading
   const [rsvpEmail, setRsvpEmail]         = useState("");
 
@@ -280,6 +281,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   async function submitRsvp() {
     if (!rsvpReady || rsvpSubmitting) return;
     setRsvpSubmitting(true);
+    setRsvpError(null);
     try {
       const res = await fetch("/api/rsvp", {
         method: "POST",
@@ -292,16 +294,22 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
           ...(rsvpEmail.trim() ? { email: rsvpEmail.trim() } : {}),
         }),
       });
-      const data = await res.json() as { rsvp?: RsvpData; has_email?: boolean };
+      const data = await res.json() as { rsvp?: RsvpData; has_email?: boolean; error?: string };
       if (res.ok && data.rsvp) {
         setRsvpSaved(data.rsvp);
         setRsvpDone(true);
         if (data.has_email) setGuestHasEmail(true);
-        // Prevent the nudge popup from re-appearing after RSVP is saved
         try { sessionStorage.setItem("rsvp_nudge_dismissed", "1"); } catch { /* */ }
+      } else if (res.status === 401) {
+        setRsvpError("Session expired — please refresh the page and try again.");
+      } else {
+        setRsvpError(data.error ?? "Something went wrong. Please try again.");
       }
-    } catch { /* best-effort */ }
-    finally { setRsvpSubmitting(false); }
+    } catch {
+      setRsvpError("Network error — please check your connection and try again.");
+    } finally {
+      setRsvpSubmitting(false);
+    }
   }
 
   // Tap on front → coin-flip to reveal sealed back
@@ -936,6 +944,12 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                         Optional — we'll send reminder emails as the wedding approaches
                       </p>
                     </div>
+                  )}
+
+                  {rsvpError && (
+                    <p style={{ fontFamily: "Georgia, serif", fontSize: 10, color: "#c0392b", textAlign: "center", margin: "4px 0 0", lineHeight: 1.4 }}>
+                      {rsvpError}
+                    </p>
                   )}
 
                   <button
