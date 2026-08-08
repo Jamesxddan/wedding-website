@@ -1,6 +1,6 @@
 import "server-only";
 
-const FROM = "James & Sharon <rsvp@jamesandsharon.wedding>";
+const FROM = "James & Sharon <rsvp@jameswedssharon.site>";
 const SITE = "https://jameswedssharon.site";
 
 // Ceremony: Oct 8, 2026 4:30 PM IST = 11:00 UTC
