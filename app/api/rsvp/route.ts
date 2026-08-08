@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { validateSession } from "@/lib/session-check";
+import { sendRsvpConfirmation } from "@/lib/rsvp-email";
 
 const VALID_RESPONSES = ["attending", "not_attending", "maybe"] as const;
 const VALID_MEAL_PREFS = ["veg", "non_veg"] as const;
@@ -69,5 +70,24 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Send confirmation email if guest has one on file (best-effort, never blocks response)
+  const { data: guest } = await supabase
+    .from("guests")
+    .select("name, email")
+    .eq("id", session.guest_id)
+    .maybeSingle();
+
+  if (guest?.email) {
+    void sendRsvpConfirmation({
+      name: guest.name,
+      email: guest.email,
+      response: data.response as "attending" | "not_attending" | "maybe",
+      guest_count: data.guest_count,
+      meal_pref: data.meal_pref as "veg" | "non_veg" | null,
+      attending_events: data.attending_events as "ceremony" | "reception" | "both" | null,
+    });
+  }
+
   return NextResponse.json({ rsvp: data });
 }

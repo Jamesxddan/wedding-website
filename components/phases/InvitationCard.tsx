@@ -289,7 +289,12 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
         }),
       });
       const data = await res.json() as { rsvp?: RsvpData };
-      if (res.ok && data.rsvp) { setRsvpSaved(data.rsvp); setRsvpDone(true); }
+      if (res.ok && data.rsvp) {
+        setRsvpSaved(data.rsvp);
+        setRsvpDone(true);
+        // Prevent the nudge popup from re-appearing after RSVP is saved
+        try { sessionStorage.setItem("rsvp_nudge_dismissed", "1"); } catch { /* */ }
+      }
     } catch { /* best-effort */ }
     finally { setRsvpSubmitting(false); }
   }
@@ -757,24 +762,29 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
 
               {rsvpDone ? (
                 /* ── Confirmation summary ── */
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 22 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: `rgba(212,175,55,0.06)`, border: `1px solid ${GA(0.2)}`, borderRadius: 12, padding: "16px 20px" }}>
+                  <span style={{ fontSize: 26 }}>✅</span>
+                  <p style={{ fontFamily: "Georgia, serif", fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: GOLD, margin: 0 }}>RSVP Confirmed</p>
+                  <span style={{ fontSize: 18, marginTop: 2 }}>
                     {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.emoji}
                   </span>
                   <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: ROSE, margin: 0 }}>
                     {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.label}
                   </p>
                   {rsvpSaved?.meal_pref && (
-                    <p style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.5), margin: 0 }}>
+                    <p style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.55), margin: 0, textAlign: "center" }}>
                       {rsvpSaved.guest_count} {rsvpSaved.guest_count === 1 ? "person" : "people"} &nbsp;·&nbsp;
                       {rsvpSaved.meal_pref === "veg" ? "🌿 Veg" : "🍖 Non-Veg"} &nbsp;·&nbsp;
                       {EVENT_OPTIONS.find(e => e.value === rsvpSaved.attending_events)?.emoji}{" "}
                       {EVENT_OPTIONS.find(e => e.value === rsvpSaved.attending_events)?.label}
                     </p>
                   )}
+                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), margin: "4px 0 0", textAlign: "center" }}>
+                    A confirmation email has been sent to you.
+                  </p>
                   <button
                     onClick={() => setRsvpDone(false)}
-                    style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), cursor: "pointer", textDecoration: "underline" }}
+                    style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.35), cursor: "pointer", textDecoration: "underline" }}
                   >
                     Update my RSVP
                   </button>
