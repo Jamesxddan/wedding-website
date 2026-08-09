@@ -315,6 +315,32 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && (
         <>
+          {/* Wedding-day teaser pill — fixed below nav */}
+          <div
+            style={{
+              position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)",
+              zIndex: 40,
+              display: "inline-flex", alignItems: "center", gap: 7,
+              padding: "7px 16px",
+              borderRadius: 99,
+              background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
+              boxShadow: "0 2px 16px rgba(120,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
+              color: "#ffd6de",
+              fontFamily: "var(--font-body, Georgia, serif)",
+              fontSize: 11,
+              letterSpacing: "0.03em",
+              lineHeight: 1.35,
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          >
+            <span style={{ fontSize: 13 }}>🗓️</span>
+            <span>
+              <strong style={{ fontWeight: 700, letterSpacing: "0.06em" }}>October 8</strong>
+              {" — this page comes alive with live streams, real‑time updates & surprises just for you"}
+            </span>
+          </div>
           <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
           {(relinkPending || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
