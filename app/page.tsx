@@ -237,6 +237,13 @@ export default function Home() {
   const [previewBlocked, setPreviewBlocked] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Unverified device (real relink flow, or owner preview of it) — show only
+  // the identity-verification form. No photos, gallery, wall of love, or any
+  // other guest content until they've confirmed who they are.
+  const isRelinkOnly =
+    (relinkPending || relinkRequiredPreview || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) &&
+    process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true";
+
   // Owner-only, this-device-only preview of the breach/rate-limit banner.
   useEffect(() => {
     try {
@@ -361,7 +368,25 @@ export default function Home() {
         <InvitationCard guestName={guestName ?? "Friend"} guestId={guestId} onExplore={() => { acknowledgeInvitation(); refresh(); }} />
       )}
 
-      {phase === Phase.RETURN_VISIT && (
+      {phase === Phase.RETURN_VISIT && isRelinkOnly && (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
+          <p style={{
+            fontFamily: "var(--font-heading, Georgia, serif)",
+            fontSize: 22, letterSpacing: "0.08em", color: "#5a1f2e",
+            marginBottom: 4,
+          }}>
+            J &amp; S
+          </p>
+          <p style={{ fontFamily: "Georgia, serif", fontSize: 12, color: "#aaa", marginBottom: 8 }}>
+            October 8, 2026 · Chennai
+          </p>
+          <div style={{ width: "100%", maxWidth: 520 }}>
+            <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />
+          </div>
+        </div>
+      )}
+
+      {phase === Phase.RETURN_VISIT && !isRelinkOnly && (
         <>
           {/* Wedding-day teaser pill — fixed below nav, auto-hides after 7s */}
           {!pillDismissed && (
@@ -406,7 +431,6 @@ export default function Home() {
           )}
           <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
-          {(relinkPending || relinkRequiredPreview || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <ScrollFloralDivider />
