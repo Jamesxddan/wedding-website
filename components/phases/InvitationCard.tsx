@@ -230,6 +230,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // RSVP state
+  const [calSaved, setCalSaved]           = useState(() => { try { return !!localStorage.getItem("calendar_saved"); } catch { return false; } });
   const [rsvpSaved, setRsvpSaved]         = useState<RsvpData | null>(null);
   const [rsvpResp, setRsvpResp]           = useState<RsvpResponse | null>(null);
   const [rsvpCount, setRsvpCount]         = useState(1);
@@ -754,16 +755,24 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
               <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), marginBottom: 10 }}>
                 Save the date
               </p>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-                <a href={buildGoogleCalendarUrl(guestName)} target="_blank" rel="noopener noreferrer"
-                  style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
-                  Google Calendar
-                </a>
-                <a href={buildIcsUrl(guestName)} download="james-sharon-wedding.ics"
-                  style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
-                  Apple / Windows
-                </a>
-              </div>
+              {calSaved ? (
+                <div style={{ padding: "8px 14px", borderRadius: 99, border: "1px solid rgba(80,160,80,0.35)", background: "rgba(80,160,80,0.06)", color: "rgba(50,130,50,0.8)", fontSize: 11, fontFamily: "Georgia, serif", display: "inline-block" }}>
+                  ✓ Added to your calendar
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+                  <a href={buildGoogleCalendarUrl(guestName)} target="_blank" rel="noopener noreferrer"
+                    onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                    style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
+                    Google Calendar
+                  </a>
+                  <a href={buildIcsUrl(guestName)} download="james-sharon-wedding.ics"
+                    onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                    style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
+                    Apple / Windows
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* RSVP */}

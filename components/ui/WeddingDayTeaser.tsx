@@ -108,6 +108,7 @@ export default function WeddingDayTeaser({ guestName, guestId, onOpenInvitation 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalIn, setModalIn] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
+  const [calSaved, setCalSaved] = useState(false);
   const [rsvpData, setRsvpData] = useState<RsvpData | "loading">("loading");
 
   const name = guestName ?? "Friend";
@@ -115,6 +116,7 @@ export default function WeddingDayTeaser({ guestName, guestId, onOpenInvitation 
   // Pill is always available — show shortly after page loads
   useEffect(() => {
     const t = setTimeout(() => setPillVisible(true), 2000);
+    try { if (localStorage.getItem("calendar_saved")) setCalSaved(true); } catch {}
     return () => clearTimeout(t);
   }, []);
 
@@ -269,34 +271,52 @@ export default function WeddingDayTeaser({ guestName, guestId, onOpenInvitation 
                   )}
 
                   {/* Calendar */}
-                  <button
-                    onClick={() => setCalOpen(!calOpen)}
-                    style={{
-                      width: "100%", padding: "10px",
-                      border: `1px solid ${GA(0.35)}`, borderRadius: 10,
-                      background: "transparent",
+                  {calSaved ? (
+                    <div style={{
+                      width: "100%", padding: "10px", marginBottom: 8,
+                      border: `1px solid rgba(80,160,80,0.35)`, borderRadius: 10,
+                      background: "rgba(80,160,80,0.06)",
                       fontFamily: "var(--font-heading, Georgia, serif)",
                       fontSize: 11, letterSpacing: "0.16em",
-                      textTransform: "uppercase", color: ROSE,
-                      cursor: "pointer",
+                      textTransform: "uppercase", color: "rgba(60,140,60,0.8)",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <span>📅</span> Add to my calendar
-                    <span style={{ fontSize: 9, opacity: 0.45 }}>{calOpen ? "▲" : "▼"}</span>
-                  </button>
-                  {calOpen && (
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14, animation: "teaser-fade-down 0.25s ease both" }}>
-                      <a href={buildGoogleCalendarUrl(name)} target="_blank" rel="noopener noreferrer"
-                        style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
-                        Google
-                      </a>
-                      <a href={buildIcsUrl(name)} download="james-sharon-wedding.ics"
-                        style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
-                        Apple / Windows
-                      </a>
+                    }}>
+                      ✓ Added to calendar
                     </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setCalOpen(!calOpen)}
+                        style={{
+                          width: "100%", padding: "10px",
+                          border: `1px solid ${GA(0.35)}`, borderRadius: 10,
+                          background: "transparent",
+                          fontFamily: "var(--font-heading, Georgia, serif)",
+                          fontSize: 11, letterSpacing: "0.16em",
+                          textTransform: "uppercase", color: ROSE,
+                          cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <span>📅</span> Add to my calendar
+                        <span style={{ fontSize: 9, opacity: 0.45 }}>{calOpen ? "▲" : "▼"}</span>
+                      </button>
+                      {calOpen && (
+                        <div style={{ display: "flex", gap: 8, marginBottom: 14, animation: "teaser-fade-down 0.25s ease both" }}>
+                          <a href={buildGoogleCalendarUrl(name)} target="_blank" rel="noopener noreferrer"
+                            onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                            style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
+                            Google
+                          </a>
+                          <a href={buildIcsUrl(name)} download="james-sharon-wedding.ics"
+                            onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                            style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
+                            Apple / Windows
+                          </a>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* RSVP / update CTA */}
