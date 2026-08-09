@@ -22,6 +22,12 @@ export interface PhaseState {
 export const OWNER_PREVIEW_PHASE_KEY = "owner_phase_preview";
 export const OWNER_PREVIEW_RELINK_KEY = "owner_preview_relink";
 export const OWNER_PREVIEW_ERROR_KEY = "owner_preview_error";
+// Sentinel stored in OWNER_PREVIEW_PHASE_KEY when a sub-owner picks "Auto" —
+// means "show me exactly what a normal guest sees," which includes ignoring
+// any site-wide admin Phase Override. Without this, "Auto" would just fall
+// through to that global override like every other visitor, defeating the
+// point of a personal preview toggle.
+export const OWNER_PREVIEW_TRUE_AUTO = "__true_auto__";
 
 export function usePhase(): PhaseState {
   const [state, setState] = useState<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>({
@@ -56,6 +62,7 @@ export function usePhase(): PhaseState {
     // lingers into a future visit). Never written to the DB, never seen by
     // other guests.
     const ownerPreview = safeSessionGetItem(OWNER_PREVIEW_PHASE_KEY);
+    const ownerWantsTrueAuto = ownerPreview === OWNER_PREVIEW_TRUE_AUTO;
     const ownerPhaseOverride =
       ownerPreview && Object.values(Phase).includes(ownerPreview as Phase)
         ? (ownerPreview as Phase)
@@ -82,11 +89,12 @@ export function usePhase(): PhaseState {
     // us whether this is a relink candidate (matching device fingerprint) or truly
     // new. Otherwise a slow/racing fetch let people register duplicate accounts
     // on devices that should have been offered the relink screen instead.
-    const waitingOnFingerprintCheck = !isNonProd && !name && !localOverride && !ownerPhaseOverride;
+    const waitingOnFingerprintCheck = !isNonProd && !name && !localOverride && !ownerPhaseOverride && !ownerWantsTrueAuto;
+    const dbOverrideForPhase = ownerWantsTrueAuto ? null : dbOverride.current;
 
     setState((prev) => ({
       ...prev,
-      phase: ownerPhaseOverride ?? localOverride ?? dbOverride.current ?? defaultPhase,
+      phase: ownerPhaseOverride ?? localOverride ?? dbOverrideForPhase ?? defaultPhase,
       // When localStorage is unavailable (Safari private browsing etc.),
       // keep the guestName/guestCity from the previous session-check result
       // rather than resetting to null.
@@ -104,6 +112,9 @@ export function usePhase(): PhaseState {
           const raw = settings.phase_override;
           if (raw && raw !== "auto" && Object.values(Phase).includes(raw as Phase)) {
             dbOverride.current = raw as Phase;
+            // A sub-owner previewing "Auto" opted out of the site-wide
+            // override for themselves — don't let it clobber their view.
+            if (ownerWantsTrueAuto) return;
             setState((prev) => {
               // Never lock a guest who already has a valid session onto FIRST_VISIT —
               // that would trap them on the registration form forever after registering.
@@ -121,7 +132,7 @@ export function usePhase(): PhaseState {
     // the phase back to FIRST_VISIT on every load.
     if (!sessionChecked.current && !localOverride && !isNonProd) {
       sessionChecked.current = true;
-      _runSessionCheck(setState, dbOverride, invitationAcknowledged, ownerPhaseOverride, ownerRelinkPreview);
+      _runSessionCheck(setState, dbOverride, invitationAcknowledged, ownerPhaseOverride, ownerRelinkPreview, ownerWantsTrueAuto);
     }
   }, [tick]);
 
@@ -143,6 +154,7 @@ async function _runSessionCheck(
   invitationAcknowledged: React.MutableRefObject<boolean>,
   ownerPhaseOverride: Phase | null,
   ownerRelinkPreview: boolean,
+  ownerWantsTrueAuto: boolean,
 ): Promise<void> {
   try {
     const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
@@ -230,8 +242,10 @@ async function _runSessionCheck(
 
     // Once the guest has a valid session, FIRST_VISIT override no longer applies —
     // use the natural computed phase so they aren't trapped after registering.
-    const effectiveDbOverride =
-      dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
+    // A sub-owner previewing "Auto" bypasses the site-wide override entirely.
+    const effectiveDbOverride = ownerWantsTrueAuto
+      ? null
+      : dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
 
     // Don't auto-skip INVITATION on the initial session check.
     // Pre-wedding users must click Explore on the invitation card to advance

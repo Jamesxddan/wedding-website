@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Phase } from "@/lib/phase";
-import { OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_RELINK_KEY, OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
+import { OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_RELINK_KEY, OWNER_PREVIEW_ERROR_KEY, OWNER_PREVIEW_TRUE_AUTO } from "@/lib/usePhase";
 
 const PHASES: { value: string; label: string; desc: string }[] = [
   { value: "auto",                  label: "Auto",           desc: "Date-based detection" },
@@ -50,7 +50,8 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
     if (safeGet(OWNER_PREVIEW_RELINK_KEY) === "1") {
       setActive("relink");
     } else {
-      setActive(safeGet(OWNER_PREVIEW_PHASE_KEY) ?? "auto");
+      const stored = safeGet(OWNER_PREVIEW_PHASE_KEY);
+      setActive(!stored || stored === OWNER_PREVIEW_TRUE_AUTO ? "auto" : stored);
     }
     setActiveError(safeGet(OWNER_PREVIEW_ERROR_KEY) ?? "none");
   }, [open]);
@@ -72,9 +73,11 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
       safeSet(OWNER_PREVIEW_RELINK_KEY, "1");
       safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
     } else if (value === "auto") {
-      // Auto = exactly what a normal guest sees. Clear every preview,
-      // including any error preview left active from the Errors tab.
-      safeRemove(OWNER_PREVIEW_PHASE_KEY);
+      // Auto = exactly what a normal guest sees, including bypassing any
+      // site-wide admin Phase Override — that override is a separate,
+      // all-visitors setting and shouldn't hold this preview hostage.
+      // Also clears any error preview left active from the Errors tab.
+      safeSet(OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_TRUE_AUTO);
       safeRemove(OWNER_PREVIEW_RELINK_KEY);
       safeRemove(OWNER_PREVIEW_ERROR_KEY);
     } else {
@@ -237,7 +240,7 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
             fontFamily: "Georgia, serif", fontStyle: "italic",
             fontSize: 10, color: "rgba(253,246,236,0.35)", lineHeight: 1.5,
           }}>
-            Preview only — this changes what YOU see on this device. Other guests are never affected.
+            Preview only — this changes what YOU see on this device. Other guests are never affected. Auto bypasses any site-wide admin override just for you.
           </p>
         </div>
       )}
