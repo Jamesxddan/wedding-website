@@ -63,12 +63,14 @@ export default function BackgroundMusic() {
 
     const unlock = () => {
       startBackgroundMusic();
-      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("touchend", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
     };
 
-    // Capture phase = earliest possible point, before React's event system
-    document.addEventListener("touchstart", unlock, { capture: true, passive: true });
+    // click + touchend are universally accepted as trusted user gestures on Android Chrome
+    document.addEventListener("click", unlock, { capture: true });
+    document.addEventListener("touchend", unlock, { capture: true, passive: true });
     document.addEventListener("mousedown", unlock, { capture: true });
 
     // Pause when user leaves tab/app; resume when they return (unless manually muted)
@@ -97,7 +99,8 @@ export default function BackgroundMusic() {
     }
 
     return () => {
-      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("touchend", unlock, true);
       document.removeEventListener("mousedown", unlock, true);
       document.removeEventListener("visibilitychange", onVisibility);
     };

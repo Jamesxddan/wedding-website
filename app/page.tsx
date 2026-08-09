@@ -215,7 +215,14 @@ export default function Home() {
   const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, acknowledgeInvitation } = usePhase();
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
+  const [pillDismissed, setPillDismissed] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (phase !== Phase.RETURN_VISIT) return;
+    const t = setTimeout(() => setPillDismissed(true), 7400);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== Phase.RETURN_VISIT || !guestId) return;
@@ -315,32 +322,47 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && (
         <>
-          {/* Wedding-day teaser pill — fixed below nav */}
-          <div
-            style={{
-              position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)",
-              zIndex: 40,
-              display: "inline-flex", alignItems: "center", gap: 7,
-              padding: "7px 16px",
-              borderRadius: 99,
-              background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
-              boxShadow: "0 2px 16px rgba(120,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
-              color: "#ffd6de",
-              fontFamily: "var(--font-body, Georgia, serif)",
-              fontSize: 11,
-              letterSpacing: "0.03em",
-              lineHeight: 1.35,
-              whiteSpace: "nowrap",
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-          >
-            <span style={{ fontSize: 13 }}>🗓️</span>
-            <span>
-              <strong style={{ fontWeight: 700, letterSpacing: "0.06em" }}>October 8</strong>
-              {" — this page comes alive with live streams, real‑time updates & surprises just for you"}
-            </span>
-          </div>
+          {/* Wedding-day teaser pill — fixed below nav, auto-hides after 7s */}
+          {!pillDismissed && (
+            <div
+              style={{
+                position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)",
+                zIndex: 40,
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "7px 12px 7px 16px",
+                borderRadius: 99,
+                background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
+                boxShadow: "0 2px 16px rgba(120,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
+                color: "#ffd6de",
+                fontFamily: "var(--font-body, Georgia, serif)",
+                fontSize: 11,
+                letterSpacing: "0.03em",
+                lineHeight: 1.35,
+                whiteSpace: "nowrap",
+                userSelect: "none",
+                animation: "pill-in 0.4s ease both, pill-out 0.4s ease 7s both",
+              }}
+            >
+              <span style={{ fontSize: 13 }}>🗓️</span>
+              <span>
+                <strong style={{ fontWeight: 700, letterSpacing: "0.06em" }}>October 8</strong>
+                {" — this page transforms with live streams & surprises"}
+              </span>
+              <button
+                onClick={() => setPillDismissed(true)}
+                style={{
+                  background: "none", border: "none", color: "rgba(255,214,222,0.6)",
+                  fontSize: 14, cursor: "pointer", padding: "0 2px", lineHeight: 1,
+                  marginLeft: 4,
+                }}
+                aria-label="Dismiss"
+              >×</button>
+              <style>{`
+                @keyframes pill-in { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+                @keyframes pill-out { from { opacity:1; } to { opacity:0; pointer-events:none; } }
+              `}</style>
+            </div>
+          )}
           <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
           {(relinkPending || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
