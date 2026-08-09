@@ -42,12 +42,9 @@ export function startBackgroundMusic() {
   if (_unlocked) return;
   _unlocked = true;
   const audio = getBackgroundAudio();
-  const doPlay = () => audio.play().catch(() => {});
-  if (audio.readyState >= 2) {
-    doPlay();
-  } else {
-    audio.addEventListener("canplay", doPlay, { once: true });
-  }
+  // Must call play() synchronously within the gesture call stack.
+  // Waiting for canplay breaks Android Chrome's autoplay policy.
+  audio.play().catch(() => {});
 }
 
 const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === "production";

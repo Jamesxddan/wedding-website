@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
+import { buildGoogleCalendarUrl, buildIcsUrl } from "@/lib/calendar";
 
 const GOLD = "#D4AF37";
 const ROSE = "#5a1f2e";
@@ -292,7 +292,7 @@ export default function WeddingDayTeaser({ guestName, guestId, onOpenInvitation 
                         style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
                         Google
                       </a>
-                      <a href={buildIcsDataUrl(name)} download="james-sharon-wedding.ics"
+                      <a href={buildIcsUrl(name)} download="james-sharon-wedding.ics"
                         style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${RA(0.2)}`, textAlign: "center", fontFamily: "Georgia, serif", fontSize: 12, color: ROSE, textDecoration: "none" }}>
                         Apple / Windows
                       </a>

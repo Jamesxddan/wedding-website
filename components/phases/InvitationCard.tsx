@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
+import { buildGoogleCalendarUrl, buildIcsUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
@@ -759,7 +759,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                   style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
                   Google Calendar
                 </a>
-                <a href={buildIcsDataUrl(guestName)} download="james-sharon-wedding.ics"
+                <a href={buildIcsUrl(guestName)} download="james-sharon-wedding.ics"
                   style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
                   Apple / Windows
                 </a>
