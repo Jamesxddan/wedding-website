@@ -74,6 +74,14 @@ export function usePhase(): PhaseState {
         ? getPhase(name, new Date(), invitationAcknowledged.current)
         : Phase.FIRST_VISIT;
 
+    // Unknown device in production (no guest_name in localStorage — e.g. incognito,
+    // cleared storage, or a genuinely new visitor) — don't flash the registration
+    // form yet. Stay on the loading screen until the fingerprint check below tells
+    // us whether this is a relink candidate (matching device fingerprint) or truly
+    // new. Otherwise a slow/racing fetch let people register duplicate accounts
+    // on devices that should have been offered the relink screen instead.
+    const waitingOnFingerprintCheck = !isNonProd && !name && !localOverride && !ownerPhaseOverride;
+
     setState((prev) => ({
       ...prev,
       phase: ownerPhaseOverride ?? localOverride ?? dbOverride.current ?? defaultPhase,
@@ -82,7 +90,7 @@ export function usePhase(): PhaseState {
       // rather than resetting to null.
       guestName: name ?? prev.guestName,
       guestCity: city ?? prev.guestCity,
-      isLoading: false,
+      isLoading: waitingOnFingerprintCheck ? true : false,
       relinkRequiredPreview: ownerRelinkPreview,
     }));
 
@@ -145,7 +153,13 @@ async function _runSessionCheck(
       body: JSON.stringify({ device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
     });
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      // Release the loading screen even on failure — otherwise a device that
+      // was waiting on this check (unknown-name production visitor) hangs
+      // on the loader forever instead of falling back to registration.
+      setState((prev) => ({ ...prev, isLoading: false }));
+      return;
+    }
     const data = (await res.json()) as {
       status: string;
       name?: string;
@@ -170,6 +184,7 @@ async function _runSessionCheck(
         guestCity: null,
         guestId: null,
         isOwner: false,
+        isLoading: false,
         sessionRestored: false,
         relinkPending: false,
         relinkRequiredPreview: false,
@@ -190,6 +205,7 @@ async function _runSessionCheck(
         guestCity: data.city ?? null,
         guestId: data.guest_id ?? null,
         isOwner: false,
+        isLoading: false,
         sessionRestored: false,
         relinkPending: true,
         relinkRequiredPreview: false,
@@ -238,6 +254,8 @@ async function _runSessionCheck(
       relinkRequiredPreview: ownerRelinkPreview,
     });
   } catch {
-    // Network failure or non-production env — silent
+    // Network/fingerprinting failure — fall back to registration rather than
+    // hanging on the loading screen forever for devices that were waiting.
+    setState((prev) => ({ ...prev, isLoading: false }));
   }
 }
