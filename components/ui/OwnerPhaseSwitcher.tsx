@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Phase } from "@/lib/phase";
+import { OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_RELINK_KEY } from "@/lib/usePhase";
 
 const PHASES: { value: string; label: string; desc: string }[] = [
-  { value: "auto",                  label: "Auto",        desc: "Date-based detection" },
-  { value: Phase.FIRST_VISIT,       label: "First Visit", desc: "Registration screen" },
-  { value: Phase.INVITATION,        label: "Invitation",  desc: "Show invite card" },
-  { value: Phase.RETURN_VISIT,      label: "Pre-Wedding", desc: "Countdown + gallery" },
-  { value: Phase.WEDDING_DAY,       label: "Wedding Day", desc: "Live day banner" },
-  { value: Phase.POST_WEDDING,      label: "Post-Wedding","desc": "Memories page" },
+  { value: "auto",                  label: "Auto",           desc: "Date-based detection" },
+  { value: Phase.FIRST_VISIT,       label: "First Visit",    desc: "Registration screen" },
+  { value: Phase.INVITATION,        label: "Invitation",     desc: "Show invite card" },
+  { value: Phase.RETURN_VISIT,      label: "Pre-Wedding",    desc: "Countdown + gallery" },
+  { value: Phase.WEDDING_DAY,       label: "Wedding Day",    desc: "Live day banner" },
+  { value: Phase.POST_WEDDING,      label: "Post-Wedding",   desc: "Memories page" },
+  { value: "relink",                label: "Relink Screen",  desc: "Fingerprinted, unregistered device" },
 ];
 
 const GOLD = "#D4AF37";
@@ -17,22 +19,23 @@ const GA   = (a: number) => `rgba(212,175,55,${a})`;
 
 interface Props { currentPhase: Phase; }
 
+function safeGet(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
 export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
   const [open, setOpen]         = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [override, setOverride] = useState<string | null>(null);
-  const [status, setStatus]     = useState<"idle" | "ok" | "err">("idle");
+  const [active, setActive]     = useState<string>("auto");
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Fetch current override on open
+  // Read current preview state on open
   useEffect(() => {
     if (!open) return;
-    fetch("/api/settings")
-      .then(r => r.ok ? r.json() : {})
-      .then((d: Record<string, string>) => {
-        setOverride(d.phase_override ?? "auto");
-      })
-      .catch(() => {});
+    if (safeGet(OWNER_PREVIEW_RELINK_KEY) === "1") {
+      setActive("relink");
+    } else {
+      setActive(safeGet(OWNER_PREVIEW_PHASE_KEY) ?? "auto");
+    }
   }, [open]);
 
   // Close on outside click
@@ -47,36 +50,21 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  async function switchPhase(value: string) {
-    if (saving) return;
-    setSaving(true);
-    setStatus("idle");
+  function selectPreview(value: string) {
     try {
-      let token: string | null = null;
-      try { token = localStorage.getItem("session_token"); } catch {}
-      const res = await fetch("/api/owner/phase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "x-session-token": token } : {}),
-        },
-        body: JSON.stringify({ phase: value }),
-      });
-      if (res.ok) {
-        setOverride(value);
-        setStatus("ok");
-        setTimeout(() => window.location.reload(), 600);
+      if (value === "relink") {
+        localStorage.setItem(OWNER_PREVIEW_RELINK_KEY, "1");
+        localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
+      } else if (value === "auto") {
+        localStorage.removeItem(OWNER_PREVIEW_PHASE_KEY);
+        localStorage.removeItem(OWNER_PREVIEW_RELINK_KEY);
       } else {
-        setStatus("err");
+        localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, value);
+        localStorage.removeItem(OWNER_PREVIEW_RELINK_KEY);
       }
-    } catch {
-      setStatus("err");
-    } finally {
-      setSaving(false);
-    }
+    } catch {}
+    window.location.reload();
   }
-
-  const activeValue = override ?? "auto";
 
   return (
     <div ref={panelRef} style={{ position: "fixed", bottom: 20, left: 68, zIndex: 44 }}>
@@ -91,7 +79,7 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
           border: `1px solid ${GA(0.22)}`,
           borderRadius: 14,
           padding: "10px 0 12px",
-          minWidth: 210,
+          minWidth: 230,
           boxShadow: "0 12px 40px rgba(0,0,0,0.55)",
           animation: "owner-panel-in 0.2s cubic-bezier(0.22,1,0.36,1) both",
         }}>
@@ -101,23 +89,22 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
             fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
             color: GA(0.55), borderBottom: `1px solid ${GA(0.1)}`,
           }}>
-            Phase Override
+            Preview Phase (you only)
           </p>
 
           {PHASES.map(({ value, label, desc }) => {
-            const isActive = activeValue === value;
+            const isActive = active === value;
             return (
               <button
                 key={value}
-                onClick={() => switchPhase(value)}
-                disabled={saving || isActive}
+                onClick={() => selectPreview(value)}
+                disabled={isActive}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   width: "100%", padding: "9px 14px",
                   background: isActive ? GA(0.08) : "none",
                   border: "none", cursor: isActive ? "default" : "pointer",
                   textAlign: "left",
-                  opacity: saving && !isActive ? 0.45 : 1,
                   transition: "background 0.15s",
                 }}
               >
@@ -150,28 +137,14 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
             );
           })}
 
-          {/* Status line */}
-          {status !== "idle" && (
-            <p style={{
-              margin: "6px 14px 0", padding: "6px 10px",
-              borderRadius: 6,
-              background: status === "ok" ? "rgba(80,160,80,0.15)" : "rgba(160,40,40,0.15)",
-              fontFamily: "Georgia, serif", fontSize: 11,
-              color: status === "ok" ? "#80c880" : "#e07070",
-              textAlign: "center",
-            }}>
-              {status === "ok" ? "✓ Switching…" : "✗ Failed — try again"}
-            </p>
-          )}
-
           <p style={{
             margin: "10px 14px 0", padding: "8px 10px",
             borderRadius: 6, background: "rgba(212,175,55,0.05)",
             border: `1px solid ${GA(0.1)}`,
             fontFamily: "Georgia, serif", fontStyle: "italic",
-            fontSize: 10, color: "rgba(253,246,236,0.25)", lineHeight: 1.5,
+            fontSize: 10, color: "rgba(253,246,236,0.35)", lineHeight: 1.5,
           }}>
-            This changes the phase for all visitors.
+            Preview only — this changes what YOU see on this device. Other guests are never affected.
           </p>
         </div>
       )}
@@ -179,7 +152,7 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
       {/* ── Gear button ── */}
       <button
         onClick={() => setOpen(o => !o)}
-        title={`Phase switcher · current: ${currentPhase}`}
+        title={`Preview switcher · current: ${currentPhase}`}
         style={{
           width: 36, height: 36, borderRadius: "50%",
           background: open
@@ -196,7 +169,7 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
           transform: open ? "rotate(90deg)" : "rotate(0deg)",
           boxShadow: open ? `0 0 12px ${GA(0.2)}` : "none",
         }}
-        aria-label="Phase switcher"
+        aria-label="Preview switcher"
         aria-expanded={open}
       >
         ⚙️

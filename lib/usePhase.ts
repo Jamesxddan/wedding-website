@@ -13,9 +13,14 @@ export interface PhaseState {
   isLoading: boolean;
   sessionRestored: boolean;
   relinkPending: boolean;
+  relinkRequiredPreview: boolean;
   refresh: () => void;
   acknowledgeInvitation: () => void;
 }
+
+// Owner-only, this-device-only preview — never touches the DB or other visitors.
+export const OWNER_PREVIEW_PHASE_KEY = "owner_phase_preview";
+export const OWNER_PREVIEW_RELINK_KEY = "owner_preview_relink";
 
 export function usePhase(): PhaseState {
   const [state, setState] = useState<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>({
@@ -27,6 +32,7 @@ export function usePhase(): PhaseState {
     isLoading: true,
     sessionRestored: false,
     relinkPending: false,
+    relinkRequiredPreview: false,
   });
   const [tick, setTick] = useState(0);
   const sessionChecked = useRef(false);
@@ -44,6 +50,15 @@ export function usePhase(): PhaseState {
         ? (devOverride as Phase)
         : null;
 
+    // Owner-only preview — set via the gear icon, lives in this browser's
+    // localStorage only. Never written to the DB, never seen by other guests.
+    const ownerPreview = safeGetItem(OWNER_PREVIEW_PHASE_KEY);
+    const ownerPhaseOverride =
+      ownerPreview && Object.values(Phase).includes(ownerPreview as Phase)
+        ? (ownerPreview as Phase)
+        : null;
+    const ownerRelinkPreview = safeGetItem(OWNER_PREVIEW_RELINK_KEY) === "1";
+
     // Dev and staging: skip registration — default to RETURN_VISIT when no guest set
     // Production: default new (no-name) visitors to FIRST_VISIT so they see the
     // registration form. The async session check below will override to the
@@ -60,16 +75,17 @@ export function usePhase(): PhaseState {
 
     setState((prev) => ({
       ...prev,
-      phase: localOverride ?? dbOverride.current ?? defaultPhase,
+      phase: ownerPhaseOverride ?? localOverride ?? dbOverride.current ?? defaultPhase,
       // When localStorage is unavailable (Safari private browsing etc.),
       // keep the guestName/guestCity from the previous session-check result
       // rather than resetting to null.
       guestName: name ?? prev.guestName,
       guestCity: city ?? prev.guestCity,
       isLoading: false,
+      relinkRequiredPreview: ownerRelinkPreview,
     }));
 
-    if (!localOverride && !settingsFetched.current) {
+    if (!localOverride && !ownerPhaseOverride && !settingsFetched.current) {
       settingsFetched.current = true;
       fetch("/api/settings")
         .then((r) => (r.ok ? r.json() : {}))
@@ -94,7 +110,7 @@ export function usePhase(): PhaseState {
     // the phase back to FIRST_VISIT on every load.
     if (!sessionChecked.current && !localOverride && !isNonProd) {
       sessionChecked.current = true;
-      _runSessionCheck(setState, dbOverride, invitationAcknowledged);
+      _runSessionCheck(setState, dbOverride, invitationAcknowledged, ownerPhaseOverride, ownerRelinkPreview);
     }
   }, [tick]);
 
@@ -114,6 +130,8 @@ async function _runSessionCheck(
   setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>>,
   dbOverride: React.MutableRefObject<Phase | null>,
   invitationAcknowledged: React.MutableRefObject<boolean>,
+  ownerPhaseOverride: Phase | null,
+  ownerRelinkPreview: boolean,
 ): Promise<void> {
   try {
     const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
@@ -153,6 +171,7 @@ async function _runSessionCheck(
         isOwner: false,
         sessionRestored: false,
         relinkPending: false,
+        relinkRequiredPreview: false,
       }));
       return;
     }
@@ -172,6 +191,7 @@ async function _runSessionCheck(
         isOwner: false,
         sessionRestored: false,
         relinkPending: true,
+        relinkRequiredPreview: false,
       }));
       return;
     }
@@ -199,9 +219,11 @@ async function _runSessionCheck(
     // to RETURN_VISIT. Date-based phases (WEDDING_DAY / POST_WEDDING) are
     // always used directly.
     const computedPhase = localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false);
-    const effectivePhase = computedPhase === Phase.RETURN_VISIT && !invitationAcknowledged.current
+    const naturalPhase = computedPhase === Phase.RETURN_VISIT && !invitationAcknowledged.current
       ? Phase.INVITATION
       : computedPhase;
+    // Owner preview always wins — set locally via the gear icon, this device only.
+    const effectivePhase = ownerPhaseOverride ?? naturalPhase;
 
     setState({
       phase: effectivePhase,
@@ -212,6 +234,7 @@ async function _runSessionCheck(
       isLoading: false,
       sessionRestored: true,
       relinkPending: false,
+      relinkRequiredPreview: ownerRelinkPreview,
     });
   } catch {
     // Network failure or non-production env — silent

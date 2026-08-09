@@ -212,7 +212,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 }
 
 export default function Home() {
-  const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, acknowledgeInvitation } = usePhase();
+  const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, relinkRequiredPreview, acknowledgeInvitation } = usePhase();
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
   const [pillDismissed, setPillDismissed] = useState(false);
@@ -365,7 +365,7 @@ export default function Home() {
           )}
           <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
-          {(relinkPending || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
+          {(relinkPending || relinkRequiredPreview || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <ScrollFloralDivider />
