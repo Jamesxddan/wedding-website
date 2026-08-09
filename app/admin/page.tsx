@@ -687,7 +687,7 @@ export default function AdminPage() {
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 640 }}>
               <thead>
-                <tr>{["Name", "City", "Device", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+                <tr>{["Name", "City", "Device", "Devices", "First visit", "Last seen", "Inv. seen", "📷", "Sub-Owner", ...(isSuper ? [""] : [])].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {guests.map((g) => {
@@ -716,9 +716,10 @@ export default function AdminPage() {
                         <td style={td}>
                           <button
                             onClick={() => toggleOwner(g)}
+                            title="Sub-owners get the preview gear icon on the main site (screens & error states) — this does not grant admin panel access."
                             style={{ fontSize: 12, padding: "3px 10px", borderRadius: 12, border: "1px solid #8B4A6B", background: g.is_owner ? "#8B4A6B" : "transparent", color: g.is_owner ? "#fff" : "#8B4A6B", cursor: "pointer" }}
                           >
-                            {g.is_owner ? "Owner ✓" : "Set owner"}
+                            {g.is_owner ? "Sub-Owner ✓" : "Set sub-owner"}
                           </button>
                         </td>
                         {isSuper && (

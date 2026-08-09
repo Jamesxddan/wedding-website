@@ -18,9 +18,10 @@ export interface PhaseState {
   acknowledgeInvitation: () => void;
 }
 
-// Owner-only, this-device-only preview — never touches the DB or other visitors.
+// Sub-owner-only, this-device-only preview — never touches the DB or other visitors.
 export const OWNER_PREVIEW_PHASE_KEY = "owner_phase_preview";
 export const OWNER_PREVIEW_RELINK_KEY = "owner_preview_relink";
+export const OWNER_PREVIEW_ERROR_KEY = "owner_preview_error";
 
 export function usePhase(): PhaseState {
   const [state, setState] = useState<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>({

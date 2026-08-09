@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { usePhase } from "@/lib/usePhase";
+import { usePhase, OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
@@ -40,6 +40,24 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   const [verifyHint, setVerifyHint] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Owner-only, this-device-only preview of the relink failure states.
+  useEffect(() => {
+    try {
+      const preview = localStorage.getItem(OWNER_PREVIEW_ERROR_KEY);
+      if (preview === "relink_not_found") {
+        setStep("lookup");
+        setErrorMsg("Name not found — check spelling or contact James & Sharon.");
+        setStatus("error");
+      } else if (preview === "relink_mismatch") {
+        setVerifyMethod("email");
+        setVerifyHint("j***@example.com");
+        setStep("verify");
+        setErrorMsg("That doesn't match what we have on file — please check and try again.");
+        setStatus("error");
+      }
+    } catch {}
+  }, []);
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -216,7 +234,15 @@ export default function Home() {
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
   const [pillDismissed, setPillDismissed] = useState(false);
+  const [previewBlocked, setPreviewBlocked] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Owner-only, this-device-only preview of the breach/rate-limit banner.
+  useEffect(() => {
+    try {
+      setPreviewBlocked(localStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "blocked");
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (phase !== Phase.RETURN_VISIT) return;
@@ -311,6 +337,21 @@ export default function Home() {
     <SiteContentProvider>
     <main className="min-h-screen bg-cream">
       <BackgroundMusic />
+
+      {previewBlocked && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+          background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
+          color: "#ffe8ec",
+          padding: "10px 16px",
+          textAlign: "center",
+          fontFamily: "var(--font-body, Georgia, serif)",
+          fontSize: 12.5,
+          boxShadow: "0 2px 16px rgba(120,20,40,0.4)",
+        }}>
+          🚫 It looks like you&apos;ve visited a few times already — please check back in a little while. We can&apos;t wait to celebrate with you! 🌸
+        </div>
+      )}
 
       {phase === Phase.FIRST_VISIT && (
         <OpeningScreen onComplete={() => { refresh(); }} />
@@ -530,7 +571,7 @@ export default function Home() {
           />
         </div>
       )}
-      {/* Owner-only phase switcher — gear icon bottom-left */}
+      {/* Sub-owner-only preview switcher — gear icon bottom-left */}
       {isOwner && !isLoading && (
         <OwnerPhaseSwitcher currentPhase={phase} />
       )}

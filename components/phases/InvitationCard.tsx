@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { buildGoogleCalendarUrl, buildIcsUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
+import { OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 
 type RsvpResponse = "attending" | "not_attending" | "maybe";
 type MealPref = "veg" | "non_veg";
@@ -258,6 +259,15 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   }, []);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  // Owner-only, this-device-only preview of the RSVP failure banner.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "rsvp_error") {
+        setRsvpError("Something went wrong. Please try again.");
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     fetch("/api/rsvp", { headers: rsvpHeaders() })
