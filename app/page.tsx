@@ -258,7 +258,7 @@ export default function Home() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== Phase.RETURN_VISIT || !guestId) return;
+    if (phase !== Phase.RETURN_VISIT || !guestId || isRelinkOnly) return;
     // Don't nudge if already dismissed this session
     if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("rsvp_nudge_dismissed")) return;
 
@@ -274,7 +274,7 @@ export default function Home() {
       .catch(() => {});
 
     return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
-  }, [phase, guestId]);
+  }, [phase, guestId, isRelinkOnly]);
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
@@ -454,7 +454,7 @@ export default function Home() {
         <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
       {/* RSVP nudge — shown to logged-in guests who haven't RSVP'd yet */}
-      {showRsvpNudge && !showInvitationModal && (
+      {showRsvpNudge && !showInvitationModal && !isRelinkOnly && (
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 900,
