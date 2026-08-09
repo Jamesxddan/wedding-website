@@ -79,7 +79,7 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
   const activeValue = override ?? "auto";
 
   return (
-    <div ref={panelRef} style={{ position: "fixed", bottom: 20, left: 20, zIndex: 44 }}>
+    <div ref={panelRef} style={{ position: "fixed", bottom: 20, left: 68, zIndex: 44 }}>
 
       {/* ── Panel ── */}
       {open && (
