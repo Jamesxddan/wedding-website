@@ -263,7 +263,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   // Owner-only, this-device-only preview of the RSVP failure banner.
   useEffect(() => {
     try {
-      if (localStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "rsvp_error") {
+      if (sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "rsvp_error") {
         setRsvpError("Something went wrong. Please try again.");
       }
     } catch {}

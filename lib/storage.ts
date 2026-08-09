@@ -29,3 +29,32 @@ export function safeRemoveItem(key: string): void {
     // Silently degrade.
   }
 }
+
+/**
+ * Same idea, but sessionStorage — clears automatically when the tab/window
+ * closes. Used for owner preview state so previews never linger into a
+ * future browsing session and get mistaken for the real site state.
+ */
+export function safeSessionGetItem(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function safeSessionSetItem(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Silently degrade.
+  }
+}
+
+export function safeSessionRemoveItem(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // Silently degrade.
+  }
+}

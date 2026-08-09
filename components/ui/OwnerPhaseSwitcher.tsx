@@ -28,7 +28,13 @@ const GA   = (a: number) => `rgba(212,175,55,${a})`;
 interface Props { currentPhase: Phase; }
 
 function safeGet(key: string): string | null {
-  try { return localStorage.getItem(key); } catch { return null; }
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+function safeSet(key: string, value: string): void {
+  try { sessionStorage.setItem(key, value); } catch {}
+}
+function safeRemove(key: string): void {
+  try { sessionStorage.removeItem(key); } catch {}
 }
 
 export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
@@ -62,37 +68,36 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
   }, [open]);
 
   function selectPreview(value: string) {
-    try {
-      if (value === "relink") {
-        localStorage.setItem(OWNER_PREVIEW_RELINK_KEY, "1");
-        localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
-      } else if (value === "auto") {
-        localStorage.removeItem(OWNER_PREVIEW_PHASE_KEY);
-        localStorage.removeItem(OWNER_PREVIEW_RELINK_KEY);
-      } else {
-        localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, value);
-        localStorage.removeItem(OWNER_PREVIEW_RELINK_KEY);
-      }
-    } catch {}
+    if (value === "relink") {
+      safeSet(OWNER_PREVIEW_RELINK_KEY, "1");
+      safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
+    } else if (value === "auto") {
+      // Auto = exactly what a normal guest sees. Clear every preview,
+      // including any error preview left active from the Errors tab.
+      safeRemove(OWNER_PREVIEW_PHASE_KEY);
+      safeRemove(OWNER_PREVIEW_RELINK_KEY);
+      safeRemove(OWNER_PREVIEW_ERROR_KEY);
+    } else {
+      safeSet(OWNER_PREVIEW_PHASE_KEY, value);
+      safeRemove(OWNER_PREVIEW_RELINK_KEY);
+    }
     window.location.reload();
   }
 
   function selectError(value: string) {
-    try {
-      if (value === "none") {
-        localStorage.removeItem(OWNER_PREVIEW_ERROR_KEY);
-      } else {
-        localStorage.setItem(OWNER_PREVIEW_ERROR_KEY, value);
-        // These errors only render on their matching screen — jump there too.
-        if (value === "rsvp_error") {
-          localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, Phase.INVITATION);
-          localStorage.removeItem(OWNER_PREVIEW_RELINK_KEY);
-        } else if (value === "relink_not_found" || value === "relink_mismatch") {
-          localStorage.setItem(OWNER_PREVIEW_RELINK_KEY, "1");
-          localStorage.setItem(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
-        }
+    if (value === "none") {
+      safeRemove(OWNER_PREVIEW_ERROR_KEY);
+    } else {
+      safeSet(OWNER_PREVIEW_ERROR_KEY, value);
+      // These errors only render on their matching screen — jump there too.
+      if (value === "rsvp_error") {
+        safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.INVITATION);
+        safeRemove(OWNER_PREVIEW_RELINK_KEY);
+      } else if (value === "relink_not_found" || value === "relink_mismatch") {
+        safeSet(OWNER_PREVIEW_RELINK_KEY, "1");
+        safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);
       }
-    } catch {}
+    }
     window.location.reload();
   }
 

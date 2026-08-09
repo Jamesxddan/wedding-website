@@ -44,7 +44,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   // Owner-only, this-device-only preview of the relink failure states.
   useEffect(() => {
     try {
-      const preview = localStorage.getItem(OWNER_PREVIEW_ERROR_KEY);
+      const preview = sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY);
       if (preview === "relink_not_found") {
         setStep("lookup");
         setErrorMsg("Name not found — check spelling or contact James & Sharon.");
@@ -247,7 +247,7 @@ export default function Home() {
   // Owner-only, this-device-only preview of the breach/rate-limit banner.
   useEffect(() => {
     try {
-      setPreviewBlocked(localStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "blocked");
+      setPreviewBlocked(sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "blocked");
     } catch {}
   }, []);
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getPhase, Phase } from "./phase";
-import { safeGetItem, safeSetItem, safeRemoveItem } from "./storage";
+import { safeGetItem, safeSetItem, safeRemoveItem, safeSessionGetItem } from "./storage";
 
 export interface PhaseState {
   phase: Phase;
@@ -51,14 +51,16 @@ export function usePhase(): PhaseState {
         ? (devOverride as Phase)
         : null;
 
-    // Owner-only preview — set via the gear icon, lives in this browser's
-    // localStorage only. Never written to the DB, never seen by other guests.
-    const ownerPreview = safeGetItem(OWNER_PREVIEW_PHASE_KEY);
+    // Owner-only preview — set via the gear icon, lives in this browser tab's
+    // sessionStorage only (clears when the tab closes, so a preview never
+    // lingers into a future visit). Never written to the DB, never seen by
+    // other guests.
+    const ownerPreview = safeSessionGetItem(OWNER_PREVIEW_PHASE_KEY);
     const ownerPhaseOverride =
       ownerPreview && Object.values(Phase).includes(ownerPreview as Phase)
         ? (ownerPreview as Phase)
         : null;
-    const ownerRelinkPreview = safeGetItem(OWNER_PREVIEW_RELINK_KEY) === "1";
+    const ownerRelinkPreview = safeSessionGetItem(OWNER_PREVIEW_RELINK_KEY) === "1";
 
     // Dev and staging: skip registration — default to RETURN_VISIT when no guest set
     // Production: default new (no-name) visitors to FIRST_VISIT so they see the
