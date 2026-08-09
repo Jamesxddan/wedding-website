@@ -328,7 +328,7 @@ export default function Home() {
           <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
-          <WeddingDayTeaser guestName={guestName} />
+          <WeddingDayTeaser guestName={guestName} guestId={guestId} onOpenInvitation={() => setShowInvitationModal(true)} />
         </>
       )}
 
