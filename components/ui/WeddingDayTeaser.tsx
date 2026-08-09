@@ -92,7 +92,7 @@ export default function WeddingDayTeaser({ guestName }: Props) {
           position: "fixed",
           bottom: 20,
           right: 20,
-          zIndex: 9998,
+          zIndex: 44,
           display: "flex",
           alignItems: "center",
           gap: 8,
