@@ -152,7 +152,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 
   if (step === "verify") {
     return (
-      <div style={{ textAlign: "center", padding: "32px 24px", borderTop: "1px solid #e8ddd4" }}>
+      <div style={{ textAlign: "center", padding: "0 4px" }}>
         <p style={{ fontSize: 13, color: "#aaa", marginBottom: 4 }}>Welcome back, {name}!</p>
         <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>
           {verifyMethod === "phone"
@@ -199,7 +199,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "32px 24px", borderTop: "1px solid #e8ddd4" }}>
+    <div style={{ textAlign: "center", padding: "0 4px" }}>
       <p style={{ fontSize: 13, color: "#aaa", marginBottom: 16 }}>Already a guest? Re-enter your details to continue.</p>
       <form onSubmit={handleLookup} style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", maxWidth: 480, margin: "0 auto" }}>
         <input
@@ -369,14 +369,18 @@ export default function Home() {
       )}
 
       {phase === Phase.RETURN_VISIT && isRelinkOnly && (
-        <>
-          <InvitationCard guestName={guestName ?? "Friend"} guestId={guestId} onExplore={() => {}} />
-          <div style={{ padding: "24px 16px 48px" }}>
-            <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
-              <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />
-            </div>
-          </div>
-        </>
+        <InvitationCard
+          guestName={guestName ?? "Friend"}
+          guestId={guestId}
+          onExplore={() => {}}
+          relinkSlot={
+            <RelinkForm
+              onSuccess={() => { acknowledgeInvitation(); refresh(); }}
+              initialName={guestName ?? undefined}
+              initialCity={guestCity ?? undefined}
+            />
+          }
+        />
       )}
 
       {phase === Phase.RETURN_VISIT && !isRelinkOnly && (

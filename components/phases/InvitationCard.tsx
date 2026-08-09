@@ -38,6 +38,9 @@ interface Props {
   guestName: string;
   guestId?: string | null;
   onExplore: () => void;
+  /** Unverified device — hide RSVP and the "Explore" CTA, show this instead
+   *  (the relink form). RSVP/Explore return once the guest verifies. */
+  relinkSlot?: React.ReactNode;
 }
 
 // Stages: front → (flip) → back → (seal break + open) → card
@@ -218,7 +221,7 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function InvitationCard({ guestName, guestId, onExplore }: Props) {
+export default function InvitationCard({ guestName, guestId, onExplore, relinkSlot }: Props) {
   const [stage, setStage]             = useState<Stage>("front");
   const [flipPhase, setFlipPhase]     = useState<FlipPhase>("idle");
   const [sealBreaking, setSealBreaking] = useState(false);
@@ -785,7 +788,8 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
               )}
             </div>
 
-            {/* RSVP */}
+            {/* RSVP — hidden until the device is verified (relinkSlot present) */}
+            {!relinkSlot && (
             <div style={{ animation: "blur-reveal 0.9s ease 0.9s both", marginBottom: 16 }}>
               <Divider />
               <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), margin: "14px 0 12px" }}>
@@ -992,11 +996,19 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                 </div>
               )}
             </div>
+            )}
 
-            <button onClick={handleExplore}
-              style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
-              {invitation.explore_btn}
-            </button>
+            {relinkSlot ? (
+              <div style={{ animation: "blur-reveal 0.9s ease 0.9s both" }}>
+                <Divider />
+                <div style={{ marginTop: 14 }}>{relinkSlot}</div>
+              </div>
+            ) : (
+              <button onClick={handleExplore}
+                style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
+                {invitation.explore_btn}
+              </button>
+            )}
           </div>
         </div>
       )}
