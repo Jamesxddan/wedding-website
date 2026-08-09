@@ -23,6 +23,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  colorScheme: "light",
   title: "James & Sharon — October 8, 2026",
   description: "Join us as we celebrate the wedding of James Daniel & Sharon on October 8th, 2026 in Chennai. Two are better than one.",
   metadataBase: new URL("https://jamesandsharon.com"),
