@@ -109,13 +109,14 @@ export default function BackgroundMusic() {
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const audio = getBackgroundAudio();
-    if (muted) {
+    if (_muted) {
+      audio.muted = false;
       audio.volume = 0.35;
-      audio.play().catch(() => {});
+      if (_unlocked) audio.play().catch(() => {});
       _muted = false;
       setMuted(false);
     } else {
-      audio.volume = 0;
+      audio.muted = true;
       _muted = true;
       setMuted(true);
     }
