@@ -26,6 +26,7 @@ const Footer      = dynamic(() => import("@/components/ui/Footer"),            {
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
+const OwnerPhaseSwitcher = dynamic(() => import("@/components/ui/OwnerPhaseSwitcher"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
@@ -480,6 +481,10 @@ export default function Home() {
             onExplore={() => { acknowledgeInvitation(); setShowInvitationModal(false); }}
           />
         </div>
+      )}
+      {/* Owner-only phase switcher — gear icon bottom-left */}
+      {isOwner && !isLoading && (
+        <OwnerPhaseSwitcher currentPhase={phase} />
       )}
     </main>
     </SiteContentProvider>
