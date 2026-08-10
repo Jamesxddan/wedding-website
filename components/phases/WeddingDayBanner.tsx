@@ -292,7 +292,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
           <DamaskOverlay opacity={0.03} />
           <div className="relative max-w-4xl mx-auto flex flex-col gap-16">
             <div className="text-center">
-              <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: "rgba(135,168,120,0.8)" }}>
+              <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
                 Live coverage
               </p>
               <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Watch the Ceremony</h2>

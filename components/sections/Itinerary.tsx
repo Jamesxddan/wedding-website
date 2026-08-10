@@ -141,7 +141,7 @@ export default function Itinerary() {
         <div className="text-center mb-16">
           <p
             className="font-body text-[11px] tracking-[0.4em] uppercase mb-3"
-            style={{ color: "rgba(135,168,120,0.85)" }}
+            style={{ color: RA(0.8) }}
           >
             The day&apos;s programme
           </p>

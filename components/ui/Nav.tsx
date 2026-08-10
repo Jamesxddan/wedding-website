@@ -71,7 +71,7 @@ export default function Nav() {
                 <a
                   href={link.href}
                   aria-current={isActive ? "true" : undefined}
-                  className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${scrolled || open ? "text-deep-rose/80 hover:text-deep-rose" : "text-white/90 hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"} ${isActive ? "font-semibold border-b-2 border-[#D4AF37]" : "border-b-2 border-transparent"}`}
+                  className={`font-body text-sm tracking-widest uppercase transition-colors duration-300 ${scrolled || open ? "text-deep-rose/80 hover:text-deep-rose" : "text-white/90 hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"} ${isActive ? "font-semibold border-b-2 border-maroon" : "border-b-2 border-transparent"}`}
                 >
                   {link.label}
                 </a>

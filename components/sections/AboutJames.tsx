@@ -26,7 +26,7 @@ export default function AboutJames() {
               </span>
             )}
           </div>
-          <span className="font-heading text-deep-rose tracking-widest text-xs uppercase">The Groom</span>
+          <span className="font-heading text-maroon tracking-widest text-xs uppercase">The Groom</span>
         </AnimatedSection>
         <AnimatedSection variant="fade-right" className="flex flex-col gap-5 bg-white/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-champagne/40 shadow-lg shadow-deep-rose/5" as="div">
           <h2 className="font-heading text-4xl text-deep-rose">{james.name}</h2>

@@ -292,7 +292,7 @@ export default function PostWeddingHero({ guestName }: Props) {
         <section className="py-24 px-6" style={{ background: "#fffdf9" }}>
           <div className="max-w-3xl mx-auto flex flex-col gap-10">
             <div className="text-center">
-              <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: "rgba(135,168,120,0.8)" }}>
+              <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
                 Watch together
               </p>
               <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Wedding Highlights</h2>
