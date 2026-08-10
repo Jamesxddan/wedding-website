@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
+import { extractDriveFolderId } from "@/lib/drive-url";
+import SlideshowCurationPicker from "@/components/admin/SlideshowCurationPicker";
 
 type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
 
@@ -143,6 +145,10 @@ export default function AdminPage() {
   const [videosSaving, setVideosSaving] = useState(false);
   const [videosSaved, setVideosSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
+  const [weddingFolderInput, setWeddingFolderInput] = useState("");
+  const [weddingFolderSaving, setWeddingFolderSaving] = useState(false);
+  const [weddingFolderSaved, setWeddingFolderSaved] = useState(false);
+  const [weddingFolderError, setWeddingFolderError] = useState("");
 
   // Ticker state
   interface TickerUpdate { id: string; message: string; icon: string; created_at: string; }
@@ -196,6 +202,7 @@ export default function AdminPage() {
     setHighlightsInput(data.highlights_video_url ?? "");
     setPhotosInput(data.post_wedding_photos_url ?? "");
     setVideosInput(data.post_wedding_videos_url ?? "");
+    setWeddingFolderInput(data.wedding_folder_id ?? "");
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -325,6 +332,21 @@ export default function AdminPage() {
     setPhaseSaving(true);
     await saveSetting("phase_override", value);
     setPhaseSaving(false);
+  }
+
+  async function saveWeddingFolder() {
+    setWeddingFolderError("");
+    const id = extractDriveFolderId(weddingFolderInput);
+    if (!id) {
+      setWeddingFolderError("Couldn't find a folder ID in that link — paste the full Drive folder share link.");
+      return;
+    }
+    setWeddingFolderSaving(true);
+    await saveSetting("wedding_folder_id", id);
+    setWeddingFolderInput(id);
+    setWeddingFolderSaving(false);
+    setWeddingFolderSaved(true);
+    setTimeout(() => setWeddingFolderSaved(false), 2500);
   }
 
   async function toggleDevices(g: Guest) {
@@ -1241,6 +1263,46 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Wedding Day Gallery</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Paste a Google Drive folder link (shared as &quot;Anyone with the link can view&quot;) — photos in it
+                appear live on the site&apos;s Wedding Day page, watermarked and masked the same way as the
+                engagement gallery. Change it anytime, no redeploy needed.
+              </p>
+              <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>📷 Wedding Day Photos (Google Drive folder link)</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  style={{ ...inputStyle, minWidth: 0 }}
+                  value={weddingFolderInput}
+                  onChange={(e) => { setWeddingFolderInput(e.target.value); setWeddingFolderSaved(false); setWeddingFolderError(""); }}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                />
+                <button style={saveBtn(weddingFolderSaving, weddingFolderSaved)} onClick={saveWeddingFolder} disabled={weddingFolderSaving}>
+                  {weddingFolderSaved ? "Saved ✓" : weddingFolderSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+              {weddingFolderError && (
+                <p style={{ marginTop: 8, fontSize: 13, color: "#e67e22" }}>⚠️ {weddingFolderError}</p>
+              )}
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Countdown Background Slideshow</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Pick up to 5 photos each for the mobile and desktop countdown-page background. Leave empty to
+                auto-rotate through the whole engagement folder (default behavior).
+              </p>
+              <SlideshowCurationPicker
+                initialMobileIds={(settings.slideshow_mobile_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+                initialDesktopIds={(settings.slideshow_desktop_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+              />
             </div>
           )}
 

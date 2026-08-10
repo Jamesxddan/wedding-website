@@ -329,6 +329,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
       )}
 
       <Venue />
+      <Gallery folder="wedding" title="Wedding Day Gallery" />
       <Gallery folder="engagement" title="Engagement Gallery" />
       <Comments />
       <Footer />
