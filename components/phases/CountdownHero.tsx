@@ -259,8 +259,8 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
   // pass reads as mushy at this size; keep just the crisp 1px outline plus a
   // small tight shadow for contrast.
   const cHaloSoft = isLight
-    ? "-1px -1px 0 rgba(255,255,255,0.6), 1px -1px 0 rgba(255,255,255,0.6), -1px 1px 0 rgba(255,255,255,0.6), 1px 1px 0 rgba(255,255,255,0.6), 0 1px 5px rgba(255,255,255,0.55)"
-    : "-1px -1px 0 rgba(0,0,0,0.5),       1px -1px 0 rgba(0,0,0,0.5),       -1px 1px 0 rgba(0,0,0,0.5),       1px 1px 0 rgba(0,0,0,0.5),       0 1px 5px rgba(0,0,0,0.5)";
+    ? "-1px -1px 0 rgba(255,255,255,0.45), 1px -1px 0 rgba(255,255,255,0.45), -1px 1px 0 rgba(255,255,255,0.45), 1px 1px 0 rgba(255,255,255,0.45), 0 1px 2px rgba(255,255,255,0.35)"
+    : "-1px -1px 0 rgba(0,0,0,0.35),        1px -1px 0 rgba(0,0,0,0.35),        -1px 1px 0 rgba(0,0,0,0.35),        1px 1px 0 rgba(0,0,0,0.35),        0 1px 2px rgba(0,0,0,0.35)";
   const cHeadShadow = isLight
     ? "-1px -1px 0 rgba(255,255,255,0.55), 1px -1px 0 rgba(255,255,255,0.55), -1px 1px 0 rgba(255,255,255,0.55), 1px 1px 0 rgba(255,255,255,0.55), 0 2px 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5)"
     : "-1px -1px 0 rgba(0,0,0,0.45),       1px -1px 0 rgba(0,0,0,0.45),       -1px 1px 0 rgba(0,0,0,0.45),       1px 1px 0 rgba(0,0,0,0.45),       0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
