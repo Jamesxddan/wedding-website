@@ -7,6 +7,13 @@ import SlideshowCurationPicker from "@/components/admin/SlideshowCurationPicker"
 
 type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
 
+const DEFAULT_CHATBOT_FAQ = [
+  { q: "Where's the venue?", a: "The ceremony is at St Andrews Kirk and the reception at BKN Auditorium, both in Chennai. See the Venue section on this page for directions." },
+  { q: "What time should I arrive?", a: "Exact timings are being finalized — check the Itinerary section, or come back closer to October 8th for the confirmed schedule." },
+  { q: "What's the dress code?", a: "Nothing too strict — smart/semi-formal is perfect. Come ready to celebrate! 🎉" },
+  { q: "Can't attend — how do I watch?", a: "Both the ceremony and reception will be streamed live right here on this page on October 8th — just come back and scroll down!" },
+];
+
 interface Guest {
   id: string;
   name: string;
@@ -149,6 +156,12 @@ export default function AdminPage() {
   const [weddingFolderSaving, setWeddingFolderSaving] = useState(false);
   const [weddingFolderSaved, setWeddingFolderSaved] = useState(false);
   const [weddingFolderError, setWeddingFolderError] = useState("");
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
+  const [chatbotToggling, setChatbotToggling] = useState(false);
+  const [chatbotFaqInput, setChatbotFaqInput] = useState("");
+  const [chatbotFaqSaving, setChatbotFaqSaving] = useState(false);
+  const [chatbotFaqSaved, setChatbotFaqSaved] = useState(false);
+  const [chatbotFaqError, setChatbotFaqError] = useState("");
 
   // Ticker state
   interface TickerUpdate { id: string; message: string; icon: string; created_at: string; }
@@ -203,6 +216,8 @@ export default function AdminPage() {
     setPhotosInput(data.post_wedding_photos_url ?? "");
     setVideosInput(data.post_wedding_videos_url ?? "");
     setWeddingFolderInput(data.wedding_folder_id ?? "");
+    setChatbotEnabled(data.chatbot_enabled === "true");
+    setChatbotFaqInput(data.chatbot_faq ?? JSON.stringify(DEFAULT_CHATBOT_FAQ, null, 2));
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -332,6 +347,32 @@ export default function AdminPage() {
     setPhaseSaving(true);
     await saveSetting("phase_override", value);
     setPhaseSaving(false);
+  }
+
+  async function toggleChatbot() {
+    setChatbotToggling(true);
+    const next = !chatbotEnabled;
+    await saveSetting("chatbot_enabled", next ? "true" : "false");
+    setChatbotEnabled(next);
+    setChatbotToggling(false);
+  }
+
+  async function saveChatbotFaq() {
+    setChatbotFaqError("");
+    try {
+      const parsed = JSON.parse(chatbotFaqInput);
+      if (!Array.isArray(parsed) || !parsed.every((p) => typeof p?.q === "string" && typeof p?.a === "string")) {
+        throw new Error("shape");
+      }
+    } catch {
+      setChatbotFaqError('Must be a JSON array of {"q": "...", "a": "..."} objects.');
+      return;
+    }
+    setChatbotFaqSaving(true);
+    await saveSetting("chatbot_faq", chatbotFaqInput.trim());
+    setChatbotFaqSaving(false);
+    setChatbotFaqSaved(true);
+    setTimeout(() => setChatbotFaqSaved(false), 2500);
   }
 
   async function saveWeddingFolder() {
@@ -1303,6 +1344,45 @@ export default function AdminPage() {
                 initialMobileIds={(settings.slideshow_mobile_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
                 initialDesktopIds={(settings.slideshow_desktop_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
               />
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <h3 style={{ margin: 0, fontSize: 16, color: "#1a1a1a" }}>Wedding FAQ Chatbot</h3>
+                <button
+                  onClick={toggleChatbot}
+                  disabled={chatbotToggling}
+                  style={{
+                    padding: "6px 16px", borderRadius: 20, border: "none", cursor: "pointer",
+                    background: chatbotEnabled ? "#8B4A6B" : "#ddd",
+                    color: chatbotEnabled ? "#fff" : "#666",
+                    fontSize: 12, fontWeight: 600, opacity: chatbotToggling ? 0.6 : 1,
+                  }}
+                >
+                  {chatbotEnabled ? "Enabled ✓" : "Disabled"}
+                </button>
+              </div>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Off by default. When on, guests browsing the pre-wedding and wedding-day pages see a small chat
+                bubble that answers logistics questions — quick-reply buttons below cost nothing; free-typed
+                questions fall back to an OpenRouter model, tightly scoped to wedding topics only, rate-limited
+                per device, and every question is logged. Off-topic or jailbreak attempts are refused automatically
+                and emailed to you.
+              </p>
+              <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>Quick-reply FAQ (JSON array of question/answer pairs)</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 140, fontFamily: "monospace", fontSize: 12, resize: "vertical" }}
+                value={chatbotFaqInput}
+                onChange={(e) => { setChatbotFaqInput(e.target.value); setChatbotFaqSaved(false); setChatbotFaqError(""); }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <button style={saveBtn(chatbotFaqSaving, chatbotFaqSaved)} onClick={saveChatbotFaq} disabled={chatbotFaqSaving}>
+                  {chatbotFaqSaved ? "Saved ✓" : chatbotFaqSaving ? "Saving…" : "Save FAQ"}
+                </button>
+                {chatbotFaqError && <p style={{ margin: 0, fontSize: 13, color: "#e67e22" }}>⚠️ {chatbotFaqError}</p>}
+              </div>
             </div>
           )}
 

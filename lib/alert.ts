@@ -3,12 +3,13 @@ import "server-only";
 const ALERT_TO = "jdj123.1997@gmail.com";
 const ALERT_FROM = "Wedding Alert <alerts@jameswedssharon.site>";
 
-export type AlertReason = "api_rate_limit" | "repeated_form_submit" | "hotlink_attempt";
+export type AlertReason = "api_rate_limit" | "repeated_form_submit" | "hotlink_attempt" | "chatbot_flagged";
 
 const REASON_LABELS: Record<AlertReason, string> = {
   api_rate_limit:       "API Rate Limit Hit",
   repeated_form_submit: "Repeated Form Submission",
   hotlink_attempt:      "Direct Image URL Access (session killed)",
+  chatbot_flagged:      "Chatbot Refused Off-Topic / Jailbreak Attempt",
 };
 
 export async function sendBreachAlert(opts: {

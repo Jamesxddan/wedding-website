@@ -26,6 +26,7 @@ const Footer      = dynamic(() => import("@/components/ui/Footer"),            {
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
+const WeddingChatbot = dynamic(() => import("@/components/ui/WeddingChatbot"), { ssr: false });
 const OwnerPhaseSwitcher = dynamic(() => import("@/components/ui/OwnerPhaseSwitcher"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
@@ -236,7 +237,15 @@ export default function Home() {
   const [showCheckBackPopup, setShowCheckBackPopup] = useState(false);
   const [checkBackPopupIn, setCheckBackPopupIn] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((s: Record<string, string>) => setChatbotEnabled(s.chatbot_enabled === "true"))
+      .catch(() => {});
+  }, []);
 
   // Unverified device (real relink flow, or owner preview of it) — show only
   // the identity-verification form. No photos, gallery, wall of love, or any
@@ -464,6 +473,7 @@ export default function Home() {
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
           <WeddingDayTeaser guestName={guestName} guestId={guestId} onOpenInvitation={() => setShowInvitationModal(true)} />
+          <WeddingChatbot enabled={chatbotEnabled} />
         </>
       )}
 
