@@ -17,6 +17,10 @@ export function buildGoogleCalendarUrl(guestName: string): string {
   );
 }
 
+export function buildIcsUrl(guestName: string): string {
+  return `/api/ics?name=${encodeURIComponent(guestName)}`;
+}
+
 export function buildIcsDataUrl(guestName: string): string {
   const ics = [
     "BEGIN:VCALENDAR",

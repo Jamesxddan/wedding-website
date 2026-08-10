@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { usePhase } from "@/lib/usePhase";
+import { usePhase, OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
@@ -26,6 +26,7 @@ const Footer      = dynamic(() => import("@/components/ui/Footer"),            {
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
+const OwnerPhaseSwitcher = dynamic(() => import("@/components/ui/OwnerPhaseSwitcher"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
@@ -39,6 +40,24 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   const [verifyHint, setVerifyHint] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Owner-only, this-device-only preview of the relink failure states.
+  useEffect(() => {
+    try {
+      const preview = sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY);
+      if (preview === "relink_not_found") {
+        setStep("lookup");
+        setErrorMsg("Name not found — check spelling or contact James & Sharon.");
+        setStatus("error");
+      } else if (preview === "relink_mismatch") {
+        setVerifyMethod("email");
+        setVerifyHint("j***@example.com");
+        setStep("verify");
+        setErrorMsg("That doesn't match what we have on file — please check and try again.");
+        setStatus("error");
+      }
+    } catch {}
+  }, []);
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -133,7 +152,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 
   if (step === "verify") {
     return (
-      <div style={{ textAlign: "center", padding: "32px 24px", borderTop: "1px solid #e8ddd4" }}>
+      <div style={{ textAlign: "center", padding: "0 4px" }}>
         <p style={{ fontSize: 13, color: "#aaa", marginBottom: 4 }}>Welcome back, {name}!</p>
         <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>
           {verifyMethod === "phone"
@@ -180,7 +199,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   }
 
   return (
-    <div style={{ textAlign: "center", padding: "32px 24px", borderTop: "1px solid #e8ddd4" }}>
+    <div style={{ textAlign: "center", padding: "0 4px" }}>
       <p style={{ fontSize: 13, color: "#aaa", marginBottom: 16 }}>Already a guest? Re-enter your details to continue.</p>
       <form onSubmit={handleLookup} style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", maxWidth: 480, margin: "0 auto" }}>
         <input
@@ -211,13 +230,35 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 }
 
 export default function Home() {
-  const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, acknowledgeInvitation } = usePhase();
+  const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, relinkRequiredPreview, acknowledgeInvitation } = usePhase();
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
+  const [pillDismissed, setPillDismissed] = useState(false);
+  const [previewBlocked, setPreviewBlocked] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Unverified device (real relink flow, or owner preview of it) — show only
+  // the identity-verification form. No photos, gallery, wall of love, or any
+  // other guest content until they've confirmed who they are.
+  const isRelinkOnly =
+    (relinkPending || relinkRequiredPreview || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) &&
+    process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true";
+
+  // Owner-only, this-device-only preview of the breach/rate-limit banner.
   useEffect(() => {
-    if (phase !== Phase.RETURN_VISIT || !guestId) return;
+    try {
+      setPreviewBlocked(sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "blocked");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (phase !== Phase.RETURN_VISIT) return;
+    const t = setTimeout(() => setPillDismissed(true), 7400);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== Phase.RETURN_VISIT || !guestId || isRelinkOnly) return;
     // Don't nudge if already dismissed this session
     if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("rsvp_nudge_dismissed")) return;
 
@@ -233,7 +274,7 @@ export default function Home() {
       .catch(() => {});
 
     return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
-  }, [phase, guestId]);
+  }, [phase, guestId, isRelinkOnly]);
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
@@ -304,6 +345,21 @@ export default function Home() {
     <main className="min-h-screen bg-cream">
       <BackgroundMusic />
 
+      {previewBlocked && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+          background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
+          color: "#ffe8ec",
+          padding: "10px 16px",
+          textAlign: "center",
+          fontFamily: "var(--font-body, Georgia, serif)",
+          fontSize: 12.5,
+          boxShadow: "0 2px 16px rgba(120,20,40,0.4)",
+        }}>
+          🚫 It looks like you&apos;ve visited a few times already — please check back in a little while. We can&apos;t wait to celebrate with you! 🌸
+        </div>
+      )}
+
       {phase === Phase.FIRST_VISIT && (
         <OpeningScreen onComplete={() => { refresh(); }} />
       )}
@@ -312,11 +368,66 @@ export default function Home() {
         <InvitationCard guestName={guestName ?? "Friend"} guestId={guestId} onExplore={() => { acknowledgeInvitation(); refresh(); }} />
       )}
 
-      {phase === Phase.RETURN_VISIT && (
+      {phase === Phase.RETURN_VISIT && isRelinkOnly && (
+        <InvitationCard
+          guestName={guestName ?? "Friend"}
+          guestId={guestId}
+          onExplore={() => {}}
+          relinkSlot={
+            <RelinkForm
+              onSuccess={() => { acknowledgeInvitation(); refresh(); }}
+              initialName={guestName ?? undefined}
+              initialCity={guestCity ?? undefined}
+            />
+          }
+        />
+      )}
+
+      {phase === Phase.RETURN_VISIT && !isRelinkOnly && (
         <>
+          {/* Wedding-day teaser pill — fixed below nav, auto-hides after 7s */}
+          {!pillDismissed && (
+            <div
+              style={{
+                position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)",
+                zIndex: 40,
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "7px 12px 7px 16px",
+                borderRadius: 99,
+                background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
+                boxShadow: "0 2px 16px rgba(120,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
+                color: "#ffd6de",
+                fontFamily: "var(--font-body, Georgia, serif)",
+                fontSize: 11,
+                letterSpacing: "0.03em",
+                lineHeight: 1.35,
+                whiteSpace: "nowrap",
+                userSelect: "none",
+                animation: "pill-in 0.4s ease both, pill-out 0.4s ease 7s both",
+              }}
+            >
+              <span style={{ fontSize: 13 }}>🗓️</span>
+              <span>
+                <strong style={{ fontWeight: 700, letterSpacing: "0.06em" }}>October 8</strong>
+                {" — this page transforms with live streams & surprises"}
+              </span>
+              <button
+                onClick={() => setPillDismissed(true)}
+                style={{
+                  background: "none", border: "none", color: "rgba(255,214,222,0.6)",
+                  fontSize: 14, cursor: "pointer", padding: "0 2px", lineHeight: 1,
+                  marginLeft: 4,
+                }}
+                aria-label="Dismiss"
+              >×</button>
+              <style>{`
+                @keyframes pill-in { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+                @keyframes pill-out { from { opacity:1; } to { opacity:0; pointer-events:none; } }
+              `}</style>
+            </div>
+          )}
           <BackgroundSlideshow />
           <CountdownHero guestName={guestName ?? "Friend"} sessionRestored={sessionRestored} onViewInvitation={() => setShowInvitationModal(true)} />
-          {(relinkPending || (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production" && !guestName)) && process.env.NEXT_PUBLIC_DISABLE_RELINK !== "true" && <RelinkForm onSuccess={() => { acknowledgeInvitation(); refresh(); }} initialName={guestName ?? undefined} initialCity={guestCity ?? undefined} />}
           <Marquee />
           <Gallery folder="engagement" title="Engagement Gallery" />
           <ScrollFloralDivider />
@@ -328,7 +439,7 @@ export default function Home() {
           <ScrollFloralDivider />
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
-          <WeddingDayTeaser guestName={guestName} />
+          <WeddingDayTeaser guestName={guestName} guestId={guestId} onOpenInvitation={() => setShowInvitationModal(true)} />
         </>
       )}
 
@@ -340,7 +451,7 @@ export default function Home() {
         <PostWeddingHero guestName={guestName ?? "Friend"} />
       )}
       {/* RSVP nudge — shown to logged-in guests who haven't RSVP'd yet */}
-      {showRsvpNudge && !showInvitationModal && (
+      {showRsvpNudge && !showInvitationModal && !isRelinkOnly && (
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 900,
@@ -480,6 +591,10 @@ export default function Home() {
             onExplore={() => { acknowledgeInvitation(); setShowInvitationModal(false); }}
           />
         </div>
+      )}
+      {/* Sub-owner-only preview switcher — gear icon bottom-left */}
+      {isOwner && !isLoading && (
+        <OwnerPhaseSwitcher currentPhase={phase} />
       )}
     </main>
     </SiteContentProvider>

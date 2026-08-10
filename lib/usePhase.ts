@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getPhase, Phase } from "./phase";
-import { safeGetItem, safeSetItem, safeRemoveItem } from "./storage";
+import { safeGetItem, safeSetItem, safeRemoveItem, safeSessionGetItem } from "./storage";
 
 export interface PhaseState {
   phase: Phase;
@@ -13,9 +13,21 @@ export interface PhaseState {
   isLoading: boolean;
   sessionRestored: boolean;
   relinkPending: boolean;
+  relinkRequiredPreview: boolean;
   refresh: () => void;
   acknowledgeInvitation: () => void;
 }
+
+// Sub-owner-only, this-device-only preview — never touches the DB or other visitors.
+export const OWNER_PREVIEW_PHASE_KEY = "owner_phase_preview";
+export const OWNER_PREVIEW_RELINK_KEY = "owner_preview_relink";
+export const OWNER_PREVIEW_ERROR_KEY = "owner_preview_error";
+// Sentinel stored in OWNER_PREVIEW_PHASE_KEY when a sub-owner picks "Auto" —
+// means "show me exactly what a normal guest sees," which includes ignoring
+// any site-wide admin Phase Override. Without this, "Auto" would just fall
+// through to that global override like every other visitor, defeating the
+// point of a personal preview toggle.
+export const OWNER_PREVIEW_TRUE_AUTO = "__true_auto__";
 
 export function usePhase(): PhaseState {
   const [state, setState] = useState<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>({
@@ -27,6 +39,7 @@ export function usePhase(): PhaseState {
     isLoading: true,
     sessionRestored: false,
     relinkPending: false,
+    relinkRequiredPreview: false,
   });
   const [tick, setTick] = useState(0);
   const sessionChecked = useRef(false);
@@ -44,6 +57,18 @@ export function usePhase(): PhaseState {
         ? (devOverride as Phase)
         : null;
 
+    // Owner-only preview — set via the gear icon, lives in this browser tab's
+    // sessionStorage only (clears when the tab closes, so a preview never
+    // lingers into a future visit). Never written to the DB, never seen by
+    // other guests.
+    const ownerPreview = safeSessionGetItem(OWNER_PREVIEW_PHASE_KEY);
+    const ownerWantsTrueAuto = ownerPreview === OWNER_PREVIEW_TRUE_AUTO;
+    const ownerPhaseOverride =
+      ownerPreview && Object.values(Phase).includes(ownerPreview as Phase)
+        ? (ownerPreview as Phase)
+        : null;
+    const ownerRelinkPreview = safeSessionGetItem(OWNER_PREVIEW_RELINK_KEY) === "1";
+
     // Dev and staging: skip registration — default to RETURN_VISIT when no guest set
     // Production: default new (no-name) visitors to FIRST_VISIT so they see the
     // registration form. The async session check below will override to the
@@ -58,18 +83,28 @@ export function usePhase(): PhaseState {
         ? getPhase(name, new Date(), invitationAcknowledged.current)
         : Phase.FIRST_VISIT;
 
+    // Unknown device in production (no guest_name in localStorage — e.g. incognito,
+    // cleared storage, or a genuinely new visitor) — don't flash the registration
+    // form yet. Stay on the loading screen until the fingerprint check below tells
+    // us whether this is a relink candidate (matching device fingerprint) or truly
+    // new. Otherwise a slow/racing fetch let people register duplicate accounts
+    // on devices that should have been offered the relink screen instead.
+    const waitingOnFingerprintCheck = !isNonProd && !name && !localOverride && !ownerPhaseOverride && !ownerWantsTrueAuto;
+    const dbOverrideForPhase = ownerWantsTrueAuto ? null : dbOverride.current;
+
     setState((prev) => ({
       ...prev,
-      phase: localOverride ?? dbOverride.current ?? defaultPhase,
+      phase: ownerPhaseOverride ?? localOverride ?? dbOverrideForPhase ?? defaultPhase,
       // When localStorage is unavailable (Safari private browsing etc.),
       // keep the guestName/guestCity from the previous session-check result
       // rather than resetting to null.
       guestName: name ?? prev.guestName,
       guestCity: city ?? prev.guestCity,
-      isLoading: false,
+      isLoading: waitingOnFingerprintCheck ? true : false,
+      relinkRequiredPreview: ownerRelinkPreview,
     }));
 
-    if (!localOverride && !settingsFetched.current) {
+    if (!localOverride && !ownerPhaseOverride && !settingsFetched.current) {
       settingsFetched.current = true;
       fetch("/api/settings")
         .then((r) => (r.ok ? r.json() : {}))
@@ -77,6 +112,9 @@ export function usePhase(): PhaseState {
           const raw = settings.phase_override;
           if (raw && raw !== "auto" && Object.values(Phase).includes(raw as Phase)) {
             dbOverride.current = raw as Phase;
+            // A sub-owner previewing "Auto" opted out of the site-wide
+            // override for themselves — don't let it clobber their view.
+            if (ownerWantsTrueAuto) return;
             setState((prev) => {
               // Never lock a guest who already has a valid session onto FIRST_VISIT —
               // that would trap them on the registration form forever after registering.
@@ -94,7 +132,7 @@ export function usePhase(): PhaseState {
     // the phase back to FIRST_VISIT on every load.
     if (!sessionChecked.current && !localOverride && !isNonProd) {
       sessionChecked.current = true;
-      _runSessionCheck(setState, dbOverride, invitationAcknowledged);
+      _runSessionCheck(setState, dbOverride, invitationAcknowledged, ownerPhaseOverride, ownerRelinkPreview, ownerWantsTrueAuto);
     }
   }, [tick]);
 
@@ -114,6 +152,9 @@ async function _runSessionCheck(
   setState: React.Dispatch<React.SetStateAction<Omit<PhaseState, "refresh" | "acknowledgeInvitation">>>,
   dbOverride: React.MutableRefObject<Phase | null>,
   invitationAcknowledged: React.MutableRefObject<boolean>,
+  ownerPhaseOverride: Phase | null,
+  ownerRelinkPreview: boolean,
+  ownerWantsTrueAuto: boolean,
 ): Promise<void> {
   try {
     const { getOrCreateDeviceUUID, getBrowserSignalsHash } = await import("./fingerprint");
@@ -126,7 +167,13 @@ async function _runSessionCheck(
       body: JSON.stringify({ device_uuid, browser_signals_hash, user_agent: navigator.userAgent }),
     });
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      // Release the loading screen even on failure — otherwise a device that
+      // was waiting on this check (unknown-name production visitor) hangs
+      // on the loader forever instead of falling back to registration.
+      setState((prev) => ({ ...prev, isLoading: false }));
+      return;
+    }
     const data = (await res.json()) as {
       status: string;
       name?: string;
@@ -151,8 +198,10 @@ async function _runSessionCheck(
         guestCity: null,
         guestId: null,
         isOwner: false,
+        isLoading: false,
         sessionRestored: false,
         relinkPending: false,
+        relinkRequiredPreview: false,
       }));
       return;
     }
@@ -170,8 +219,10 @@ async function _runSessionCheck(
         guestCity: data.city ?? null,
         guestId: data.guest_id ?? null,
         isOwner: false,
+        isLoading: false,
         sessionRestored: false,
         relinkPending: true,
+        relinkRequiredPreview: false,
       }));
       return;
     }
@@ -191,17 +242,21 @@ async function _runSessionCheck(
 
     // Once the guest has a valid session, FIRST_VISIT override no longer applies —
     // use the natural computed phase so they aren't trapped after registering.
-    const effectiveDbOverride =
-      dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
+    // A sub-owner previewing "Auto" bypasses the site-wide override entirely.
+    const effectiveDbOverride = ownerWantsTrueAuto
+      ? null
+      : dbOverride.current === Phase.FIRST_VISIT ? null : dbOverride.current;
 
     // Don't auto-skip INVITATION on the initial session check.
     // Pre-wedding users must click Explore on the invitation card to advance
     // to RETURN_VISIT. Date-based phases (WEDDING_DAY / POST_WEDDING) are
     // always used directly.
     const computedPhase = localOverride ?? effectiveDbOverride ?? getPhase(data.name, new Date(), data.invitation_seen ?? false);
-    const effectivePhase = computedPhase === Phase.RETURN_VISIT && !invitationAcknowledged.current
+    const naturalPhase = computedPhase === Phase.RETURN_VISIT && !invitationAcknowledged.current
       ? Phase.INVITATION
       : computedPhase;
+    // Owner preview always wins — set locally via the gear icon, this device only.
+    const effectivePhase = ownerPhaseOverride ?? naturalPhase;
 
     setState({
       phase: effectivePhase,
@@ -212,8 +267,11 @@ async function _runSessionCheck(
       isLoading: false,
       sessionRestored: true,
       relinkPending: false,
+      relinkRequiredPreview: ownerRelinkPreview,
     });
   } catch {
-    // Network failure or non-production env — silent
+    // Network/fingerprinting failure — fall back to registration rather than
+    // hanging on the loading screen forever for devices that were waiting.
+    setState((prev) => ({ ...prev, isLoading: false }));
   }
 }

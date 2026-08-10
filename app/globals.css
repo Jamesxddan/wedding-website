@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* This site is light-mode only by design. Without this, some Android
+   browsers (Chrome's "force dark", Samsung Internet) auto-invert or
+   recolor pages that don't declare a scheme, which can wreck contrast on
+   custom colors — text blending into its background, "invisible" text, etc. */
+:root {
+  color-scheme: light;
+}
+
 @theme {
   /* Wedding palette */
   --color-blush: #F4C2C2;

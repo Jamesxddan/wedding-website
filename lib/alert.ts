@@ -1,7 +1,7 @@
 import "server-only";
 
 const ALERT_TO = "jdj123.1997@gmail.com";
-const ALERT_FROM = "Wedding Alert <alerts@jamesandsharon.wedding>";
+const ALERT_FROM = "Wedding Alert <alerts@jameswedssharon.site>";
 
 export type AlertReason = "api_rate_limit" | "repeated_form_submit" | "hotlink_attempt";
 

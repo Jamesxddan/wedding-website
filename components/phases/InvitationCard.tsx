@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { buildGoogleCalendarUrl, buildIcsDataUrl } from "@/lib/calendar";
+import { buildGoogleCalendarUrl, buildIcsUrl } from "@/lib/calendar";
 import { useSiteContent } from "@/lib/SiteContentContext";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
+import { OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 
 type RsvpResponse = "attending" | "not_attending" | "maybe";
 type MealPref = "veg" | "non_veg";
@@ -37,6 +38,9 @@ interface Props {
   guestName: string;
   guestId?: string | null;
   onExplore: () => void;
+  /** Unverified device — hide RSVP and the "Explore" CTA, show this instead
+   *  (the relink form). RSVP/Explore return once the guest verifies. */
+  relinkSlot?: React.ReactNode;
 }
 
 // Stages: front → (flip) → back → (seal break + open) → card
@@ -217,7 +221,7 @@ function WaxSeal({ breaking }: { breaking: boolean }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function InvitationCard({ guestName, guestId, onExplore }: Props) {
+export default function InvitationCard({ guestName, guestId, onExplore, relinkSlot }: Props) {
   const [stage, setStage]             = useState<Stage>("front");
   const [flipPhase, setFlipPhase]     = useState<FlipPhase>("idle");
   const [sealBreaking, setSealBreaking] = useState(false);
@@ -230,6 +234,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // RSVP state
+  const [calSaved, setCalSaved]           = useState(() => { try { return !!localStorage.getItem("calendar_saved"); } catch { return false; } });
   const [rsvpSaved, setRsvpSaved]         = useState<RsvpData | null>(null);
   const [rsvpResp, setRsvpResp]           = useState<RsvpResponse | null>(null);
   const [rsvpCount, setRsvpCount]         = useState(1);
@@ -237,6 +242,9 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   const [rsvpEvents, setRsvpEvents]       = useState<AttendingEvents | null>(null);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpDone, setRsvpDone]           = useState(false);
+  const [rsvpError, setRsvpError]         = useState<string | null>(null);
+  const [guestHasEmail, setGuestHasEmail] = useState<boolean | null>(null); // null = loading
+  const [rsvpEmail, setRsvpEmail]         = useState("");
 
   const { invitation } = useSiteContent();
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
@@ -255,10 +263,19 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // Owner-only, this-device-only preview of the RSVP failure banner.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(OWNER_PREVIEW_ERROR_KEY) === "rsvp_error") {
+        setRsvpError("Something went wrong. Please try again.");
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetch("/api/rsvp", { headers: rsvpHeaders() })
       .then(r => r.ok ? r.json() : null)
-      .then((d: { rsvp: RsvpData | null } | null) => {
+      .then((d: { rsvp: RsvpData | null; has_email?: boolean } | null) => {
         if (d?.rsvp) {
           setRsvpSaved(d.rsvp);
           setRsvpResp(d.rsvp.response);
@@ -267,6 +284,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
           setRsvpEvents(d.rsvp.attending_events ?? null);
           setRsvpDone(true);
         }
+        setGuestHasEmail(d?.has_email ?? false);
       })
       .catch(() => {});
   }, []);
@@ -277,6 +295,7 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
   async function submitRsvp() {
     if (!rsvpReady || rsvpSubmitting) return;
     setRsvpSubmitting(true);
+    setRsvpError(null);
     try {
       const res = await fetch("/api/rsvp", {
         method: "POST",
@@ -286,12 +305,25 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
           guest_count: rsvpCount,
           meal_pref: rsvpMeal,
           attending_events: rsvpEvents,
+          ...(rsvpEmail.trim() ? { email: rsvpEmail.trim() } : {}),
         }),
       });
-      const data = await res.json() as { rsvp?: RsvpData };
-      if (res.ok && data.rsvp) { setRsvpSaved(data.rsvp); setRsvpDone(true); }
-    } catch { /* best-effort */ }
-    finally { setRsvpSubmitting(false); }
+      const data = await res.json() as { rsvp?: RsvpData; has_email?: boolean; error?: string };
+      if (res.ok && data.rsvp) {
+        setRsvpSaved(data.rsvp);
+        setRsvpDone(true);
+        if (data.has_email) setGuestHasEmail(true);
+        try { sessionStorage.setItem("rsvp_nudge_dismissed", "1"); } catch { /* */ }
+      } else if (res.status === 401) {
+        setRsvpError("Session expired — please refresh the page and try again.");
+      } else {
+        setRsvpError(data.error ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setRsvpError("Network error — please check your connection and try again.");
+    } finally {
+      setRsvpSubmitting(false);
+    }
   }
 
   // Tap on front → coin-flip to reveal sealed back
@@ -736,19 +768,28 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
               <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), marginBottom: 10 }}>
                 Save the date
               </p>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-                <a href={buildGoogleCalendarUrl(guestName)} target="_blank" rel="noopener noreferrer"
-                  style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
-                  Google Calendar
-                </a>
-                <a href={buildIcsDataUrl(guestName)} download="james-sharon-wedding.ics"
-                  style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
-                  Apple / Windows
-                </a>
-              </div>
+              {calSaved ? (
+                <div style={{ padding: "8px 14px", borderRadius: 99, border: "1px solid rgba(80,160,80,0.35)", background: "rgba(80,160,80,0.06)", color: "rgba(50,130,50,0.8)", fontSize: 11, fontFamily: "Georgia, serif", display: "inline-block" }}>
+                  ✓ Added to your calendar
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+                  <a href={buildGoogleCalendarUrl(guestName)} target="_blank" rel="noopener noreferrer"
+                    onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                    style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
+                    Google Calendar
+                  </a>
+                  <a href={buildIcsUrl(guestName)} download="james-sharon-wedding.ics"
+                    onClick={() => { try { localStorage.setItem("calendar_saved", "1"); } catch {} setCalSaved(true); }}
+                    style={{ padding: "8px 14px", borderRadius: 99, border: `1px solid ${ROSE}`, color: ROSE, fontSize: 11, textDecoration: "none", fontFamily: "Georgia, serif" }}>
+                    Apple / Windows
+                  </a>
+                </div>
+              )}
             </div>
 
-            {/* RSVP */}
+            {/* RSVP — hidden until the device is verified (relinkSlot present) */}
+            {!relinkSlot && (
             <div style={{ animation: "blur-reveal 0.9s ease 0.9s both", marginBottom: 16 }}>
               <Divider />
               <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), margin: "14px 0 12px" }}>
@@ -757,24 +798,31 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
 
               {rsvpDone ? (
                 /* ── Confirmation summary ── */
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 22 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: `rgba(212,175,55,0.06)`, border: `1px solid ${GA(0.2)}`, borderRadius: 12, padding: "16px 20px" }}>
+                  <span style={{ fontSize: 26 }}>✅</span>
+                  <p style={{ fontFamily: "Georgia, serif", fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: GOLD, margin: 0 }}>RSVP Confirmed</p>
+                  <span style={{ fontSize: 18, marginTop: 2 }}>
                     {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.emoji}
                   </span>
                   <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: ROSE, margin: 0 }}>
                     {RSVP_OPTIONS.find(o => o.value === rsvpSaved?.response)?.label}
                   </p>
                   {rsvpSaved?.meal_pref && (
-                    <p style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.5), margin: 0 }}>
+                    <p style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.55), margin: 0, textAlign: "center" }}>
                       {rsvpSaved.guest_count} {rsvpSaved.guest_count === 1 ? "person" : "people"} &nbsp;·&nbsp;
                       {rsvpSaved.meal_pref === "veg" ? "🌿 Veg" : "🍖 Non-Veg"} &nbsp;·&nbsp;
                       {EVENT_OPTIONS.find(e => e.value === rsvpSaved.attending_events)?.emoji}{" "}
                       {EVENT_OPTIONS.find(e => e.value === rsvpSaved.attending_events)?.label}
                     </p>
                   )}
+                  {guestHasEmail && (
+                    <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), margin: "4px 0 0", textAlign: "center" }}>
+                      A confirmation email has been sent to you.
+                    </p>
+                  )}
                   <button
                     onClick={() => setRsvpDone(false)}
-                    style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.4), cursor: "pointer", textDecoration: "underline" }}
+                    style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.35), cursor: "pointer", textDecoration: "underline" }}
                   >
                     Update my RSVP
                   </button>
@@ -894,6 +942,39 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                     </div>
                   )}
 
+                  {/* Email capture — shown when no email on file */}
+                  {guestHasEmail === false && (
+                    <div style={{ marginTop: 8, paddingTop: 12, borderTop: `1px solid ${GA(0.12)}` }}>
+                      <p style={{ fontFamily: "Georgia, serif", fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: RA(0.4), margin: "0 0 8px" }}>
+                        Your email address
+                      </p>
+                      <input
+                        type="email"
+                        value={rsvpEmail}
+                        onChange={e => setRsvpEmail(e.target.value)}
+                        placeholder="so we can send you a confirmation"
+                        style={{
+                          width: "100%", padding: "10px 12px",
+                          background: "rgba(255,255,255,0.04)",
+                          border: `1px solid ${GA(rsvpEmail ? 0.45 : 0.2)}`,
+                          borderRadius: 8, color: ROSE,
+                          fontFamily: "Georgia, serif", fontSize: 13,
+                          outline: "none", boxSizing: "border-box",
+                          transition: "border-color 0.18s ease",
+                        }}
+                      />
+                      <p style={{ fontFamily: "Georgia, serif", fontSize: 10, color: RA(0.28), margin: "5px 0 0", fontStyle: "italic" }}>
+                        Optional — we'll send reminder emails as the wedding approaches
+                      </p>
+                    </div>
+                  )}
+
+                  {rsvpError && (
+                    <p style={{ fontFamily: "Georgia, serif", fontSize: 10, color: "#c0392b", textAlign: "center", margin: "4px 0 0", lineHeight: 1.4 }}>
+                      {rsvpError}
+                    </p>
+                  )}
+
                   <button
                     type="button"
                     disabled={!rsvpReady || rsvpSubmitting}
@@ -915,11 +996,19 @@ export default function InvitationCard({ guestName, guestId, onExplore }: Props)
                 </div>
               )}
             </div>
+            )}
 
-            <button onClick={handleExplore}
-              style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
-              {invitation.explore_btn}
-            </button>
+            {relinkSlot ? (
+              <div style={{ animation: "blur-reveal 0.9s ease 0.9s both" }}>
+                <Divider />
+                <div style={{ marginTop: 14 }}>{relinkSlot}</div>
+              </div>
+            ) : (
+              <button onClick={handleExplore}
+                style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
+                {invitation.explore_btn}
+              </button>
+            )}
           </div>
         </div>
       )}

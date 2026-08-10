@@ -29,6 +29,11 @@ export async function POST(req: NextRequest) {
   if (fp) {
     const fpUpdate: Record<string, unknown> = { last_seen_at: new Date().toISOString() };
     if (user_agent) fpUpdate.user_agent = user_agent;
+    // Keep browser_signals_hash fresh on every visit — self-heals rows whose
+    // hash was never captured (e.g. registered before this field existed, or
+    // a failed capture at registration time) so incognito/relink matching on
+    // this browser profile works going forward.
+    if (browser_signals_hash) fpUpdate.browser_signals_hash = browser_signals_hash;
     await supabase
       .from("device_fingerprints")
       .update(fpUpdate)

@@ -50,6 +50,7 @@ export default function Nav() {
   }, []);
 
   return (
+    <>
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled || open ? "bg-cream/95 backdrop-blur-sm shadow-sm" : "bg-transparent"
@@ -92,76 +93,6 @@ export default function Nav() {
         </button>
       </div>
 
-      {/* Mobile full-screen overlay menu */}
-      {open && (
-        <div
-          className="md:hidden fixed inset-0 z-40 flex flex-col items-center justify-center"
-          style={{
-            background: "rgba(20,8,5,0.88)",
-            backdropFilter: "blur(18px)",
-            WebkitBackdropFilter: "blur(18px)",
-            animation: "nav-fade-in 0.25s ease both",
-          }}
-          onClick={() => setOpen(false)}
-        >
-          {/* Monogram */}
-          <p
-            className="font-heading text-2xl mb-10"
-            style={{ color: "#D4AF37", letterSpacing: "0.25em", opacity: 0.7 }}
-          >
-            J &amp; S
-          </p>
-
-          <ul className="flex flex-col items-center gap-7">
-            {LINKS.map((link, i) => {
-              const isActive = active === link.href.slice(1);
-              return (
-                <li
-                  key={link.href}
-                  style={{ animation: `nav-item-rise 0.3s ease ${0.05 + i * 0.05}s both` }}
-                >
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    aria-current={isActive ? "true" : undefined}
-                    style={{
-                      fontFamily: "var(--font-heading, Georgia, serif)",
-                      fontSize: isActive ? 22 : 18,
-                      letterSpacing: "0.18em",
-                      textTransform: "uppercase",
-                      color: isActive ? "#D4AF37" : "rgba(253,246,236,0.75)",
-                      textDecoration: "none",
-                      transition: "color 0.2s ease, font-size 0.2s ease",
-                      display: "block",
-                    }}
-                  >
-                    {link.label}
-                    {isActive && (
-                      <span
-                        style={{
-                          display: "block",
-                          height: 1,
-                          background: "linear-gradient(90deg, transparent, #D4AF37, transparent)",
-                          marginTop: 3,
-                        }}
-                      />
-                    )}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Subtle close hint */}
-          <p
-            className="font-script italic absolute bottom-12"
-            style={{ color: "rgba(253,246,236,0.25)", fontSize: 13 }}
-          >
-            tap anywhere to close
-          </p>
-        </div>
-      )}
-
       <style>{`
         @keyframes nav-fade-in {
           from { opacity: 0; }
@@ -173,5 +104,75 @@ export default function Nav() {
         }
       `}</style>
     </nav>
+
+    {/* Mobile full-screen overlay — rendered outside <nav> so fixed+fixed nesting doesn't clip it on Android */}
+    {open && (
+      <div
+        className="md:hidden"
+        style={{
+          position: "fixed", inset: 0, zIndex: 49,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          background: "rgba(20,8,5,0.93)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
+          animation: "nav-fade-in 0.25s ease both",
+        }}
+        onClick={() => setOpen(false)}
+      >
+        <p
+          className="font-heading text-2xl mb-10"
+          style={{ color: "#D4AF37", letterSpacing: "0.25em", opacity: 0.7 }}
+        >
+          J &amp; S
+        </p>
+
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
+          {LINKS.map((link, i) => {
+            const isActive = active === link.href.slice(1);
+            return (
+              <li
+                key={link.href}
+                style={{ animation: `nav-item-rise 0.3s ease ${0.05 + i * 0.05}s both` }}
+              >
+                <a
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive ? "true" : undefined}
+                  style={{
+                    fontFamily: "var(--font-heading, Georgia, serif)",
+                    fontSize: isActive ? 22 : 18,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: isActive ? "#D4AF37" : "rgba(253,246,236,0.75)",
+                    textDecoration: "none",
+                    transition: "color 0.2s ease, font-size 0.2s ease",
+                    display: "block",
+                  }}
+                >
+                  {link.label}
+                  {isActive && (
+                    <span
+                      style={{
+                        display: "block", height: 1,
+                        background: "linear-gradient(90deg, transparent, #D4AF37, transparent)",
+                        marginTop: 3,
+                      }}
+                    />
+                  )}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+
+        <p
+          className="font-script italic"
+          style={{ position: "absolute", bottom: 48, color: "rgba(253,246,236,0.25)", fontSize: 13 }}
+        >
+          tap anywhere to close
+        </p>
+      </div>
+    )}
+    </>
   );
 }
