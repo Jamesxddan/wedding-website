@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Phase } from "@/lib/phase";
+import { safeGetItem } from "@/lib/storage";
 import { OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_RELINK_KEY, OWNER_PREVIEW_ERROR_KEY, OWNER_PREVIEW_TRUE_AUTO } from "@/lib/usePhase";
 
 const PHASES: { value: string; label: string; desc: string }[] = [
@@ -42,7 +44,24 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
   const [tab, setTab]             = useState<"phase" | "errors">("phase");
   const [active, setActive]       = useState<string>("auto");
   const [activeError, setActiveError] = useState<string>("none");
+  const [adminStatus, setAdminStatus] = useState<{ isAdmin: boolean; isSuper: boolean } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Does the current visitor also hold admin access? Lets the sub-owner gear
+  // offer a one-click path into /admin when they're an admin. The endpoint is
+  // an affordance check only — /admin and every /api/admin route stay gated by
+  // getAdminSession regardless, so this leaks no credentials.
+  useEffect(() => {
+    const token = safeGetItem("session_token");
+    fetch("/api/admin/gear-status", {
+      headers: token ? { "x-session-token": token } : {},
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { isAdmin?: boolean; isSuper?: boolean } | null) => {
+        if (d) setAdminStatus({ isAdmin: !!d.isAdmin, isSuper: !!d.isSuper });
+      })
+      .catch(() => {});
+  }, []);
 
   // Read current preview state on open
   useEffect(() => {
@@ -232,6 +251,48 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
               </button>
             );
           })}
+
+          {adminStatus?.isAdmin && (
+            <>
+              <div style={{ margin: "6px 14px 0", borderTop: `1px solid ${GA(0.12)}` }} />
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "9px 14px",
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }}
+              >
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+                  background: GOLD,
+                  boxShadow: `0 0 6px ${GOLD}`,
+                }} />
+                <span>
+                  <span style={{
+                    display: "block",
+                    fontFamily: "var(--font-heading, Georgia, serif)",
+                    fontSize: 12, letterSpacing: "0.04em",
+                    color: GOLD,
+                  }}>
+                    Admin Panel
+                  </span>
+                  <span style={{
+                    display: "block",
+                    fontFamily: "Georgia, serif",
+                    fontSize: 10,
+                    color: "rgba(253,246,236,0.3)",
+                    marginTop: 1,
+                  }}>
+                    {adminStatus.isSuper ? "Super admin" : "Admin"} — site-wide controls
+                  </span>
+                </span>
+                <span style={{ marginLeft: "auto", color: "rgba(253,246,236,0.4)", fontSize: 12 }}>→</span>
+              </Link>
+            </>
+          )}
 
           <p style={{
             margin: "10px 14px 0", padding: "8px 10px",
