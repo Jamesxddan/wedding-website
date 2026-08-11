@@ -15,7 +15,9 @@ export type AuditAction =
   | "youtube_url_set"
   | "toggle_owner"
   | "content_update"
-  | "reset_device";
+  | "reset_device"
+  | "admin_password_reset"
+  | "admin_password_changed";
 
 export async function auditLog(action: AuditAction, details?: Record<string, unknown>): Promise<void> {
   try {

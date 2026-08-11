@@ -238,12 +238,28 @@ export default function Home() {
   const [checkBackPopupIn, setCheckBackPopupIn] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
   const [chatbotEnabled, setChatbotEnabled] = useState(false);
+  const [adminViewer, setAdminViewer] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => (r.ok ? r.json() : {}))
       .then((s: Record<string, string>) => setChatbotEnabled(s.chatbot_enabled === "true"))
+      .catch(() => {});
+  }, []);
+
+  // Admins & super admins see the preview-switcher gear on the main site too,
+  // not just sub-owners. gear-status is an affordance check only — /admin and
+  // the admin API stay gated by getAdminSession regardless.
+  useEffect(() => {
+    const token = safeGetItem("session_token");
+    fetch("/api/admin/gear-status", {
+      headers: token ? { "x-session-token": token } : {},
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { isAdmin?: boolean } | null) => {
+        if (d?.isAdmin) setAdminViewer(true);
+      })
       .catch(() => {});
   }, []);
 
@@ -626,8 +642,9 @@ export default function Home() {
           />
         </div>
       )}
-      {/* Sub-owner-only preview switcher — gear icon bottom-left */}
-      {isOwner && !isLoading && (
+      {/* Preview switcher — gear icon bottom-left: sub-owners, plus any admin /
+          super admin (the switcher itself then offers the Admin Panel link). */}
+      {(isOwner || adminViewer) && !isLoading && (
         <OwnerPhaseSwitcher currentPhase={phase} />
       )}
     </main>

@@ -212,6 +212,12 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newIsSuper, setNewIsSuper] = useState(false);
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [pwCur, setPwCur] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwNew2, setPwNew2] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [adminSaving, setAdminSaving] = useState(false);
   const [adminError, setAdminError] = useState("");
 
@@ -615,6 +621,49 @@ export default function AdminPage() {
     await loadAdmins();
   }
 
+  async function changeMyPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwSaving(true);
+    setPwMsg(null);
+    if (pwNew !== pwNew2) {
+      setPwSaving(false);
+      setPwMsg({ type: "err", text: "New passwords don't match." });
+      return;
+    }
+    const res = await fetch("/api/admin/me", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current_password: pwCur, new_password: pwNew }),
+    });
+    setPwSaving(false);
+    if (res.ok) {
+      setPwCur(""); setPwNew(""); setPwNew2("");
+      setPwMsg({ type: "ok", text: "Password updated — use it next time you sign in." });
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setPwMsg({ type: "err", text: err.error ?? "Failed to change password." });
+    }
+  }
+
+  async function resetAdminPassword(a: Admin) {
+    const temp = prompt(
+      `Set a new password for ${a.email}\n\nThey'll sign in with this, then can change it themselves from the "Change password" link in the header.`,
+      ""
+    );
+    if (!temp) return;
+    const res = await fetch("/api/admin/admins", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: a.id, password: temp }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Failed to reset password");
+      return;
+    }
+    alert(`Password for ${a.email} reset — their open sessions were signed out.`);
+  }
+
   const th: React.CSSProperties = {
     textAlign: "left", padding: "8px 12px", fontSize: 12,
     color: "#999", fontWeight: 600, borderBottom: "1px solid #ede8e2",
@@ -745,13 +794,77 @@ export default function AdminPage() {
                 {adminEmail}{isSuper ? " · Super Admin" : ""}
               </p>
             </div>
-            <button
-              onClick={signOut}
-              style={{ fontSize: 12, color: "#bbb", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            >
-              Sign out
-            </button>
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <button
+                onClick={() => setShowPwForm((s) => !s)}
+                style={{ fontSize: 12, color: "#bbb", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                {showPwForm ? "Cancel" : "Change password"}
+              </button>
+              <button
+                onClick={signOut}
+                style={{ fontSize: 12, color: "#bbb", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                Sign out
+              </button>
+            </div>
           </div>
+
+          {showPwForm && (
+            <div style={{ ...card, marginBottom: 20 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 15, color: "#1a1a1a" }}>Change my password</h3>
+              <form onSubmit={changeMyPassword} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 150px" }}>
+                  <label style={{ fontSize: 12, color: "#888" }}>Current</label>
+                  <input
+                    type="password"
+                    value={pwCur}
+                    onChange={(e) => setPwCur(e.target.value)}
+                    placeholder="Current password"
+                    required
+                    autoComplete="current-password"
+                    style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 150px" }}>
+                  <label style={{ fontSize: 12, color: "#888" }}>New</label>
+                  <input
+                    type="password"
+                    value={pwNew}
+                    onChange={(e) => setPwNew(e.target.value)}
+                    placeholder="New password (min 8)"
+                    required
+                    autoComplete="new-password"
+                    style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 150px" }}>
+                  <label style={{ fontSize: 12, color: "#888" }}>Confirm new</label>
+                  <input
+                    type="password"
+                    value={pwNew2}
+                    onChange={(e) => setPwNew2(e.target.value)}
+                    placeholder="Repeat new password"
+                    required
+                    autoComplete="new-password"
+                    style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={pwSaving}
+                  style={{ padding: "9px 20px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: pwSaving ? "default" : "pointer" }}
+                >
+                  {pwSaving ? "Updating…" : "Update"}
+                </button>
+              </form>
+              {pwMsg && (
+                <p style={{ marginTop: 10, fontSize: 13, color: pwMsg.type === "ok" ? "#2e7d32" : "#c0392b" }}>
+                  {pwMsg.text}
+                </p>
+              )}
+            </div>
+          )}
 
           <div style={{
             display: "flex", gap: 8, marginBottom: 20, alignItems: "center",
@@ -1641,6 +1754,14 @@ export default function AdminPage() {
                     >
                       {a.is_super ? "Demote" : "Make Super"}
                     </button>
+                    {isSuper && a.email !== adminEmail && (
+                      <button
+                        onClick={() => resetAdminPassword(a)}
+                        style={{ fontSize: 12, padding: "3px 10px", borderRadius: 10, border: "1px solid #8B4A6B", color: "#8B4A6B", background: "transparent", cursor: "pointer" }}
+                      >
+                        Reset pass
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         if (confirm(`Remove ${a.email}? Their session will end immediately.`)) removeAdmin(a.id);

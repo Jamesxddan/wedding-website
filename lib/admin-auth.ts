@@ -3,6 +3,10 @@ import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabase";
 
+// Shared floor for both create and reset so admins can't set throwaway 1-char
+// passwords. Kept in sync with the placeholder text in the admin UI.
+export const MIN_PASSWORD_LENGTH = 8;
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
