@@ -12,7 +12,7 @@ interface FaqPair { q: string; a: string; }
 
 const DEFAULT_FAQ: FaqPair[] = [
   { q: "Where's the venue?", a: "The ceremony is at St Andrews Kirk and the reception at BKN Auditorium, both in Chennai. See the Venue section on this page for directions." },
-  { q: "What time should I arrive?", a: "Exact timings are being finalized — check the Itinerary section, or come back closer to October 8th for the confirmed schedule." },
+  { q: "What time should I arrive?", a: "The ceremony at St Andrews Kirk starts at 4:30 PM and the reception at BKN Auditorium at 7:00 PM." },
   { q: "What's the dress code?", a: "Nothing too strict — smart/semi-formal is perfect. Come ready to celebrate! 🎉" },
   { q: "Can't attend — how do I watch?", a: "Both the ceremony and reception will be streamed live right here on this page on October 8th — just come back and scroll down!" },
 ];
