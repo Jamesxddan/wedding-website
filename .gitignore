@@ -51,3 +51,6 @@ graphify-out/
 
 # local tooling state
 /.claude-flow/
+
+# local agent/DB transient state
+.swarm/

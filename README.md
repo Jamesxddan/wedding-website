@@ -4,7 +4,7 @@ A cinematic wedding invitation website built for James & Sharon's wedding (Octob
 
 ## Tech Stack
 
-- **Next.js 15** (App Router, React 19, server/client components)
+- **Next.js 16** (App Router, React 19, server/client components)
 - **Tailwind CSS v4** with `@theme` block in `globals.css`
 - **TypeScript**
 - **Supabase** — guest registry, device fingerprints, settings, comments, breach detection
@@ -54,11 +54,19 @@ app/
     session/                # POST: session check by device UUID
     relink/                 # POST: re-link existing guest to a new device
     settings/               # GET: public settings (phase_override, site_content, etc.)
+    chat/                   # POST: guest chatbot answers (OpenRouter)
     drive-photos/           # GET: photos from Google Drive (auth: HMAC + session token)
     drive-image/            # GET: proxy Drive images (auth: HMAC-signed token)
     comments/               # CRUD: comments/Wall of Love with moderation
 
-  admin/page.tsx            # Admin panel — 10 tabs
+    admin/
+      auth/                 # POST login / DELETE logout
+      me/                   # GET current admin + POST change own password
+      admins/               # CRUD admins; PATCH also resets another admin's password
+      gear-status/          # GET affordance check — is this visitor an admin?
+      settings/ comments/ guests/ rsvps/ logs/ flags/ ticker/ audit/ …
+
+  admin/page.tsx            # Admin panel — 12 tabs
 
 components/
   phases/
@@ -99,7 +107,8 @@ lib/
   cities.ts                 # City autocomplete from cities-list (Indian cities prioritised)
   calendar.ts               # Google Calendar + ICS deep link builders
   breach.ts                 # Breach detection and rate limiting
-  admin-auth.ts             # Admin authentication middleware
+  chatbot.ts                # Guest FAQ chatbot — OpenRouter call, off-topic sentinel
+  admin-auth.ts             # Admin sessions, scrypt hashPassword/verifyPassword
   admin-audit.ts            # Admin action audit logging
 ```
 
@@ -107,20 +116,31 @@ lib/
 
 ## Admin Panel
 
-Available at `/admin`. 10 tabs:
+Available at `/admin`. 12 tabs:
 
 | Tab | Function |
 |---|---|
 | **Guests** | View all registered guests, search, delete, manual add |
+| **RSVPs** | RSVP responses |
 | **Logs** | Event logs with level/type filtering |
 | **Flags** | Breach flags / rate-limit violations management |
 | **Live** | Real-time event stream |
 | **Control** | Phase override, announcement banner, YouTube URLs |
 | **Preview** | `/preview` iframe — full site as a returning guest sees it |
-| **Admins** | Manage admin accounts |
+| **Admins** | Manage admin accounts — add, promote/demote, remove, **reset password** |
 | **Audit** | Admin action audit trail |
 | **Comments** | Moderate Wall of Love — approve, flag, block |
 | **Content** | Full site content editor (opening, invitation, bios, venue, families) |
+| **Chatbot** | FAQ bot on/off + pick the AI model |
+
+### Admin Passwords
+
+- **Reset password** (super admin only, Admins tab) — sets a fresh scrypt hash for
+  another admin and signs their live sessions out. Always works even if a stored
+  hash is stale or malformed.
+- **Change my password** (any admin, header link) — requires the current password,
+  keeps the current session, signs out other devices.
+- Passwords are `scrypt(salt:hash)` — plaintext is never stored. Minimum length 8.
 
 ### Site Content Persistence
 
@@ -159,6 +179,23 @@ Admin content changes are stored in Supabase (`settings` table, key `site_conten
 - Admins can force any phase from the Control tab
 - Dev/staging bypasses all session checks for testing
 - `localStorage dev_phase` for local development overrides
+
+### Guest Chatbot
+`lib/chatbot.ts` — small OpenRouter-backed FAQ assistant, embedded bottom-right.
+- Only answers wedding-logistics questions; anything else returns the `OFF_TOPIC`
+  sentinel, which is mapped to a friendly decline and triggers an admin alert.
+- Model is admin-pickable (`chatbot_model` setting, default
+  `nvidia/nemotron-3-ultra-550b-a55b:free`). Reasoning models are budgeted
+  generously (`max_tokens` 1000/2000) and retried once on empty output — an
+  empty response is a failure, not a refusal.
+
+### Preview Switcher Gear (sub-owner + admins)
+The `⚙️` gear (bottom-left) shows phase/error-state previews for this device only.
+- Shown to sub-owners (guests flagged `is_owner`) **and** any admin / super admin
+  visitor (detected via `/api/admin/gear-status`).
+- Admin & super admin visitors also get an **Admin Panel** link inside the gear —
+  a one-click path to `/admin`. The link is affordance-only; `/admin` and every
+  `/api/admin` route remain gated by `getAdminSession`.
 
 ### Background Music
 Module-level `HTMLAudioElement` singleton persists across React renders and phase transitions. No snap/restart on phase change. iOS requires user gesture (registration button tap).
