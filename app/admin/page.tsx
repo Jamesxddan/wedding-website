@@ -9,9 +9,23 @@ type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview"
 
 const DEFAULT_CHATBOT_FAQ = [
   { q: "Where's the venue?", a: "The ceremony is at St Andrews Kirk and the reception at BKN Auditorium, both in Chennai. See the Venue section on this page for directions." },
-  { q: "What time should I arrive?", a: "Exact timings are being finalized — check the Itinerary section, or come back closer to October 8th for the confirmed schedule." },
+  { q: "What time should I arrive?", a: "The ceremony at St Andrews Kirk starts at 4:30 PM and the reception at BKN Auditorium at 7:00 PM." },
   { q: "What's the dress code?", a: "Nothing too strict — smart/semi-formal is perfect. Come ready to celebrate! 🎉" },
   { q: "Can't attend — how do I watch?", a: "Both the ceremony and reception will be streamed live right here on this page on October 8th — just come back and scroll down!" },
+];
+
+const DEFAULT_CHATBOT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
+// Models the admin can pick for free-typed chat answers. Free tier = zero cost
+// but can be slower/less reliable; paid models cost fractions of a cent per answer.
+const CHATBOT_MODELS = [
+  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", label: "Nemotron Ultra 550B · free" },
+  { id: "nvidia/nemotron-3-super-120b-a12b:free", label: "Nemotron Super 120B · free" },
+  { id: "google/gemma-4-31b-it:free", label: "Gemma 4 31B · free" },
+  { id: "google/gemma-4-26b-a4b-it:free", label: "Gemma 4 26B · free" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash · paid" },
+  { id: "openai/gpt-4o-mini", label: "GPT-4o mini · paid" },
+  { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5 · paid" },
+  { id: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4 · paid" },
 ];
 
 interface Guest {
@@ -178,6 +192,9 @@ export default function AdminPage() {
   const [chatbotFaqSaving, setChatbotFaqSaving] = useState(false);
   const [chatbotFaqSaved, setChatbotFaqSaved] = useState(false);
   const [chatbotFaqError, setChatbotFaqError] = useState("");
+  const [chatbotModel, setChatbotModel] = useState(DEFAULT_CHATBOT_MODEL);
+  const [chatbotModelSaving, setChatbotModelSaving] = useState(false);
+  const [chatbotModelSaved, setChatbotModelSaved] = useState(false);
 
   // Ticker state
   interface TickerUpdate { id: string; message: string; icon: string; created_at: string; }
@@ -235,6 +252,7 @@ export default function AdminPage() {
     setWeddingFolderInput(data.wedding_folder_id ?? "");
     setChatbotEnabled(data.chatbot_enabled === "true");
     setChatbotFaqInput(data.chatbot_faq ?? JSON.stringify(DEFAULT_CHATBOT_FAQ, null, 2));
+    setChatbotModel(data.chatbot_model || DEFAULT_CHATBOT_MODEL);
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -401,6 +419,14 @@ export default function AdminPage() {
     setChatbotFaqSaving(false);
     setChatbotFaqSaved(true);
     setTimeout(() => setChatbotFaqSaved(false), 2500);
+  }
+
+  async function saveChatbotModel() {
+    setChatbotModelSaving(true);
+    await saveSetting("chatbot_model", chatbotModel);
+    setChatbotModelSaving(false);
+    setChatbotModelSaved(true);
+    setTimeout(() => setChatbotModelSaved(false), 2500);
   }
 
   async function saveWeddingFolder() {
@@ -1468,6 +1494,27 @@ export default function AdminPage() {
                 per device, and every question is logged. Off-topic or jailbreak attempts are refused automatically
                 and emailed to you.
               </p>
+              <div style={{ margin: "0 0 16px" }}>
+                <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>AI model for free-typed answers</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <select
+                    value={chatbotModel}
+                    onChange={(e) => { setChatbotModel(e.target.value); setChatbotModelSaved(false); }}
+                    style={{ ...inputStyle, flex: 1, cursor: "pointer" }}
+                  >
+                    {!CHATBOT_MODELS.some((m) => m.id === chatbotModel) && <option value={chatbotModel}>{chatbotModel}</option>}
+                    {CHATBOT_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </select>
+                  <button style={saveBtn(chatbotModelSaving, chatbotModelSaved)} onClick={saveChatbotModel} disabled={chatbotModelSaving}>
+                    {chatbotModelSaved ? "Saved ✓" : chatbotModelSaving ? "Saving…" : "Save model"}
+                  </button>
+                </div>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#aaa" }}>
+                  Free models cost nothing but can be slower or less reliable; paid models cost fractions of a cent per answer.
+                </p>
+              </div>
               <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>Quick-reply FAQ (JSON array of question/answer pairs)</label>
               <textarea
                 style={{ ...inputStyle, minHeight: 140, fontFamily: "monospace", fontSize: 12, resize: "vertical" }}

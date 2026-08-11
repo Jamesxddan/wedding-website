@@ -11,12 +11,13 @@ export async function POST(req: NextRequest) {
   const session = await validateSession(req, "chat_message", {});
   if (session instanceof NextResponse) return session;
 
-  const { data: settingsRow } = await supabase
+  const { data: settingsRows } = await supabase
     .from("settings")
-    .select("value")
-    .eq("key", "chatbot_enabled")
-    .maybeSingle();
-  if (settingsRow?.value !== "true") {
+    .select("key, value")
+    .in("key", ["chatbot_enabled", "chatbot_model"]);
+  const settingsMap: Record<string, string> = {};
+  for (const row of settingsRows ?? []) settingsMap[row.key] = row.value;
+  if (settingsMap["chatbot_enabled"] !== "true") {
     return NextResponse.json({ error: "chatbot_disabled" }, { status: 403 });
   }
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { answer, flagged } = await askWeddingChatbot(question);
+  const { answer, flagged } = await askWeddingChatbot(question, settingsMap["chatbot_model"] || undefined);
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   await supabase.from("chat_logs").insert({

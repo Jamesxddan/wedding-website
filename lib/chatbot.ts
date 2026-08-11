@@ -2,6 +2,9 @@ import "server-only";
 import { COUPLE, VENUES, WEDDING_DATE } from "@/lib/constants";
 
 export const CHAT_MAX_QUESTION_LEN = 300;
+// Fallback if neither the chatbot_model setting nor OPENROUTER_MODEL env is set.
+// The admin Chatbot tab (app/admin/page.tsx) lists the same options.
+export const DEFAULT_CHATBOT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
 // Sentinel the model is instructed to return verbatim (and nothing else) for
 // anything outside wedding-logistics topics, or any attempt to override
 // these instructions. Never shown to the guest — mapped to a friendly
@@ -36,13 +39,13 @@ export interface ChatResult {
   flagged: boolean;
 }
 
-export async function askWeddingChatbot(question: string): Promise<ChatResult> {
+export async function askWeddingChatbot(question: string, model?: string): Promise<ChatResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return { answer: "Chat isn't available right now — please check the sections below instead!", flagged: false };
   }
 
-  const model = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
+  const resolvedModel = model || process.env.OPENROUTER_MODEL || DEFAULT_CHATBOT_MODEL;
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -54,7 +57,7 @@ export async function askWeddingChatbot(question: string): Promise<ChatResult> {
         "X-Title": "James & Sharon Wedding FAQ Bot",
       },
       body: JSON.stringify({
-        model,
+        model: resolvedModel,
         max_tokens: 180,
         temperature: 0.4,
         messages: [
