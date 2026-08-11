@@ -5,7 +5,7 @@ import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { extractDriveFolderId } from "@/lib/drive-url";
 import SlideshowCurationPicker from "@/components/admin/SlideshowCurationPicker";
 
-type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
+type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content" | "chatbot";
 
 const DEFAULT_CHATBOT_FAQ = [
   { q: "Where's the venue?", a: "The ceremony is at St Andrews Kirk and the reception at BKN Auditorium, both in Chennai. See the Venue section on this page for directions." },
@@ -35,6 +35,17 @@ interface LogRow {
   event_data: Record<string, unknown> | null;
   ip: string | null;
   created_at: string;
+  guests: { name: string } | null;
+}
+
+interface ChatLogRow {
+  id: string;
+  question: string;
+  answer: string;
+  flagged: boolean;
+  ip: string | null;
+  created_at: string;
+  guest_id: string | null;
   guests: { name: string } | null;
 }
 
@@ -121,6 +132,8 @@ export default function AdminPage() {
 
   const [guests, setGuests] = useState<Guest[]>([]);
   const [logs, setLogs] = useState<LogRow[]>([]);
+  const [chatLogs, setChatLogs] = useState<ChatLogRow[]>([]);
+  const [chatFlaggedOnly, setChatFlaggedOnly] = useState(false);
   const [flags, setFlags] = useState<Flag[]>([]);
 
   interface RsvpRow { id: string; response: string; guest_count: number; meal_pref: string | null; attending_events: string | null; updated_at: string; name: string; city: string; email: string | null; }
@@ -248,6 +261,10 @@ export default function AdminPage() {
           : "/api/admin/logs";
         const res = await fetch(url);
         if (res.ok) setLogs(await res.json());
+      } else if (t === "chatbot") {
+        const url = chatFlaggedOnly ? "/api/admin/chat-logs?flagged=true" : "/api/admin/chat-logs";
+        const res = await fetch(url);
+        if (res.ok) setChatLogs(await res.json());
       } else {
         const res = await fetch("/api/admin/flags");
         if (res.ok) setFlags(await res.json());
@@ -255,7 +272,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [logFilter, loadSettings, loadAdmins, loadTicker]);
+  }, [logFilter, chatFlaggedOnly, loadSettings, loadAdmins, loadTicker]);
 
   useEffect(() => { if (authed) load(tab); }, [authed, tab, load]);
 
@@ -649,6 +666,7 @@ export default function AdminPage() {
     { key: "audit", label: "📋 Audit Log" },
     { key: "comments", label: "💬 Comments" },
     { key: "content", label: "✏️ Site Content" },
+    { key: "chatbot", label: "🤖 Chatbot" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -1030,6 +1048,55 @@ export default function AdminPage() {
                 ))}
                 {flags.length === 0 && (
                   <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No active blocks</td></tr>
+                )}
+              </tbody>
+            </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── CHATBOT ── */}
+      {tab === "chatbot" && (
+        <>
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#555", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={chatFlaggedOnly}
+                onChange={(e) => setChatFlaggedOnly(e.target.checked)}
+              />
+              Flagged only (off-topic / jailbreak attempts)
+            </label>
+            <button
+              onClick={() => load("chatbot")}
+              style={{ padding: "8px 14px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}
+            >
+              Refresh
+            </button>
+          </div>
+          {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
+          {!loading && (
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 640 }}>
+              <thead>
+                <tr>{["Time", "Guest", "Question", "Answer", "IP"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {chatLogs.map((c) => (
+                  <tr key={c.id} style={c.flagged ? { background: "#fff3f0" } : undefined}>
+                    <td style={td}>{new Date(c.created_at).toLocaleString()}</td>
+                    <td style={td}>{c.guests?.name ?? "—"}</td>
+                    <td style={{ ...td, maxWidth: 240, whiteSpace: "normal" }}>
+                      {c.flagged && <span style={{ color: "#c0392b", fontWeight: 700, marginRight: 4 }}>⚠️</span>}
+                      {c.question}
+                    </td>
+                    <td style={{ ...td, maxWidth: 280, whiteSpace: "normal", color: "#666" }}>{c.answer}</td>
+                    <td style={td}>{c.ip ?? "—"}</td>
+                  </tr>
+                ))}
+                {chatLogs.length === 0 && (
+                  <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No chat messages yet</td></tr>
                 )}
               </tbody>
             </table>
