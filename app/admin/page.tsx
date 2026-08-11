@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
+import { extractDriveFolderId } from "@/lib/drive-url";
+import SlideshowCurationPicker from "@/components/admin/SlideshowCurationPicker";
 
-type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content";
+type Tab = "guests" | "rsvp" | "logs" | "flags" | "live" | "control" | "preview" | "admins" | "audit" | "comments" | "content" | "chatbot";
+
+const DEFAULT_CHATBOT_FAQ = [
+  { q: "Where's the venue?", a: "The ceremony is at St Andrews Kirk and the reception at BKN Auditorium, both in Chennai. See the Venue section on this page for directions." },
+  { q: "What time should I arrive?", a: "Exact timings are being finalized — check the Itinerary section, or come back closer to October 8th for the confirmed schedule." },
+  { q: "What's the dress code?", a: "Nothing too strict — smart/semi-formal is perfect. Come ready to celebrate! 🎉" },
+  { q: "Can't attend — how do I watch?", a: "Both the ceremony and reception will be streamed live right here on this page on October 8th — just come back and scroll down!" },
+];
 
 interface Guest {
   id: string;
@@ -26,6 +35,17 @@ interface LogRow {
   event_data: Record<string, unknown> | null;
   ip: string | null;
   created_at: string;
+  guests: { name: string } | null;
+}
+
+interface ChatLogRow {
+  id: string;
+  question: string;
+  answer: string;
+  flagged: boolean;
+  ip: string | null;
+  created_at: string;
+  guest_id: string | null;
   guests: { name: string } | null;
 }
 
@@ -112,6 +132,8 @@ export default function AdminPage() {
 
   const [guests, setGuests] = useState<Guest[]>([]);
   const [logs, setLogs] = useState<LogRow[]>([]);
+  const [chatLogs, setChatLogs] = useState<ChatLogRow[]>([]);
+  const [chatFlaggedOnly, setChatFlaggedOnly] = useState(false);
   const [flags, setFlags] = useState<Flag[]>([]);
 
   interface RsvpRow { id: string; response: string; guest_count: number; meal_pref: string | null; attending_events: string | null; updated_at: string; name: string; city: string; email: string | null; }
@@ -146,6 +168,16 @@ export default function AdminPage() {
   const [commentVideoSaving, setCommentVideoSaving] = useState(false);
   const [commentVideoSaved, setCommentVideoSaved] = useState(false);
   const [phaseSaving, setPhaseSaving] = useState(false);
+  const [weddingFolderInput, setWeddingFolderInput] = useState("");
+  const [weddingFolderSaving, setWeddingFolderSaving] = useState(false);
+  const [weddingFolderSaved, setWeddingFolderSaved] = useState(false);
+  const [weddingFolderError, setWeddingFolderError] = useState("");
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
+  const [chatbotToggling, setChatbotToggling] = useState(false);
+  const [chatbotFaqInput, setChatbotFaqInput] = useState("");
+  const [chatbotFaqSaving, setChatbotFaqSaving] = useState(false);
+  const [chatbotFaqSaved, setChatbotFaqSaved] = useState(false);
+  const [chatbotFaqError, setChatbotFaqError] = useState("");
 
   // Ticker state
   interface TickerUpdate { id: string; message: string; icon: string; created_at: string; }
@@ -200,6 +232,9 @@ export default function AdminPage() {
     setPhotosInput(data.post_wedding_photos_url ?? "");
     setVideosInput(data.post_wedding_videos_url ?? "");
     setCommentVideoInput(data.youtube_comment_video_id ?? "");
+    setWeddingFolderInput(data.wedding_folder_id ?? "");
+    setChatbotEnabled(data.chatbot_enabled === "true");
+    setChatbotFaqInput(data.chatbot_faq ?? JSON.stringify(DEFAULT_CHATBOT_FAQ, null, 2));
   }, []);
 
   const loadAdmins = useCallback(async () => {
@@ -230,6 +265,10 @@ export default function AdminPage() {
           : "/api/admin/logs";
         const res = await fetch(url);
         if (res.ok) setLogs(await res.json());
+      } else if (t === "chatbot") {
+        const url = chatFlaggedOnly ? "/api/admin/chat-logs?flagged=true" : "/api/admin/chat-logs";
+        const res = await fetch(url);
+        if (res.ok) setChatLogs(await res.json());
       } else {
         const res = await fetch("/api/admin/flags");
         if (res.ok) setFlags(await res.json());
@@ -237,7 +276,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [logFilter, loadSettings, loadAdmins, loadTicker]);
+  }, [logFilter, chatFlaggedOnly, loadSettings, loadAdmins, loadTicker]);
 
   useEffect(() => { if (authed) load(tab); }, [authed, tab, load]);
 
@@ -336,6 +375,47 @@ export default function AdminPage() {
     setPhaseSaving(true);
     await saveSetting("phase_override", value);
     setPhaseSaving(false);
+  }
+
+  async function toggleChatbot() {
+    setChatbotToggling(true);
+    const next = !chatbotEnabled;
+    await saveSetting("chatbot_enabled", next ? "true" : "false");
+    setChatbotEnabled(next);
+    setChatbotToggling(false);
+  }
+
+  async function saveChatbotFaq() {
+    setChatbotFaqError("");
+    try {
+      const parsed = JSON.parse(chatbotFaqInput);
+      if (!Array.isArray(parsed) || !parsed.every((p) => typeof p?.q === "string" && typeof p?.a === "string")) {
+        throw new Error("shape");
+      }
+    } catch {
+      setChatbotFaqError('Must be a JSON array of {"q": "...", "a": "..."} objects.');
+      return;
+    }
+    setChatbotFaqSaving(true);
+    await saveSetting("chatbot_faq", chatbotFaqInput.trim());
+    setChatbotFaqSaving(false);
+    setChatbotFaqSaved(true);
+    setTimeout(() => setChatbotFaqSaved(false), 2500);
+  }
+
+  async function saveWeddingFolder() {
+    setWeddingFolderError("");
+    const id = extractDriveFolderId(weddingFolderInput);
+    if (!id) {
+      setWeddingFolderError("Couldn't find a folder ID in that link — paste the full Drive folder share link.");
+      return;
+    }
+    setWeddingFolderSaving(true);
+    await saveSetting("wedding_folder_id", id);
+    setWeddingFolderInput(id);
+    setWeddingFolderSaving(false);
+    setWeddingFolderSaved(true);
+    setTimeout(() => setWeddingFolderSaved(false), 2500);
   }
 
   async function toggleDevices(g: Guest) {
@@ -597,6 +677,7 @@ export default function AdminPage() {
     { key: "audit", label: "📋 Audit Log" },
     { key: "comments", label: "💬 Comments" },
     { key: "content", label: "✏️ Site Content" },
+    { key: "chatbot", label: "🤖 Chatbot" },
   ];
 
   const regularTabs: { key: Tab; label: string }[] = [
@@ -986,6 +1067,55 @@ export default function AdminPage() {
         </>
       )}
 
+      {/* ── CHATBOT ── */}
+      {tab === "chatbot" && (
+        <>
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#555", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={chatFlaggedOnly}
+                onChange={(e) => setChatFlaggedOnly(e.target.checked)}
+              />
+              Flagged only (off-topic / jailbreak attempts)
+            </label>
+            <button
+              onClick={() => load("chatbot")}
+              style={{ padding: "8px 14px", background: "#8B4A6B", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}
+            >
+              Refresh
+            </button>
+          </div>
+          {loading && <p style={{ color: "#bbb", fontSize: 13 }}>Loading…</p>}
+          {!loading && (
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"], borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", minWidth: 640 }}>
+              <thead>
+                <tr>{["Time", "Guest", "Question", "Answer", "IP"].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {chatLogs.map((c) => (
+                  <tr key={c.id} style={c.flagged ? { background: "#fff3f0" } : undefined}>
+                    <td style={td}>{new Date(c.created_at).toLocaleString()}</td>
+                    <td style={td}>{c.guests?.name ?? "—"}</td>
+                    <td style={{ ...td, maxWidth: 240, whiteSpace: "normal" }}>
+                      {c.flagged && <span style={{ color: "#c0392b", fontWeight: 700, marginRight: 4 }}>⚠️</span>}
+                      {c.question}
+                    </td>
+                    <td style={{ ...td, maxWidth: 280, whiteSpace: "normal", color: "#666" }}>{c.answer}</td>
+                    <td style={td}>{c.ip ?? "—"}</td>
+                  </tr>
+                ))}
+                {chatLogs.length === 0 && (
+                  <tr><td colSpan={5} style={{ ...td, color: "#ccc", textAlign: "center", padding: 32 }}>No chat messages yet</td></tr>
+                )}
+              </tbody>
+            </table>
+            </div>
+          )}
+        </>
+      )}
+
       {/* ── LIVE STREAM ── */}
       {tab === "live" && (
         <div style={{ maxWidth: 680 }}>
@@ -1270,6 +1400,85 @@ export default function AdminPage() {
                     <p style={{ marginTop: 8, fontSize: 13, color: "#e67e22" }}>⚠️ Couldn&apos;t parse a video ID — check the URL.</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Wedding Day Gallery</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Paste a Google Drive folder link (shared as &quot;Anyone with the link can view&quot;) — photos in it
+                appear live on the site&apos;s Wedding Day page, watermarked and masked the same way as the
+                engagement gallery. Change it anytime, no redeploy needed.
+              </p>
+              <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>📷 Wedding Day Photos (Google Drive folder link)</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  style={{ ...inputStyle, minWidth: 0 }}
+                  value={weddingFolderInput}
+                  onChange={(e) => { setWeddingFolderInput(e.target.value); setWeddingFolderSaved(false); setWeddingFolderError(""); }}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                />
+                <button style={saveBtn(weddingFolderSaving, weddingFolderSaved)} onClick={saveWeddingFolder} disabled={weddingFolderSaving}>
+                  {weddingFolderSaved ? "Saved ✓" : weddingFolderSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+              {weddingFolderError && (
+                <p style={{ marginTop: 8, fontSize: 13, color: "#e67e22" }}>⚠️ {weddingFolderError}</p>
+              )}
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>Countdown Background Slideshow</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Pick up to 5 photos each for the mobile and desktop countdown-page background. Leave empty to
+                auto-rotate through the whole engagement folder (default behavior).
+              </p>
+              <SlideshowCurationPicker
+                initialMobileIds={(settings.slideshow_mobile_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+                initialDesktopIds={(settings.slideshow_desktop_ids ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+              />
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <h3 style={{ margin: 0, fontSize: 16, color: "#1a1a1a" }}>Wedding FAQ Chatbot</h3>
+                <button
+                  onClick={toggleChatbot}
+                  disabled={chatbotToggling}
+                  style={{
+                    padding: "6px 16px", borderRadius: 20, border: "none", cursor: "pointer",
+                    background: chatbotEnabled ? "#8B4A6B" : "#ddd",
+                    color: chatbotEnabled ? "#fff" : "#666",
+                    fontSize: 12, fontWeight: 600, opacity: chatbotToggling ? 0.6 : 1,
+                  }}
+                >
+                  {chatbotEnabled ? "Enabled ✓" : "Disabled"}
+                </button>
+              </div>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Off by default. When on, guests browsing the pre-wedding and wedding-day pages see a small chat
+                bubble that answers logistics questions — quick-reply buttons below cost nothing; free-typed
+                questions fall back to an OpenRouter model, tightly scoped to wedding topics only, rate-limited
+                per device, and every question is logged. Off-topic or jailbreak attempts are refused automatically
+                and emailed to you.
+              </p>
+              <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>Quick-reply FAQ (JSON array of question/answer pairs)</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 140, fontFamily: "monospace", fontSize: 12, resize: "vertical" }}
+                value={chatbotFaqInput}
+                onChange={(e) => { setChatbotFaqInput(e.target.value); setChatbotFaqSaved(false); setChatbotFaqError(""); }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <button style={saveBtn(chatbotFaqSaving, chatbotFaqSaved)} onClick={saveChatbotFaq} disabled={chatbotFaqSaving}>
+                  {chatbotFaqSaved ? "Saved ✓" : chatbotFaqSaving ? "Saving…" : "Save FAQ"}
+                </button>
+                {chatbotFaqError && <p style={{ margin: 0, fontSize: 13, color: "#e67e22" }}>⚠️ {chatbotFaqError}</p>}
               </div>
             </div>
           )}

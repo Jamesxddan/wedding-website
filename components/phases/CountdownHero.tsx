@@ -251,11 +251,16 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
   const cPrimary       = isLight ? "rgba(18,12,8,0.95)"   : "rgba(255,255,255,1.0)";
   const cSecondary     = isLight ? "rgba(18,12,8,0.85)"   : "rgba(255,255,255,0.90)";
   const cMuted         = isLight ? "rgba(18,12,8,0.68)"   : "rgba(255,255,255,0.72)";
-  const cScript        = isLight ? "rgba(140,50,70,0.95)" : "rgba(244,194,194,0.9)";
   // Outline + halo: 4-direction pixel offsets give a crisp edge; glow adds depth
   const cHalo = isLight
     ? "-1px -1px 0 rgba(255,255,255,0.75), 1px -1px 0 rgba(255,255,255,0.75), -1px 1px 0 rgba(255,255,255,0.75), 1px 1px 0 rgba(255,255,255,0.75), 0 1px 10px rgba(255,255,255,0.95), 0 2px 28px rgba(255,255,255,0.7)"
     : "-1px -1px 0 rgba(0,0,0,0.65),       1px -1px 0 rgba(0,0,0,0.65),       -1px 1px 0 rgba(0,0,0,0.65),       1px 1px 0 rgba(0,0,0,0.65),       0 1px 10px rgba(0,0,0,0.90), 0 2px 28px rgba(0,0,0,0.6)";
+  // Lighter variant for small body-text lines — the full cHalo's double blur
+  // pass reads as mushy at this size; keep just the crisp 1px outline plus a
+  // small tight shadow for contrast.
+  const cHaloSoft = isLight
+    ? "-1px -1px 0 rgba(255,255,255,0.45), 1px -1px 0 rgba(255,255,255,0.45), -1px 1px 0 rgba(255,255,255,0.45), 1px 1px 0 rgba(255,255,255,0.45), 0 1px 2px rgba(255,255,255,0.35)"
+    : "-1px -1px 0 rgba(0,0,0,0.35),        1px -1px 0 rgba(0,0,0,0.35),        -1px 1px 0 rgba(0,0,0,0.35),        1px 1px 0 rgba(0,0,0,0.35),        0 1px 2px rgba(0,0,0,0.35)";
   const cHeadShadow = isLight
     ? "-1px -1px 0 rgba(255,255,255,0.55), 1px -1px 0 rgba(255,255,255,0.55), -1px 1px 0 rgba(255,255,255,0.55), 1px 1px 0 rgba(255,255,255,0.55), 0 2px 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5)"
     : "-1px -1px 0 rgba(0,0,0,0.45),       1px -1px 0 rgba(0,0,0,0.45),       -1px 1px 0 rgba(0,0,0,0.45),       1px 1px 0 rgba(0,0,0,0.45),       0 2px 40px rgba(244,194,194,0.35), 0 0 80px rgba(181,101,118,0.2)";
@@ -373,19 +378,6 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
                 <SplitText text="Sharon" delayBase={780} stagger={60} />
               </span>
             </h1>
-            <p
-              className="font-script italic mt-3"
-              style={{
-                fontSize: "clamp(1.1rem, 2.5vw, 1.6rem)",
-                animation: "blur-reveal 1.4s ease both",
-                animationDelay: "1300ms",
-                color: cScript,
-                textShadow: cHalo,
-                transition: `color ${CT}, text-shadow ${CT}`,
-              }}
-            >
-              &ldquo;God&apos;s will was on our marriage&rdquo;
-            </p>
           </div>
 
           {/* Date pill */}
@@ -464,7 +456,7 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
               fontStyle: "italic",
               letterSpacing: "0.03em",
               color: cMuted,
-              textShadow: cHalo,
+              textShadow: cHaloSoft,
               transition: `color ${CT}, text-shadow ${CT}`,
               maxWidth: 340,
               textAlign: "center",
@@ -481,7 +473,7 @@ export default function CountdownHero({ guestName, sessionRestored = false, onVi
               transitionDelay: "900ms",
               fontSize: "clamp(1.1rem, 2vw, 1.45rem)",
               color: cSecondary,
-              textShadow: cHalo,
+              textShadow: cHaloSoft,
               transition: `color ${CT}, text-shadow ${CT}`,
             }}
           >

@@ -156,3 +156,20 @@ create table if not exists admin_audit_logs (
 
 create index if not exists admin_audit_logs_admin_email_idx on admin_audit_logs(admin_email);
 create index if not exists admin_audit_logs_created_at_idx  on admin_audit_logs(created_at desc);
+
+-- Wedding FAQ chatbot — every free-text question + answer is logged here for
+-- admin visibility and abuse monitoring. flagged=true means the model refused
+-- an off-topic/jailbreak attempt (an alert email is also sent in that case).
+create table if not exists chat_logs (
+  id          uuid primary key default gen_random_uuid(),
+  guest_id    uuid references guests(id) on delete set null,
+  device_uuid text not null,
+  question    text not null,
+  answer      text not null,
+  flagged     boolean not null default false,
+  ip          text,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists chat_logs_device_uuid_idx on chat_logs(device_uuid);
+create index if not exists chat_logs_created_at_idx   on chat_logs(created_at desc);

@@ -26,6 +26,7 @@ const Footer      = dynamic(() => import("@/components/ui/Footer"),            {
 const Marquee     = dynamic(() => import("@/components/ui/Marquee"),           { ssr: false });
 const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"), { ssr: false });
 const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
+const WeddingChatbot = dynamic(() => import("@/components/ui/WeddingChatbot"), { ssr: false });
 const OwnerPhaseSwitcher = dynamic(() => import("@/components/ui/OwnerPhaseSwitcher"), { ssr: false });
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
@@ -233,9 +234,18 @@ export default function Home() {
   const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, relinkRequiredPreview, acknowledgeInvitation } = usePhase();
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
-  const [pillDismissed, setPillDismissed] = useState(false);
+  const [showCheckBackPopup, setShowCheckBackPopup] = useState(false);
+  const [checkBackPopupIn, setCheckBackPopupIn] = useState(false);
   const [previewBlocked, setPreviewBlocked] = useState(false);
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
   const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((s: Record<string, string>) => setChatbotEnabled(s.chatbot_enabled === "true"))
+      .catch(() => {});
+  }, []);
 
   // Unverified device (real relink flow, or owner preview of it) — show only
   // the identity-verification form. No photos, gallery, wall of love, or any
@@ -251,11 +261,25 @@ export default function Home() {
     } catch {}
   }, []);
 
+  // "Check back on Oct 8" popup — once per browser session (tab/window),
+  // not on every reload during the same visit.
   useEffect(() => {
-    if (phase !== Phase.RETURN_VISIT) return;
-    const t = setTimeout(() => setPillDismissed(true), 7400);
+    if (phase !== Phase.RETURN_VISIT || isRelinkOnly) return;
+    let shown = false;
+    try { shown = sessionStorage.getItem("check_back_popup_shown") === "1"; } catch {}
+    if (shown) return;
+    const t = setTimeout(() => {
+      setShowCheckBackPopup(true);
+      setTimeout(() => setCheckBackPopupIn(true), 30);
+      try { sessionStorage.setItem("check_back_popup_shown", "1"); } catch {}
+    }, 1500);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, isRelinkOnly]);
+
+  function dismissCheckBackPopup() {
+    setCheckBackPopupIn(false);
+    setTimeout(() => setShowCheckBackPopup(false), 350);
+  }
 
   useEffect(() => {
     if (phase !== Phase.RETURN_VISIT || !guestId || isRelinkOnly) return;
@@ -385,45 +409,54 @@ export default function Home() {
 
       {phase === Phase.RETURN_VISIT && !isRelinkOnly && (
         <>
-          {/* Wedding-day teaser pill — fixed below nav, auto-hides after 7s */}
-          {!pillDismissed && (
+          {/* Full-screen "come back Oct 8" popup — once per browser session */}
+          {showCheckBackPopup && (
             <div
+              onClick={(e) => { if (e.target === e.currentTarget) dismissCheckBackPopup(); }}
               style={{
-                position: "fixed", top: 68, left: "50%", transform: "translateX(-50%)",
-                zIndex: 40,
-                display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "7px 12px 7px 16px",
-                borderRadius: 99,
-                background: "linear-gradient(135deg, #7a1a2e 0%, #a83050 100%)",
-                boxShadow: "0 2px 16px rgba(120,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
-                color: "#ffd6de",
-                fontFamily: "var(--font-body, Georgia, serif)",
-                fontSize: 11,
-                letterSpacing: "0.03em",
-                lineHeight: 1.35,
-                whiteSpace: "nowrap",
-                userSelect: "none",
-                animation: "pill-in 0.4s ease both, pill-out 0.4s ease 7s both",
+                position: "fixed", inset: 0, zIndex: 9500,
+                background: "rgba(15,8,5,0.72)",
+                backdropFilter: "blur(8px)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "20px 16px",
+                opacity: checkBackPopupIn ? 1 : 0,
+                transition: "opacity 0.35s ease",
               }}
             >
-              <span style={{ fontSize: 13 }}>🗓️</span>
-              <span>
-                <strong style={{ fontWeight: 700, letterSpacing: "0.06em" }}>October 8</strong>
-                {" — this page transforms with live streams & surprises"}
-              </span>
-              <button
-                onClick={() => setPillDismissed(true)}
+              <div
                 style={{
-                  background: "none", border: "none", color: "rgba(255,214,222,0.6)",
-                  fontSize: 14, cursor: "pointer", padding: "0 2px", lineHeight: 1,
-                  marginLeft: 4,
+                  width: "min(380px, 100%)",
+                  background: "#fffdf9",
+                  borderRadius: 20,
+                  padding: "36px 28px 28px",
+                  textAlign: "center",
+                  boxShadow: "0 32px 100px rgba(90,31,46,0.3)",
+                  transform: checkBackPopupIn ? "translateY(0) scale(1)" : "translateY(24px) scale(0.96)",
+                  transition: "transform 0.4s cubic-bezier(0.22,1,0.36,1)",
                 }}
-                aria-label="Dismiss"
-              >×</button>
-              <style>{`
-                @keyframes pill-in { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-                @keyframes pill-out { from { opacity:1; } to { opacity:0; pointer-events:none; } }
-              `}</style>
+              >
+                <div style={{ fontSize: 34, marginBottom: 12 }}>🎊</div>
+                <h2 style={{ fontFamily: "var(--font-heading, Georgia, serif)", fontSize: "1.3rem", color: "#5a1f2e", margin: "0 0 10px" }}>
+                  Mark your calendar
+                </h2>
+                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: "rgba(90,31,46,0.7)", lineHeight: 1.7, margin: "0 0 22px" }}>
+                  Please check back here on October 8th to watch the wedding live!
+                </p>
+                <button
+                  onClick={dismissCheckBackPopup}
+                  style={{
+                    width: "100%", padding: "12px",
+                    border: "none", borderRadius: 10,
+                    background: "linear-gradient(135deg, #5a1f2e 0%, #8B4A6B 100%)",
+                    color: "#fef9f0",
+                    fontFamily: "var(--font-heading, Georgia, serif)",
+                    fontSize: 11, letterSpacing: "0.2em",
+                    textTransform: "uppercase", cursor: "pointer",
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           )}
           <BackgroundSlideshow />
@@ -440,6 +473,7 @@ export default function Home() {
           <Comments guestName={guestName} guestId={guestId} isOwner={isOwner} />
           <Footer />
           <WeddingDayTeaser guestName={guestName} guestId={guestId} onOpenInvitation={() => setShowInvitationModal(true)} />
+          <WeddingChatbot enabled={chatbotEnabled} />
         </>
       )}
 

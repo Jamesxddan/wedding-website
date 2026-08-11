@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import LiveStream from "@/components/sections/LiveStream";
@@ -11,6 +12,8 @@ import Venue from "@/components/sections/Venue";
 import Comments from "@/components/sections/Comments";
 import { DamaskOverlay, OrnamentalFrame, ConfettiBurst } from "@/components/ui/OrnamentalMotifs";
 import LiveTicker from "@/components/sections/LiveTicker";
+
+const WeddingChatbot = dynamic(() => import("@/components/ui/WeddingChatbot"), { ssr: false });
 
 const GOLD = "#D4AF37";
 const GA = (a: number) => `rgba(212,175,55,${a})`;
@@ -58,6 +61,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
   const [bknUrl, setBknUrl] = useState(BKN_STREAM_URL);
   const [appeared, setAppeared] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
@@ -71,6 +75,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
       .then((data: Record<string, string>) => {
         if (data.youtube_ceremony_url) setKirkUrl(data.youtube_ceremony_url);
         if (data.youtube_reception_url) setBknUrl(data.youtube_reception_url);
+        setChatbotEnabled(data.chatbot_enabled === "true");
       })
       .catch(() => {});
   }, []);
@@ -329,11 +334,13 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
       )}
 
       <Venue />
+      <Gallery folder="wedding" title="Wedding Day Gallery" />
       <Gallery folder="engagement" title="Engagement Gallery" />
       <Comments />
       <Footer />
 
       {cabMode && <CabDialog mode={cabMode} onClose={() => setCabMode(null)} />}
+      <WeddingChatbot enabled={chatbotEnabled} />
     </>
   );
 }
