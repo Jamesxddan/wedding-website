@@ -39,43 +39,61 @@ export interface ChatResult {
   flagged: boolean;
 }
 
-export async function askWeddingChatbot(question: string, model?: string): Promise<ChatResult> {
+// Reasoning models (Nemotron, Gemini thinking, etc.) spend output tokens on
+// chain-of-thought before the visible answer, so the budget has to be generous.
+// The final answer itself stays short because the system prompt caps it at ~60 words.
+const CHAT_MAX_TOKENS = 1000;
+const CHAT_MAX_TOKENS_RETRY = 2000;
+
+async function callOpenRouter(question: string, model: string, maxTokens: number): Promise<string | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+  if (!apiKey) return null;
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://jameswedssharon.site",
+      "X-Title": "James & Sharon Wedding FAQ Bot",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: buildSystemPrompt() },
+        { role: "user", content: question },
+      ],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const raw: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  return raw || null;
+}
+
+export async function askWeddingChatbot(question: string, model?: string): Promise<ChatResult> {
+  if (!process.env.OPENROUTER_API_KEY) {
     return { answer: "Chat isn't available right now — please check the sections below instead!", flagged: false };
   }
 
   const resolvedModel = model || process.env.OPENROUTER_MODEL || DEFAULT_CHATBOT_MODEL;
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://jameswedssharon.site",
-        "X-Title": "James & Sharon Wedding FAQ Bot",
-      },
-      body: JSON.stringify({
-        model: resolvedModel,
-        max_tokens: 180,
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: buildSystemPrompt() },
-          { role: "user", content: question },
-        ],
-      }),
-    });
+    let raw = await callOpenRouter(question, resolvedModel, CHAT_MAX_TOKENS);
 
-    if (!res.ok) {
-      return { answer: "Sorry, I'm having trouble answering right now — please try again in a moment.", flagged: false };
+    // Empty content is usually the free tier stalling or reasoning eating the
+    // whole budget — retry once with more headroom before giving up. It is a
+    // failure, NOT a refusal, so it must not be flagged as a breach.
+    if (!raw) raw = await callOpenRouter(question, resolvedModel, CHAT_MAX_TOKENS_RETRY);
+
+    // Only the literal sentinel is a real off-topic/jailbreak refusal.
+    if (raw === OFF_TOPIC_SENTINEL) {
+      return { answer: "I can only help with questions about James & Sharon's wedding! 💐 Try asking about the venue, timing, or how to watch live.", flagged: true };
     }
 
-    const data = await res.json();
-    const raw: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
-
-    if (!raw || raw === OFF_TOPIC_SENTINEL) {
-      return { answer: "I can only help with questions about James & Sharon's wedding! 💐 Try asking about the venue, timing, or how to watch live.", flagged: true };
+    if (!raw) {
+      return { answer: "Hmm, I couldn't pull together an answer just now — please try again in a moment, or tap a quick question below. 🌸", flagged: false };
     }
 
     return { answer: raw, flagged: false };
