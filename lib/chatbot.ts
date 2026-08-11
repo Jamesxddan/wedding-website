@@ -15,6 +15,7 @@ function buildSystemPrompt(): string {
   return [
     `You are a small FAQ assistant embedded on the wedding website of ${COUPLE.groom} & ${COUPLE.bride}, married ${dateStr} in ${VENUES.ceremony.city}, India.`,
     `Ceremony venue: ${VENUES.ceremony.name}. Reception venue: ${VENUES.reception.name}.`,
+    `Ceremony time: 4:30 PM. Reception time: 7:00 PM.`,
     ``,
     `Family of the bride (Sharon): Father Mr. Yesuratnam, Mother Mrs. Rizmasusi, Sister Shiny Singapogu.`,
     `Family of the groom (James Daniel): Father Mr. Joseph Rubin Washington, Mother Mrs. Sophia Joseph, Brother John Jebasingh.`,
@@ -41,7 +42,7 @@ export async function askWeddingChatbot(question: string): Promise<ChatResult> {
     return { answer: "Chat isn't available right now — please check the sections below instead!", flagged: false };
   }
 
-  const model = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free";
+  const model = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
