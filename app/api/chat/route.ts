@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { validateSession } from "@/lib/session-check";
 import { askWeddingChatbot, CHAT_MAX_QUESTION_LEN } from "@/lib/chatbot";
+import { findInstantAnswer } from "@/lib/chatbot-knowledge";
 import { sendBreachAlert } from "@/lib/alert";
 
 const CHAT_RATE_LIMIT = 15; // messages per device per hour — LLM calls cost money
@@ -45,7 +46,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { answer, flagged } = await askWeddingChatbot(question, settingsMap["chatbot_model"] || undefined);
+  // Fast path: if the question clearly matches the knowledge base, answer
+  // instantly without spending an LLM call. Deliberately conservative — a
+  // non-match just falls through to the chatbot.
+  const instant = findInstantAnswer(question);
+  let answer: string;
+  let flagged: boolean;
+  if (instant) {
+    answer = instant;
+    flagged = false;
+  } else {
+    const res = await askWeddingChatbot(question, settingsMap["chatbot_model"] || undefined);
+    answer = res.answer;
+    flagged = res.flagged;
+  }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   await supabase.from("chat_logs").insert({

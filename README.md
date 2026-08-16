@@ -182,12 +182,30 @@ Admin content changes are stored in Supabase (`settings` table, key `site_conten
 
 ### Guest Chatbot
 `lib/chatbot.ts` — small OpenRouter-backed FAQ assistant, embedded bottom-right.
-- Only answers wedding-logistics questions; anything else returns the `OFF_TOPIC`
+- Only answers wedding/website questions; anything else returns the `OFF_TOPIC`
   sentinel, which is mapped to a friendly decline and triggers an admin alert.
 - Model is admin-pickable (`chatbot_model` setting, default
   `nvidia/nemotron-3-ultra-550b-a55b:free`). Reasoning models are budgeted
   generously (`max_tokens` 1000/2000) and retried once on empty output — an
   empty response is a failure, not a refusal.
+
+### Chatbot Knowledge Base (instant answers)
+`data/chatbot-knowledge.json` is a compact question bank (created by
+`scripts/build-chatbot-kb.mjs` from a brainstorm of every topic a guest could
+ask) that does two things:
+
+- **Fast path** — `lib/chatbot-knowledge.ts` scores the question against the
+  bank's keywords/phrasings; a clear match answers instantly with no LLM call
+  (zero cost, ~instant response). Non-matches fall through to the LLM, and the
+  matcher is deliberately conservative so it never shows a wrong answer.
+- **Fact sheet** — the same file feeds `buildFactSheet()`, which is injected
+  into the LLM system prompt so the bot knows the site's ground truth (who
+  created the site, where the couple works, bios, streams, etc.).
+
+The bank is rebuilt by running the brainstorming workflow (12 domain agents +
+2 gap critics writing to `data/brainstorm/`), then `node scripts/build-chatbot-kb.mjs`
+merges, dedupes, compacts, and emits the JSON plus a readable
+`docs/chatbot-question-bank.md`.
 
 ### Preview Switcher Gear (sub-owner + admins)
 The `⚙️` gear (bottom-left) shows phase/error-state previews for this device only.
