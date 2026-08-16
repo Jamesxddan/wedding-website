@@ -2,7 +2,7 @@
 
 Full brainstorm of every question the site's FAQ chatbot can answer. Grouped by topic. Each entry shows the canonical question, the answer the bot gives, and the alternative phrasings it recognises.
 
-**Coverage:** 148 question intents · 696 alternate phrasings · stored compactly in `data/chatbot-knowledge.json` (64.1 KB).
+**Coverage:** 152 question intents · 716 alternate phrasings · stored compactly in `data/chatbot-knowledge.json` (65.8 KB).
 
 ## Contents
 - [Wedding Logistics & Schedule](#wedding-logistics-schedule) — 14 questions
