@@ -11,6 +11,8 @@ type Chain = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  order: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
   maybeSingle: ReturnType<typeof vi.fn>;
 };
 
@@ -19,6 +21,8 @@ function makeChain(data: unknown): Chain {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
   };
   return chain;

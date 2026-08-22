@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { normalizeForStorage } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, city, email, mobile, device_uuid, browser_signals_hash, user_agent } = body as {
+  const {
+    name,
+    city,
+    email,
+    mobile,
+    device_uuid,
+    browser_signals_hash,
+    user_agent,
+    country_code,
+    national_number,
+  } = body as {
     name?: string;
     city?: string;
     email?: string;
@@ -11,14 +22,13 @@ export async function POST(req: NextRequest) {
     device_uuid?: string;
     browser_signals_hash?: string;
     user_agent?: string;
+    country_code?: string;
+    national_number?: string;
   };
 
+  // Validate required fields
   if (!name || !city || !device_uuid) {
     return NextResponse.json({ error: "missing required fields" }, { status: 400 });
-  }
-
-  if (/miz/i.test(name.trim().split(/\s+/)[0])) {
-    return NextResponse.json({ error: "failed to create guest" }, { status: 500 });
   }
 
   // Return existing token if this device already registered
@@ -32,13 +42,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ session_token: existing.session_token });
   }
 
-  let guestId: string;
+  // Normalize phone and email
   const normalizedEmail = email?.trim().toLowerCase() || null;
-  const normalizedMobile = mobile?.trim() || null;
+  const normalizedMobile = normalizeForStorage(
+    country_code && national_number ? `${country_code}${national_number}` : mobile ?? ""
+  );
 
+  let guestId: string;
   let existingGuest: { id: string; name: string; city: string; email: string | null; mobile: string | null } | null = null;
 
-  // 1. Query by Mobile (Highest Precedence)
+  // 1. Query by mobile (highest precedence)
   if (normalizedMobile) {
     const { data, error } = await supabase
       .from("guests")
@@ -55,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Query by Email (Secondary Precedence, if not resolved by mobile yet)
+  // 2. Query by email (secondary precedence, if not resolved by mobile yet)
   if (!existingGuest && normalizedEmail) {
     const { data, error } = await supabase
       .from("guests")
@@ -81,7 +94,7 @@ export async function POST(req: NextRequest) {
     if (existingGuest.name !== name) updates.name = name;
     if (existingGuest.city !== city) updates.city = city;
 
-    // Mobile Precedence updates Email
+    // Mobile precedence updates Email
     if (normalizedEmail && existingGuest.email !== normalizedEmail) {
       updates.email = normalizedEmail;
     }
@@ -94,7 +107,7 @@ export async function POST(req: NextRequest) {
       const { error: updateError } = await supabase
         .from("guests")
         .update(updates)
-        .eq("id", guestId);
+        .eq("id", existingGuest.id);
 
       if (updateError) {
         console.error("[register] existing guest update error:", updateError);
@@ -119,6 +132,7 @@ export async function POST(req: NextRequest) {
     guestId = guest.id;
   }
 
+  // Create device fingerprint
   const { data: fp, error: fpError } = await supabase
     .from("device_fingerprints")
     .insert({

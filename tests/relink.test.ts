@@ -49,7 +49,7 @@ describe("POST /api/relink", () => {
       // Second call for the actual token generation (no DB call needed)
       vi.mocked(supabase.from).mockReturnValue(makeChain(null) as any);
 
-      const { POST } = await import("@/app/api/relink/route");
+      const { POST } = await import("@/app/api/relink/request-token/route");
       const res = await POST(req("http://localhost/api/relink/request-token", {
         guest_id: "guest-123",
         browser_signals_hash: "hash-abc",
@@ -64,7 +64,7 @@ describe("POST /api/relink", () => {
 
     it("should return 404 when guest_id is provided but no trusted device found", async () => {
       vi.mocked(supabase.from).mockReturnValue(makeChain(null) as any);
-      const { POST } = await import("@/app/api/relink/route");
+      const { POST } = await import("@/app/api/relink/request-token/route");
       const res = await POST(req("http://localhost/api/relink/request-token", {
         guest_id: "guest-123",
         browser_signals_hash: "hash-abc",
@@ -75,7 +75,7 @@ describe("POST /api/relink", () => {
     });
 
     it("should return 404 when guest_id is missing (no trusted device to look up)", async () => {
-      const { POST } = await import("@/app/api/relink/route");
+      const { POST } = await import("@/app/api/relink/request-token/route");
       const res = await POST(req("http://localhost/api/relink/request-token", {
         browser_signals_hash: "hash-abc",
       }));
@@ -87,7 +87,7 @@ describe("POST /api/relink", () => {
 
   describe("confirm", () => {
     it("should return 400 when token or device_uuid is missing", async () => {
-      const { POST } = await import("@/app/api/relink/route");
+      const { POST } = await import("@/app/api/relink/confirm/route");
       const res = await POST(req("http://localhost/api/relink/confirm", {
         token: "some-token",
       }));
@@ -97,7 +97,7 @@ describe("POST /api/relink", () => {
     });
 
     it("should return 403 for an invalid token", async () => {
-      const { POST } = await import("@/app/api/relink/route");
+      const { POST } = await import("@/app/api/relink/confirm/route");
       const res = await POST(req("http://localhost/api/relink/confirm", {
         token: "invalid.token",
         device_uuid: "new-device-uuid",

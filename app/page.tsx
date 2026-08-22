@@ -8,6 +8,7 @@ import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint"
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
 import { safeSetItem, safeGetItem } from "@/lib/storage";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 // Statically loaded — shown immediately on first/return visit
 import OpeningScreen from "@/components/phases/OpeningScreen";
@@ -34,13 +35,17 @@ const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMoti
 function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => void; initialName?: string; initialCity?: string }) {
   const [name, setName] = useState(initialName ?? "");
   const [city, setCity] = useState(initialCity ?? "");
-  const [step, setStep] = useState<"lookup" | "verify">("lookup");
+  const [step, setStep] = useState<"lookup" | "verify" | "token_verify">("lookup");
   const [verifyEmail, setVerifyEmail] = useState("");
   const [verifyPhone, setVerifyPhone] = useState("");
   const [verifyMethod, setVerifyMethod] = useState<"email" | "phone" | "none" | null>(null);
   const [verifyHint, setVerifyHint] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState<string>("IN");
+  const [phoneNationalNumber, setPhoneNationalNumber] = useState<string>("");
+  const [verifyToken, setVerifyToken] = useState("");
+  const [verifyTokenLoading, setVerifyTokenLoading] = useState(false);
 
   // Owner-only, this-device-only preview of the relink failure states.
   useEffect(() => {
@@ -80,8 +85,8 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
       setVerifyHint(data.hint ?? "");
       // No verification needed — complete relink directly
       if (data.method === "none") {
-        await completeRelink(name.trim(), city.trim(), "", "");
-        return;
+        // Generate token flow instead of auto-relinking
+        setStep("token_verify");
       }
       setStep("verify");
       setStatus("idle");
@@ -144,11 +149,75 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   // Reset to lookup step if user changes name/city
   function handleNameChange(val: string) {
     setName(val);
-    if (step === "verify") { setStep("lookup"); setErrorMsg(""); setStatus("idle"); }
+    if (step === "verify" || step === "token_verify") { setStep("lookup"); setErrorMsg(""); setStatus("idle"); }
   }
   function handleCityChange(val: string) {
     setCity(val);
-    if (step === "verify") { setStep("lookup"); setErrorMsg(""); setStatus("idle"); }
+    if (step === "verify" || step === "token_verify") { setStep("lookup"); setErrorMsg(""); setStatus("idle"); }
+  }
+
+  if (step === "token_verify") {
+    return (
+      <div style={{ textAlign: "center", padding: "0 4px" }}>
+        <p style={{ fontSize: 13, color: "#aaa", marginBottom: 4 }}>Welcome back, {name}!</p>
+        <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>
+          This guest doesn't have an email or phone on file.
+        </p>
+        <p style={{ fontSize: 12, color: "#bbb", marginBottom: 20 }}>
+          To verify your identity, we'll send a secure link to your original device.
+        </p>
+        {verifyTokenLoading ? (
+          <p style={{ fontSize: 14, color: "#8B4A6B" }}>Generating secure link…</p>
+        ) : (
+          <button
+            onClick={async () => {
+              setVerifyTokenLoading(true);
+              setErrorMsg("");
+              try {
+                const device_uuid = await getOrCreateDeviceUUID();
+                const browser_signals_hash = await getBrowserSignalsHash();
+                const res = await fetch("/api/relink/request-token", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    device_uuid,
+                    browser_signals_hash,
+                    user_agent: navigator.userAgent,
+                    guest_id: safeGetItem("guest_id"),
+                    guest_name: name,
+                    guest_city: city,
+                  }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                  setErrorMsg(data.error || "Failed to generate verification link");
+                  setVerifyTokenLoading(false);
+                  return;
+                }
+                setVerifyToken(data.token);
+                // Open verify page in new tab
+                window.open(`/relink/verify?token=${encodeURIComponent(data.token)}`, "_blank");
+                setVerifyTokenLoading(false);
+              } catch {
+                setErrorMsg("Connection error — please try again.");
+                setVerifyTokenLoading(false);
+              }
+            }}
+            disabled={verifyTokenLoading}
+            style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#8B4A6B", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: verifyTokenLoading ? 0.6 : 1 }}
+          >
+            {verifyTokenLoading ? "Generating…" : "That's not me — Verify identity"}
+          </button>
+        )}
+        {status === "error" && <p style={{ marginTop: 12, fontSize: 13, color: "#c0392b" }}>{errorMsg}</p>}
+        <button
+          onClick={() => { setStep("lookup"); setErrorMsg(""); setStatus("idle"); }}
+          style={{ marginTop: 10, background: "none", border: "none", color: "#999", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+        >
+          ← Try a different name
+        </button>
+      </div>
+    );
   }
 
   if (step === "verify") {
@@ -171,13 +240,20 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
               style={{ flex: "1 1 200px", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none" }}
             />
           ) : (
-            <input
-              value={verifyPhone}
-              onChange={e => { setVerifyPhone(e.target.value); setStatus("idle"); }}
+            <PhoneInput
+              value={{
+                countryCode: phoneCountryCode,
+                nationalNumber: phoneNationalNumber
+              }}
+              onChange={(value) => {
+                setPhoneCountryCode(value.countryCode);
+                setPhoneNationalNumber(value.nationalNumber);
+                setVerifyPhone(`${value.countryCode}${value.nationalNumber}`);
+              }}
               placeholder="Your phone number"
-              type="tel"
-              required
-              style={{ flex: "1 1 200px", padding: "10px 14px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none" }}
+              disabled={status === "loading"}
+              error={status === "error" && errorMsg.includes("phone")}
+              className="flex-1 min-w-[200px]"
             />
           )}
           <button
