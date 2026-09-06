@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   normalizeEmail,
   isDisposableEmail,
@@ -63,6 +63,31 @@ describe("hashOtpCode", () => {
 
   it("is not reversible/plaintext (hash does not contain the code)", () => {
     expect(hashOtpCode("whitson@example.com", "123456")).not.toContain("123456");
+  });
+
+  describe("in production without OTP_HASH_PEPPER", () => {
+    const originalPepper = process.env.OTP_HASH_PEPPER;
+
+    afterEach(() => {
+      delete process.env.VERCEL_ENV;
+      if (originalPepper === undefined) {
+        delete process.env.OTP_HASH_PEPPER;
+      } else {
+        process.env.OTP_HASH_PEPPER = originalPepper;
+      }
+    });
+
+    it("throws instead of falling back to the dev pepper", () => {
+      process.env.VERCEL_ENV = "production";
+      delete process.env.OTP_HASH_PEPPER;
+      expect(() => hashOtpCode("whitson@example.com", "123456")).toThrow();
+    });
+
+    it("does not throw in production when OTP_HASH_PEPPER is set", () => {
+      process.env.VERCEL_ENV = "production";
+      process.env.OTP_HASH_PEPPER = "some-real-pepper";
+      expect(() => hashOtpCode("whitson@example.com", "123456")).not.toThrow();
+    });
   });
 });
 

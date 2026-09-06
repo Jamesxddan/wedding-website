@@ -25,9 +25,17 @@ export function generateOtpCode(): string {
 }
 
 export function hashOtpCode(email: string, code: string): string {
-  const pepper = process.env.OTP_HASH_PEPPER || "dev-otp-pepper-change-in-production";
+  const pepper = process.env.OTP_HASH_PEPPER;
+  if (!pepper) {
+    if (process.env.VERCEL_ENV === "production") {
+      throw new Error(
+        "OTP_HASH_PEPPER is not set in production. Refusing to hash OTP codes with a default pepper."
+      );
+    }
+  }
+  const effectivePepper = pepper || "dev-otp-pepper-change-in-production";
   return crypto
     .createHash("sha256")
-    .update(`${normalizeEmail(email)}:${code}:${pepper}`)
+    .update(`${normalizeEmail(email)}:${code}:${effectivePepper}`)
     .digest("hex");
 }
