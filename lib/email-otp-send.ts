@@ -35,7 +35,8 @@ export async function sendOtpEmail(email: string, code: string): Promise<void> {
         html,
       }),
     });
-  } catch {
+  } catch (err) {
     /* best-effort — the caller still returns debug_code outside production */
+    console.error("sendOtpEmail failed", { email, error: err });
   }
 }

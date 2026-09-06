@@ -20,12 +20,12 @@ function req(body: Record<string, unknown>) {
   });
 }
 
-function makeChain(data: unknown, error: unknown = null) {
+function makeChain(data: unknown, error: unknown = null, upsertError: unknown = null) {
   return {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data, error }),
-    upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    upsert: vi.fn().mockResolvedValue({ data: null, error: upsertError }),
   };
 }
 
@@ -109,6 +109,17 @@ describe("POST /api/relink/email-otp/request", () => {
     const json = await res.json();
     expect(res.status).toBe(429);
     expect(json.error).toBe("rate_limited");
+  });
+
+  it("returns 500 when the upsert fails", async () => {
+    vi.mocked(supabase.from).mockReturnValue(
+      makeChain(null, null, { message: "db error" }) as ReturnType<typeof supabase.from>
+    );
+    const { POST } = await import("@/app/api/relink/email-otp/request/route");
+    const res = await POST(req({ email: "whitson@example.com", device_uuid: "d1" }));
+    const json = await res.json();
+    expect(res.status).toBe(500);
+    expect(json.error).toBe("failed to generate code");
   });
 
   it("allows a send once the hourly window has rolled over", async () => {
