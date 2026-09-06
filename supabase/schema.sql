@@ -173,3 +173,23 @@ create table if not exists chat_logs (
 
 create index if not exists chat_logs_device_uuid_idx on chat_logs(device_uuid);
 create index if not exists chat_logs_created_at_idx   on chat_logs(created_at desc);
+
+-- Email OTPs for the relink "this isn't me" escape hatch. One row per email
+-- address at a time (a fresh request upserts the existing row). window_started_at
+-- tracks the top-of-hour for the send-rate-limit window, separate from
+-- created_at (which is the row's original creation time).
+create table if not exists email_otps (
+  id                 uuid primary key default gen_random_uuid(),
+  email              text not null unique,
+  code_hash          text not null,
+  device_uuid        text not null,
+  attempts           int not null default 0,
+  send_count         int not null default 1,
+  window_started_at  timestamptz not null default now(),
+  last_sent_at       timestamptz not null default now(),
+  expires_at         timestamptz not null,
+  verified_at        timestamptz,
+  created_at         timestamptz not null default now()
+);
+
+create index if not exists email_otps_email_idx on email_otps(email);
