@@ -54,3 +54,7 @@ graphify-out/
 
 # local agent/DB transient state
 .swarm/
+tests/e2e/.auth/
+
+# git worktrees used for isolated feature work
+.worktrees/
