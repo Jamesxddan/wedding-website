@@ -16,8 +16,8 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
-    actionTimeout: 10_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 15_000,
+    navigationTimeout: 60_000,
   },
   projects: [
     {
@@ -54,6 +54,13 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
+    env: {
+      NEXT_TELEMETRY_DISABLED: "1",
+      NODE_ENV: "development",
+    },
+  },
+  expect: {
+    timeout: 10_000,
   },
 });

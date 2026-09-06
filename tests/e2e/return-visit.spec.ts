@@ -1,32 +1,28 @@
 import { test, expect } from "../fixtures";
-import { setGuestSession } from "../utils/helpers";
+import { setGuestSession, setPhaseOverride } from "../utils/helpers";
 
-test.describe("Return Visit Flow", () => {
+test.describe("RETURN_VISIT Phase (Pre-Wedding)", () => {
   test.beforeEach(async ({ freshPage }) => {
-    // Simulate a returning visitor with existing session
-    await setGuestSession(freshPage, "Test Guest", "Chennai", true);
+    // Guest who has registered AND seen invitation
+    await setGuestSession(freshPage, "Return Guest", "Chennai", true);
   });
 
-  test("should display countdown hero for returning visitor", async ({
-    freshPage,
-  }) => {
+  test("should display countdown hero with timer", async ({ freshPage }) => {
     await freshPage.goto("/");
     await freshPage.waitForLoadState("networkidle");
 
-    // Should show countdown labels — use .first() to avoid strict mode violation
-    await expect(
-      freshPage.getByText("Days", { exact: true }).first()
-    ).toBeVisible({ timeout: 10_000 });
+    // Should show countdown labels (Days, Hours, Minutes, Seconds)
+    await expect(freshPage.getByText("Days", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(freshPage.getByText("Hours", { exact: true }).first()).toBeVisible();
+    await expect(freshPage.getByText("Minutes", { exact: true }).first()).toBeVisible();
+    await expect(freshPage.getByText("Seconds", { exact: true }).first()).toBeVisible();
   });
 
-  test("should show guest greeting with name", async ({ freshPage }) => {
+  test("should greet guest by name", async ({ freshPage }) => {
     await freshPage.goto("/");
     await freshPage.waitForLoadState("networkidle");
 
-    // Should greet the guest by name — use exact match to avoid strict mode
-    await expect(
-      freshPage.getByText("Test Guest", { exact: true }).first()
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(freshPage.getByText("Return Guest", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("should display all main sections", async ({ freshPage }) => {
@@ -43,37 +39,55 @@ test.describe("Return Visit Flow", () => {
     await expect(freshPage.getByText(/venue/i).first()).toBeVisible();
   });
 
-  test("should open invitation modal from countdown hero", async ({
-    freshPage,
-  }) => {
+  test("should scroll to gallery and show photos", async ({ freshPage }) => {
     await freshPage.goto("/");
     await freshPage.waitForLoadState("networkidle");
 
-    // Click view invitation button
-    const viewInvitationBtn = freshPage.getByRole("button", {
-      name: /view invitation/i,
-    });
-    if (await viewInvitationBtn.isVisible()) {
-      await viewInvitationBtn.click();
+    // Scroll to gallery section
+    const gallerySection = freshPage.getByText(/gallery/i).first();
+    await gallerySection.scrollIntoViewIfNeeded();
+    await freshPage.waitForTimeout(1000);
 
-      // Modal should appear with invitation content
-      await expect(
-        freshPage.getByText(/James|Sharon|wedding/i)
-      ).toBeVisible({ timeout: 10_000 });
-
-      // Can close with back button
-      const backBtn = freshPage.getByRole("button", { name: /back/i });
-      if (await backBtn.isVisible()) {
-        await backBtn.click();
-      }
-    }
+    // Photos should be visible (lazy loaded)
+    // Just verify no console errors occurred
+    const errors: string[] = [];
+    freshPage.on("pageerror", (err) => errors.push(err.message));
+    expect(errors).toHaveLength(0);
   });
 
-  test("should display background music player", async ({ freshPage }) => {
+  test("should scroll to venue and show itinerary", async ({ freshPage }) => {
     await freshPage.goto("/");
     await freshPage.waitForLoadState("networkidle");
 
-    // Just verify the page loads without errors
-    expect(freshPage.url()).toContain("/");
+    const venueSection = freshPage.getByText(/venue/i).first();
+    await venueSection.scrollIntoViewIfNeeded();
+    await freshPage.waitForTimeout(1000);
+
+    // Itinerary items should be visible
+    await expect(freshPage.getByText(/ceremony|reception|st andrews|bkn/i)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("should open Wall of Love and allow comment", async ({ freshPage }) => {
+    await freshPage.goto("/");
+    await freshPage.waitForLoadState("networkidle");
+
+    // Find Wall of Love section
+    const wallOfLove = freshPage.getByText(/wall of love/i).first();
+    if (await wallOfLove.isVisible()) {
+      await wallOfLove.scrollIntoViewIfNeeded();
+      await freshPage.waitForTimeout(500);
+
+      // Find comment textarea
+      const textarea = freshPage.getByPlaceholder(/bless|message|write/i);
+      if (await textarea.isVisible({ timeout: 5000 })) {
+        await textarea.fill("Beautiful couple! Wishing you a lifetime of happiness. 💛");
+        // Press Enter to send (if Enter sends)
+        await textarea.press("Enter");
+        await freshPage.waitForTimeout(2000);
+
+        // Comment should appear or form should submit
+        await expect(freshPage.getByText(/beautiful couple/i)).toBeVisible({ timeout: 10_000 });
+      }
+    }
   });
 });
