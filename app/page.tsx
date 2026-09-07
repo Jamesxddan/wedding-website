@@ -271,6 +271,12 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
         >
           ← Not you? Try a different name
         </button>
+        <a
+          href="/relink/verify-email"
+          style={{ display: "inline-block", marginTop: 10, color: "#999", fontSize: 12, textDecoration: "underline" }}
+        >
+          This isn&apos;t me — verify with a different email
+        </a>
       </div>
     );
   }
@@ -302,12 +308,28 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
         </button>
       </form>
       {status === "error" && <p style={{ marginTop: 12, fontSize: 13, color: "#c0392b" }}>{errorMsg}</p>}
+      <a
+        href="/relink/verify-email"
+        style={{ display: "inline-block", marginTop: 14, color: "#999", fontSize: 12, textDecoration: "underline" }}
+      >
+        This isn&apos;t me — verify with a different email
+      </a>
     </div>
   );
 }
 
 export default function Home() {
   const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, relinkRequiredPreview, acknowledgeInvitation } = usePhase();
+  const [verifiedRelinkEmail, setVerifiedRelinkEmail] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const email = sessionStorage.getItem("verified_relink_email");
+      if (email) {
+        setVerifiedRelinkEmail(email);
+        sessionStorage.removeItem("verified_relink_email");
+      }
+    } catch {}
+  }, []);
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [showRsvpNudge, setShowRsvpNudge] = useState(false);
   const [showCheckBackPopup, setShowCheckBackPopup] = useState(false);
@@ -394,6 +416,10 @@ export default function Home() {
 
   // RETURN_VISIT is the countdown/pre-wedding page — log as "PRE_WEDDING" to distinguish from INVITATION in event_data
   useTrackPageVisit(isLoading ? null : (phase === Phase.RETURN_VISIT ? "PRE_WEDDING" : phase));
+
+  if (verifiedRelinkEmail) {
+    return <OpeningScreen onComplete={() => { setVerifiedRelinkEmail(null); refresh(); }} verifiedEmail={verifiedRelinkEmail} />;
+  }
 
   if (isLoading) {
     return (
