@@ -57,16 +57,24 @@ export async function POST(req: NextRequest) {
 
   // Fallback: check by browser_signals_hash — catches incognito users whose
   // device UUID was cleared but browser profile (userAgent, timezone, screen) matches.
+  //
+  // This hash is low-entropy by nature (it has to match across a cookie
+  // clear on the SAME device), so it can collide across two different
+  // guests with similar-enough devices. Disclosing one guest's name/city to
+  // another guest's browser based on a collision is a privacy bug, so if the
+  // hash isn't unique to a single guest we refuse to guess and fall through
+  // to "new" instead.
   if (browser_signals_hash) {
-    const { data: fpByHash } = await supabase
+    const { data: fpRowsByHash } = await supabase
       .from("device_fingerprints")
       .select(`guest_id, guests ( id, name, city, invitation_seen, is_owner )`)
       .eq("browser_signals_hash", browser_signals_hash)
-      .order("last_seen_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("last_seen_at", { ascending: false });
 
-    if (fpByHash?.guests) {
+    const distinctGuestIds = new Set((fpRowsByHash ?? []).map((r) => r.guest_id).filter(Boolean));
+    const fpByHash = fpRowsByHash?.[0];
+
+    if (distinctGuestIds.size === 1 && fpByHash?.guests) {
       const guest = fpByHash.guests as unknown as {
         id: string; name: string; city: string; invitation_seen: boolean; is_owner: boolean;
       };

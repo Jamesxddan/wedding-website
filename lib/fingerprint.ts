@@ -24,11 +24,24 @@ export async function getOrCreateDeviceUUID(): Promise<string> {
 }
 
 export async function getBrowserSignalsHash(): Promise<string> {
+  // Kept intentionally broad — this is a fallback matcher for guests who
+  // cleared cookies/switched browsers on their OWN device, not a strong
+  // identity proof. More signals here just reduce (never eliminate) the
+  // chance two different guests on similar devices collide; the server
+  // still treats a hash shared by >1 guest as ambiguous and refuses to
+  // guess (see app/api/session/route.ts).
+  const nav = navigator as Navigator & { deviceMemory?: number };
   const signals = [
     navigator.userAgent,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     String(screen.width),
     String(screen.height),
+    String(screen.colorDepth),
+    navigator.language,
+    (navigator.languages || []).join(","),
+    String(navigator.hardwareConcurrency ?? ""),
+    String(nav.deviceMemory ?? ""),
+    navigator.platform ?? "",
   ].join("|");
   const data = new TextEncoder().encode(signals);
   const buf = await crypto.subtle.digest("SHA-256", data);

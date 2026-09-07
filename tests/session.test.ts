@@ -28,6 +28,18 @@ function makeChain(data: unknown): Chain {
   return chain;
 }
 
+// The browser_signals_hash fallback query is awaited directly (no .maybeSingle()),
+// since it can return multiple rows — supabase-js query builders are PromiseLike,
+// so the mock needs a `.then` to stand in for that.
+function makeListChain(data: unknown[]) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    then: (resolve: (v: { data: unknown[]; error: null }) => void) => resolve({ data, error: null }),
+  };
+}
+
 function req(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/session", {
     method: "POST",
@@ -77,6 +89,43 @@ describe("POST /api/session", () => {
     expect(data.status).toBe("known");
     expect(data.name).toBe("James");
     expect(data.session_token).toBe("tok-123");
+  });
+
+  it("returns relink_required when browser_signals_hash uniquely matches one guest", async () => {
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce(makeChain(null) as ReturnType<typeof supabase.from>) // device_uuid lookup: miss
+      .mockReturnValueOnce(
+        makeListChain([
+          { guest_id: "g-1", guests: { id: "g-1", name: "James Daniel", city: "Chennai", invitation_seen: true, is_owner: false } },
+        ]) as ReturnType<typeof supabase.from>
+      );
+
+    const { POST } = await import("@/app/api/session/route");
+    const res = await POST(req({ device_uuid: "new-device", browser_signals_hash: "shared-hash" }));
+    const data = await res.json();
+    expect(data.status).toBe("relink_required");
+    expect(data.name).toBe("James Daniel");
+    expect(data.guest_id).toBe("g-1");
+  });
+
+  it("refuses to guess and returns { status: 'new' } when browser_signals_hash matches more than one distinct guest", async () => {
+    // Regression test: two different guests (e.g. same phone model/OS/timezone)
+    // can share the same low-entropy browser_signals_hash. The server must not
+    // disclose either guest's name/city to the other's unrecognized device.
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce(makeChain(null) as ReturnType<typeof supabase.from>) // device_uuid lookup: miss
+      .mockReturnValueOnce(
+        makeListChain([
+          { guest_id: "g-1", guests: { id: "g-1", name: "James Daniel", city: "Chennai", invitation_seen: true, is_owner: false } },
+          { guest_id: "g-2", guests: { id: "g-2", name: "Whitson", city: "Chennai", invitation_seen: false, is_owner: false } },
+        ]) as ReturnType<typeof supabase.from>
+      );
+
+    const { POST } = await import("@/app/api/session/route");
+    const res = await POST(req({ device_uuid: "new-device", browser_signals_hash: "shared-hash" }));
+    const data = await res.json();
+    expect(data.status).toBe("new");
+    expect(data.name).toBeUndefined();
   });
 
 });
