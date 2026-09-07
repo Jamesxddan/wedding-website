@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { searchCities, isIndianCity, type City } from "@/lib/cities";
 import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
 import { safeSetItem } from "@/lib/storage";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { toE164 } from "@/lib/phone";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -12,7 +14,8 @@ interface Props {
 export default function FirstVisitForm({ onComplete }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState("IN");
+  const [phoneNationalNumber, setPhoneNationalNumber] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [suggestions, setSuggestions] = useState<City[]>([]);
@@ -69,8 +72,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
   }
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const mobileDigits = mobile.trim().replace(/\D/g, "");
-  const isMobileValid = /^[\d\s\-()+]*$/.test(mobile.trim()) && mobileDigits.length >= 10 && mobileDigits.length <= 15;
+  const mobileDigits = phoneNationalNumber.replace(/\D/g, "");
+  const isMobileValid = mobileDigits.length >= 6 && mobileDigits.length <= 15;
   const hasAtLeastOne = isEmailValid || isMobileValid;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -92,7 +95,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
           name: name.trim(),
           city: selectedCity.name,
           email: email.trim().toLowerCase(),
-          mobile: mobile.trim(),
+          mobile: isMobileValid ? toE164(phoneCountryCode, phoneNationalNumber) : "",
           device_uuid,
           browser_signals_hash,
           user_agent: navigator.userAgent,
@@ -114,7 +117,7 @@ export default function FirstVisitForm({ onComplete }: Props) {
       safeSetItem("guest_name", name.trim());
       safeSetItem("guest_city", selectedCity.name);
       safeSetItem("guest_email", email.trim().toLowerCase());
-      safeSetItem("guest_mobile", mobile.trim());
+      safeSetItem("guest_mobile", isMobileValid ? toE164(phoneCountryCode, phoneNationalNumber) : "");
       if (data.session_token) safeSetItem("session_token", data.session_token);
       onComplete(name.trim());
     } catch {
@@ -148,12 +151,12 @@ export default function FirstVisitForm({ onComplete }: Props) {
       {/* Hide email when mobile is typed (but not if both are filled via autofill) */}
       <div
         style={{
-          maxHeight: mobile.trim() && !email.trim() ? "0px" : "120px",
-          opacity: mobile.trim() && !email.trim() ? 0 : 1,
+          maxHeight: phoneNationalNumber.trim() && !email.trim() ? "0px" : "120px",
+          opacity: phoneNationalNumber.trim() && !email.trim() ? 0 : 1,
           overflow: "hidden",
-          pointerEvents: mobile.trim() && !email.trim() ? "none" : "auto",
+          pointerEvents: phoneNationalNumber.trim() && !email.trim() ? "none" : "auto",
           transition: "max-height 0.45s ease, opacity 0.35s ease",
-          marginBottom: mobile.trim() && !email.trim() ? "-20px" : "0px",
+          marginBottom: phoneNationalNumber.trim() && !email.trim() ? "-20px" : "0px",
         }}
       >
         <div className="flex flex-col gap-1.5">
@@ -174,25 +177,25 @@ export default function FirstVisitForm({ onComplete }: Props) {
       {/* Hide mobile when email is typed (but not if both are filled via autofill) */}
       <div
         style={{
-          maxHeight: email.trim() && !mobile.trim() ? "0px" : "120px",
-          opacity: email.trim() && !mobile.trim() ? 0 : 1,
+          maxHeight: email.trim() && !phoneNationalNumber.trim() ? "0px" : "120px",
+          opacity: email.trim() && !phoneNationalNumber.trim() ? 0 : 1,
           overflow: "hidden",
-          pointerEvents: email.trim() && !mobile.trim() ? "none" : "auto",
+          pointerEvents: email.trim() && !phoneNationalNumber.trim() ? "none" : "auto",
           transition: "max-height 0.45s ease, opacity 0.35s ease",
-          marginBottom: email.trim() && !mobile.trim() ? "-20px" : "0px",
+          marginBottom: email.trim() && !phoneNationalNumber.trim() ? "-20px" : "0px",
         }}
       >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
             Mobile          </label>
-          <input
-            id="guest-mobile"
-            type="tel"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder="+91 98765 43210"
+          <PhoneInput
+            value={{ countryCode: phoneCountryCode, nationalNumber: phoneNationalNumber }}
+            onChange={(value) => {
+              setPhoneCountryCode(value.countryCode);
+              setPhoneNationalNumber(value.nationalNumber);
+            }}
+            placeholder="98765 43210"
             className={inputCls}
-            autoComplete="off"
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { usePhase, OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
+import { toE164 } from "@/lib/phone";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
 import { safeSetItem, safeGetItem } from "@/lib/storage";
@@ -248,7 +249,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
               onChange={(value) => {
                 setPhoneCountryCode(value.countryCode);
                 setPhoneNationalNumber(value.nationalNumber);
-                setVerifyPhone(`${value.countryCode}${value.nationalNumber}`);
+                setVerifyPhone(toE164(value.countryCode, value.nationalNumber));
               }}
               placeholder="Your phone number"
               disabled={status === "loading"}

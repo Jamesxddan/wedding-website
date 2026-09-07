@@ -135,6 +135,20 @@ export function parsePhone(input: string): ParsedPhone | null {
     };
   }
 
+  // Case 3b: 11-digit number with a domestic trunk-prefix zero (e.g. a guest
+  // typing their own Indian mobile the way they'd dial it locally: 0XXXXXXXXXX)
+  // → strip the trunk zero and assume India, same as case 3.
+  if (cleaned.length === 11 && /^0[6-9]/.test(cleaned)) {
+    const national = cleaned.slice(1);
+    return {
+      countryCode: 'IN',
+      dialCode: '+91',
+      nationalNumber: national,
+      e164: `+91${national}`,
+      isValid: true,
+    };
+  }
+
   // Case 4: Generic fallback for 6-15 digit numbers → assume India
   if (cleaned.length >= 6 && cleaned.length <= 15) {
     return {
@@ -222,4 +236,23 @@ export function detectCountryCode(input: string): string {
 export function normalizeForStorage(input: string): string {
   const parsed = parsePhone(input);
   return parsed ? parsed.e164 : input.trim();
+}
+
+/**
+ * Combine an explicit ISO country code (e.g. from a PhoneInput country
+ * picker) with a national number into a canonical E.164 string.
+ *
+ * Use this whenever the country is known explicitly — it never falls back
+ * to guessing the country from digit patterns the way parsePhone/
+ * normalizeForStorage do, so it's the correct way to turn a PhoneInput's
+ * { countryCode, nationalNumber } value into a value safe to store or
+ * transmit. Also strips a domestic trunk-prefix leading zero (e.g. a UK/
+ * Australia/India number typed the way it'd be dialed locally,
+ * "0XXXXXXXXXX"), since that prefix is dropped in international format.
+ */
+export function toE164(isoCountryCode: string, nationalNumber: string): string {
+  const country = COUNTRY_OPTIONS.find((c) => c.code === isoCountryCode);
+  const dialCode = country?.dialCode ?? '+91';
+  const digits = nationalNumber.replace(/\D/g, '').replace(/^0+/, '');
+  return `${dialCode}${digits}`;
 }

@@ -5,6 +5,7 @@ import {
   detectCountryCode,
   normalizeForStorage,
   getCountryCodeOptions,
+  toE164,
   type ParsedPhone,
 } from "@/lib/phone";
 
@@ -79,6 +80,32 @@ describe("parsePhone", () => {
     it("should reject Indian numbers with wrong length", () => {
       const parsed = parsePhone("987654321"); // 9 digits
       expect(parsed?.isValid).toBe(false);
+    });
+
+    it("should strip a domestic trunk-prefix zero: 09876543210", () => {
+      const parsed = parsePhone("09876543210");
+      expect(parsed).toMatchObject({
+        countryCode: "IN",
+        dialCode: "+91",
+        nationalNumber: "9876543210",
+        e164: "+919876543210",
+        isValid: true,
+      });
+    });
+
+    it("should strip a trunk-prefix zero with punctuation: 098765-43210", () => {
+      const parsed = parsePhone("098765-43210");
+      expect(parsed?.e164).toBe("+919876543210");
+    });
+  });
+
+  describe("regression: a plain 10-digit number is only ever a guess", () => {
+    it("misclassifies a US number that happens to start with 9 as Indian (documents the known limitation of guessing without an explicit country — use toE164 with an explicit country instead)", () => {
+      // This is why toE164() exists: whenever the real country is known
+      // (e.g. from a PhoneInput country picker), callers must use toE164
+      // instead of parsePhone/normalizeForStorage's digit-guessing.
+      const parsed = parsePhone("9175551234");
+      expect(parsed?.countryCode).toBe("IN");
     });
   });
 
@@ -190,6 +217,32 @@ describe("detectCountryCode", () => {
 
   it("should default to IN for invalid input", () => {
     expect(detectCountryCode("abc")).toBe("IN");
+  });
+});
+
+describe("toE164", () => {
+  it("combines India's dial code with a plain national number", () => {
+    expect(toE164("IN", "9876543210")).toBe("+919876543210");
+  });
+
+  it("combines US's dial code with a national number that starts with 9 (would be misguessed as India by parsePhone)", () => {
+    expect(toE164("US", "9175551234")).toBe("+19175551234");
+  });
+
+  it("combines Australia's dial code and strips a domestic trunk-prefix zero", () => {
+    expect(toE164("AU", "0412345678")).toBe("+61412345678");
+  });
+
+  it("combines UK's dial code and strips a domestic trunk-prefix zero", () => {
+    expect(toE164("GB", "07911123456")).toBe("+447911123456");
+  });
+
+  it("strips punctuation/spaces from the national number", () => {
+    expect(toE164("IN", "98765-43210")).toBe("+919876543210");
+  });
+
+  it("falls back to India's dial code for an unknown ISO country code", () => {
+    expect(toE164("ZZ", "9876543210")).toBe("+919876543210");
   });
 });
 
