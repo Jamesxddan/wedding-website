@@ -14,6 +14,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 // Statically loaded — shown immediately on first/return visit
 import OpeningScreen from "@/components/phases/OpeningScreen";
 import InvitationCard from "@/components/phases/InvitationCard";
+import IdentityGate from "@/components/phases/IdentityGate";
 
 // Lazy-loaded — only needed after phase resolves or user explores
 const CountdownHero   = dynamic(() => import("@/components/phases/CountdownHero"),   { ssr: false });
@@ -322,6 +323,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
 export default function Home() {
   const { phase, guestName, guestCity, guestId, isOwner, isLoading, refresh, sessionRestored, relinkPending, relinkRequiredPreview, acknowledgeInvitation } = usePhase();
   const [verifiedRelinkEmail, setVerifiedRelinkEmail] = useState<string | null>(null);
+  const [identityGateDismissed, setIdentityGateDismissed] = useState(false);
   useEffect(() => {
     try {
       const email = sessionStorage.getItem("verified_relink_email");
@@ -420,6 +422,26 @@ export default function Home() {
 
   if (verifiedRelinkEmail) {
     return <OpeningScreen onComplete={() => { setVerifiedRelinkEmail(null); refresh(); }} verifiedEmail={verifiedRelinkEmail} />;
+  }
+
+  // Auto-guessed relink match (fingerprint/device recognized a device but
+  // the visitor hasn't confirmed it's really them) — ask politely before
+  // showing anything guest-specific, rather than assuming the guess is
+  // correct. "No" sends them to the same self-serve email-OTP page used
+  // everywhere else in the relink flow.
+  if (relinkPending && guestName && guestId && !identityGateDismissed) {
+    return (
+      <IdentityGate
+        guestId={guestId}
+        guestName={guestName}
+        guestCity={guestCity}
+        onConfirmed={() => { acknowledgeInvitation(); refresh(); }}
+        onNotMe={() => {
+          setIdentityGateDismissed(true);
+          window.location.assign("/relink/verify-email");
+        }}
+      />
+    );
   }
 
   if (isLoading) {

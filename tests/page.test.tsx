@@ -42,6 +42,26 @@ describe("Home routing shell", () => {
     expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
   });
 
+  it("shows the identity confirmation gate instead of guest content when relinkPending with a guessed name", () => {
+    mockUsePhase.mockReturnValue({
+      phase: Phase.RETURN_VISIT,
+      guestName: "James Daniel",
+      guestCity: "Chennai",
+      guestId: "guest-1",
+      isOwner: false,
+      isLoading: false,
+      refresh: vi.fn(),
+      sessionRestored: false,
+      relinkPending: true,
+      relinkRequiredPreview: false,
+      acknowledgeInvitation: vi.fn(),
+    });
+    render(<Home />);
+    expect(screen.getByText(/are you james daniel from chennai\?/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /yes, i'm james daniel/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /no, i'm someone else/i })).toBeInTheDocument();
+  });
+
   // RETURN_VISIT, WEDDING_DAY, and POST_WEDDING phase rendering is tested
   // via E2E tests (return-visit.spec.ts) since components are dynamically imported.
 });
