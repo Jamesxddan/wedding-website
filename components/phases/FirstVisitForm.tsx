@@ -7,11 +7,12 @@ import { safeSetItem } from "@/lib/storage";
 
 interface Props {
   onComplete: (name: string) => void;
+  verifiedEmail?: string;
 }
 
-export default function FirstVisitForm({ onComplete }: Props) {
+export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(verifiedEmail ?? "");
   const [mobile, setMobile] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -167,6 +168,8 @@ export default function FirstVisitForm({ onComplete }: Props) {
             placeholder="your@email.com"
             className={inputCls}
             autoComplete="off"
+            readOnly={!!verifiedEmail}
+            style={verifiedEmail ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
           />
         </div>
       </div>
