@@ -38,7 +38,7 @@ async function fillAndSubmit(onComplete = vi.fn()) {
   // Use fireEvent.change for email/mobile to bypass pointer-events:none on the
   // collapsing wrapper (the fields hide each other when one is filled).
   fireEvent.change(screen.getByPlaceholderText(/your@email/i), { target: { value: "james@example.com" } });
-  fireEvent.change(screen.getByPlaceholderText(/\+91/i), { target: { value: "+919876543210" } });
+  fireEvent.change(screen.getByPlaceholderText(/98765 43210/i), { target: { value: "9876543210" } });
   await userEvent.type(screen.getByPlaceholderText(/search city/i), "ch");
   await waitFor(() => screen.getByText("Chennai"));
   fireEvent.mouseDown(screen.getByText("Chennai"));
@@ -62,7 +62,7 @@ describe("FirstVisitForm", () => {
     render(<FirstVisitForm onComplete={() => {}} />);
     expect(screen.getByPlaceholderText(/your name/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/your@email/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/\+91/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/98765 43210/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search city/i)).toBeInTheDocument();
   });
 
