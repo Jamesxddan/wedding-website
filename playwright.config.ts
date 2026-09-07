@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { ADMIN_STORAGE_STATE } from "./tests/e2e/auth-storage";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -26,27 +27,27 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], storageState: ADMIN_STORAGE_STATE },
       dependencies: ["setup"],
     },
     {
       name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
+      use: { ...devices["Desktop Firefox"], storageState: ADMIN_STORAGE_STATE },
       dependencies: ["setup"],
     },
     {
       name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: { ...devices["Desktop Safari"], storageState: ADMIN_STORAGE_STATE },
       dependencies: ["setup"],
     },
     {
       name: "mobile-chrome",
-      use: { ...devices["Pixel 5"] },
+      use: { ...devices["Pixel 5"], storageState: ADMIN_STORAGE_STATE },
       dependencies: ["setup"],
     },
     {
       name: "mobile-safari",
-      use: { ...devices["iPhone 13"] },
+      use: { ...devices["iPhone 13"], storageState: ADMIN_STORAGE_STATE },
       dependencies: ["setup"],
     },
   ],

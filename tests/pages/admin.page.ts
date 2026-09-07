@@ -27,14 +27,14 @@ export class AdminPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.guestsTab = page.getByRole("tab", { name: /guests/i });
-    this.logsTab = page.getByRole("tab", { name: /logs/i });
-    this.flagsTab = page.getByRole("tab", { name: /flags/i });
-    this.previewTab = page.getByRole("tab", { name: /preview/i });
-    this.adminsTab = page.getByRole("tab", { name: /admins/i });
-    this.auditTab = page.getByRole("tab", { name: /audit/i });
-    this.commentsTab = page.getByRole("tab", { name: /comments/i });
-    this.contentTab = page.getByRole("tab", { name: /content/i });
+    this.guestsTab = page.getByRole("button", { name: /guests/i });
+    this.logsTab = page.getByRole("button", { name: /logs/i });
+    this.flagsTab = page.getByRole("button", { name: /flags/i });
+    this.previewTab = page.getByRole("button", { name: /preview/i });
+    this.adminsTab = page.getByRole("button", { name: /admins/i });
+    this.auditTab = page.getByRole("button", { name: /audit/i });
+    this.commentsTab = page.getByRole("button", { name: /comments/i });
+    this.contentTab = page.getByRole("button", { name: /content/i });
     this.guestTable = page.getByRole("table");
     this.searchInput = page.getByPlaceholder(/search/i);
   }
@@ -48,8 +48,8 @@ export class AdminPage extends BasePage {
       guests: this.guestsTab,
       logs: this.logsTab,
       flags: this.flagsTab,
-      live: this.page.getByRole("tab", { name: /live/i }),
-      control: this.page.getByRole("tab", { name: /control/i }),
+      live: this.page.getByRole("button", { name: /live/i }),
+      control: this.page.getByRole("button", { name: /control/i }),
       preview: this.previewTab,
       admins: this.adminsTab,
       audit: this.auditTab,
