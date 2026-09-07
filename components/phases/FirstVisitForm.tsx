@@ -9,11 +9,12 @@ import { toE164 } from "@/lib/phone";
 
 interface Props {
   onComplete: (name: string) => void;
+  verifiedEmail?: string;
 }
 
-export default function FirstVisitForm({ onComplete }: Props) {
+export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(verifiedEmail ?? "");
   const [phoneCountryCode, setPhoneCountryCode] = useState("IN");
   const [phoneNationalNumber, setPhoneNationalNumber] = useState("");
   const [cityQuery, setCityQuery] = useState("");
@@ -170,19 +171,24 @@ export default function FirstVisitForm({ onComplete }: Props) {
             placeholder="your@email.com"
             className={inputCls}
             autoComplete="off"
+            readOnly={!!verifiedEmail}
+            style={verifiedEmail ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
           />
         </div>
       </div>
 
-      {/* Hide mobile when email is typed (but not if both are filled via autofill) */}
+      {/* Hide mobile when email is typed (but not if both are filled via autofill).
+          A verifiedEmail (relink flow) is pre-filled by the app, not typed by the
+          user, so it must never trigger this auto-hide — otherwise the mobile
+          field would be permanently unreachable for relink-flow users. */}
       <div
         style={{
-          maxHeight: email.trim() && !phoneNationalNumber.trim() ? "0px" : "120px",
-          opacity: email.trim() && !phoneNationalNumber.trim() ? 0 : 1,
+          maxHeight: !verifiedEmail && email.trim() && !phoneNationalNumber.trim() ? "0px" : "120px",
+          opacity: !verifiedEmail && email.trim() && !phoneNationalNumber.trim() ? 0 : 1,
           overflow: "hidden",
-          pointerEvents: email.trim() && !phoneNationalNumber.trim() ? "none" : "auto",
+          pointerEvents: !verifiedEmail && email.trim() && !phoneNationalNumber.trim() ? "none" : "auto",
           transition: "max-height 0.45s ease, opacity 0.35s ease",
-          marginBottom: email.trim() && !phoneNationalNumber.trim() ? "-20px" : "0px",
+          marginBottom: !verifiedEmail && email.trim() && !phoneNationalNumber.trim() ? "-20px" : "0px",
         }}
       >
         <div className="flex flex-col gap-1.5">

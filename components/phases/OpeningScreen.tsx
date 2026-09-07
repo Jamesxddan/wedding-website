@@ -7,6 +7,7 @@ import OpeningScene from "@/components/webgl/OpeningScene";
 
 interface Props {
   onComplete: (name: string) => void;
+  verifiedEmail?: string;
 }
 
 const GOLD = "#D4AF37";
@@ -26,7 +27,7 @@ function Divider({ delay }: { delay: string }) {
   );
 }
 
-export default function OpeningScreen({ onComplete }: Props) {
+export default function OpeningScreen({ onComplete, verifiedEmail }: Props) {
   const { opening, invitation } = useSiteContent();
 
   return (
@@ -233,7 +234,7 @@ export default function OpeningScreen({ onComplete }: Props) {
           >
             {opening.invited_label}
           </span>
-          <FirstVisitForm onComplete={onComplete} />
+          <FirstVisitForm onComplete={onComplete} verifiedEmail={verifiedEmail} />
         </div>
       </div>
     </div>
