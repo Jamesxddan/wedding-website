@@ -174,15 +174,18 @@ export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
         </div>
       </div>
 
-      {/* Hide mobile when email is typed (but not if both are filled via autofill) */}
+      {/* Hide mobile when email is typed (but not if both are filled via autofill).
+          A verifiedEmail (relink flow) is pre-filled by the app, not typed by the
+          user, so it must never trigger this auto-hide — otherwise the mobile
+          field would be permanently unreachable for relink-flow users. */}
       <div
         style={{
-          maxHeight: email.trim() && !mobile.trim() ? "0px" : "120px",
-          opacity: email.trim() && !mobile.trim() ? 0 : 1,
+          maxHeight: !verifiedEmail && email.trim() && !mobile.trim() ? "0px" : "120px",
+          opacity: !verifiedEmail && email.trim() && !mobile.trim() ? 0 : 1,
           overflow: "hidden",
-          pointerEvents: email.trim() && !mobile.trim() ? "none" : "auto",
+          pointerEvents: !verifiedEmail && email.trim() && !mobile.trim() ? "none" : "auto",
           transition: "max-height 0.45s ease, opacity 0.35s ease",
-          marginBottom: email.trim() && !mobile.trim() ? "-20px" : "0px",
+          marginBottom: !verifiedEmail && email.trim() && !mobile.trim() ? "-20px" : "0px",
         }}
       >
         <div className="flex flex-col gap-1.5">
