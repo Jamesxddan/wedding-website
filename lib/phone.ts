@@ -256,3 +256,18 @@ export function toE164(isoCountryCode: string, nationalNumber: string): string {
   const digits = nationalNumber.replace(/\D/g, '').replace(/^0+/, '');
   return `${dialCode}${digits}`;
 }
+
+/**
+ * Combine an explicit dial code (e.g. "+998", not necessarily one of
+ * COUNTRY_OPTIONS — this is the "Custom" case in PhoneInput, where the
+ * guest typed their own dial code for a country not in the curated list)
+ * with a national number into a canonical E.164 string. Unlike toE164,
+ * this never looks anything up by ISO code — the dial code is taken as
+ * given, normalized to always start with "+".
+ */
+export function combineDialCode(dialCode: string, nationalNumber: string): string {
+  const dc = dialCode.trim().replace(/[^\d+]/g, '');
+  const normalizedDialCode = dc.startsWith('+') ? dc : `+${dc}`;
+  const digits = nationalNumber.replace(/\D/g, '').replace(/^0+/, '');
+  return `${normalizedDialCode}${digits}`;
+}

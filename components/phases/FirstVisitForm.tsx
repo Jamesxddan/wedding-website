@@ -5,7 +5,7 @@ import { searchCities, isIndianCity, type City } from "@/lib/cities";
 import { startBackgroundMusic } from "@/components/ui/BackgroundMusic";
 import { safeSetItem } from "@/lib/storage";
 import { PhoneInput } from "@/components/ui/PhoneInput";
-import { toE164 } from "@/lib/phone";
+import { combineDialCode } from "@/lib/phone";
 
 interface Props {
   onComplete: (name: string) => void;
@@ -16,6 +16,7 @@ export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(verifiedEmail ?? "");
   const [phoneCountryCode, setPhoneCountryCode] = useState("IN");
+  const [phoneDialCode, setPhoneDialCode] = useState("+91");
   const [phoneNationalNumber, setPhoneNationalNumber] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -96,7 +97,7 @@ export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
           name: name.trim(),
           city: selectedCity.name,
           email: email.trim().toLowerCase(),
-          mobile: isMobileValid ? toE164(phoneCountryCode, phoneNationalNumber) : "",
+          mobile: isMobileValid ? combineDialCode(phoneDialCode, phoneNationalNumber) : "",
           device_uuid,
           browser_signals_hash,
           user_agent: navigator.userAgent,
@@ -118,7 +119,7 @@ export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
       safeSetItem("guest_name", name.trim());
       safeSetItem("guest_city", selectedCity.name);
       safeSetItem("guest_email", email.trim().toLowerCase());
-      safeSetItem("guest_mobile", isMobileValid ? toE164(phoneCountryCode, phoneNationalNumber) : "");
+      safeSetItem("guest_mobile", isMobileValid ? combineDialCode(phoneDialCode, phoneNationalNumber) : "");
       if (data.session_token) safeSetItem("session_token", data.session_token);
       onComplete(name.trim());
     } catch {
@@ -195,9 +196,10 @@ export default function FirstVisitForm({ onComplete, verifiedEmail }: Props) {
           <label htmlFor="guest-mobile" className="font-heading text-[12px] text-deep-rose/80 tracking-[0.3em] uppercase">
             Mobile          </label>
           <PhoneInput
-            value={{ countryCode: phoneCountryCode, nationalNumber: phoneNationalNumber }}
+            value={{ countryCode: phoneCountryCode, dialCode: phoneDialCode, nationalNumber: phoneNationalNumber }}
             onChange={(value) => {
               setPhoneCountryCode(value.countryCode);
+              setPhoneDialCode(value.dialCode);
               setPhoneNationalNumber(value.nationalNumber);
             }}
             placeholder="98765 43210"

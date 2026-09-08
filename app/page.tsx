@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { usePhase, OWNER_PREVIEW_ERROR_KEY } from "@/lib/usePhase";
 import { Phase } from "@/lib/phase";
 import { getOrCreateDeviceUUID, getBrowserSignalsHash } from "@/lib/fingerprint";
-import { toE164 } from "@/lib/phone";
+import { combineDialCode } from "@/lib/phone";
 import { useTrackPageVisit } from "@/lib/useTrackPageVisit";
 import { SiteContentProvider } from "@/lib/SiteContentContext";
 import { safeSetItem, safeGetItem } from "@/lib/storage";
@@ -45,6 +45,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState<string>("IN");
+  const [phoneDialCode, setPhoneDialCode] = useState<string>("+91");
   const [phoneNationalNumber, setPhoneNationalNumber] = useState<string>("");
   const [verifyToken, setVerifyToken] = useState("");
   const [verifyTokenLoading, setVerifyTokenLoading] = useState(false);
@@ -245,12 +246,14 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
             <PhoneInput
               value={{
                 countryCode: phoneCountryCode,
+                dialCode: phoneDialCode,
                 nationalNumber: phoneNationalNumber
               }}
               onChange={(value) => {
                 setPhoneCountryCode(value.countryCode);
+                setPhoneDialCode(value.dialCode);
                 setPhoneNationalNumber(value.nationalNumber);
-                setVerifyPhone(toE164(value.countryCode, value.nationalNumber));
+                setVerifyPhone(combineDialCode(value.dialCode, value.nationalNumber));
               }}
               placeholder="Your phone number"
               disabled={status === "loading"}

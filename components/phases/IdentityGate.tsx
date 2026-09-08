@@ -28,6 +28,7 @@ export default function IdentityGate({ guestId, guestName, guestCity, onConfirme
   const [code, setCode] = useState("");
   const [emailHint, setEmailHint] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState("IN");
+  const [phoneDialCode, setPhoneDialCode] = useState("+91");
   const [phoneNationalNumber, setPhoneNationalNumber] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -118,14 +119,14 @@ export default function IdentityGate({ guestId, guestName, guestCity, onConfirme
     try {
       const device_uuid = await getOrCreateDeviceUUID();
       const browser_signals_hash = await getBrowserSignalsHash();
-      const { toE164 } = await import("@/lib/phone");
+      const { combineDialCode } = await import("@/lib/phone");
       const res = await fetch("/api/relink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: guestName,
           city: guestCity ?? "",
-          phone: toE164(phoneCountryCode, phoneNationalNumber),
+          phone: combineDialCode(phoneDialCode, phoneNationalNumber),
           device_uuid,
           browser_signals_hash,
           user_agent: navigator.userAgent,
@@ -226,9 +227,10 @@ export default function IdentityGate({ guestId, guestName, guestCity, onConfirme
             </p>
             <form onSubmit={handleVerifyPhone} style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
               <PhoneInput
-                value={{ countryCode: phoneCountryCode, nationalNumber: phoneNationalNumber }}
+                value={{ countryCode: phoneCountryCode, dialCode: phoneDialCode, nationalNumber: phoneNationalNumber }}
                 onChange={(value) => {
                   setPhoneCountryCode(value.countryCode);
+                  setPhoneDialCode(value.dialCode);
                   setPhoneNationalNumber(value.nationalNumber);
                 }}
                 placeholder="Your phone number"

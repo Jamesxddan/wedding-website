@@ -6,6 +6,7 @@ import {
   normalizeForStorage,
   getCountryCodeOptions,
   toE164,
+  combineDialCode,
   type ParsedPhone,
 } from "@/lib/phone";
 
@@ -243,6 +244,29 @@ describe("toE164", () => {
 
   it("falls back to India's dial code for an unknown ISO country code", () => {
     expect(toE164("ZZ", "9876543210")).toBe("+919876543210");
+  });
+});
+
+describe("combineDialCode", () => {
+  it("combines a curated dial code with a national number", () => {
+    expect(combineDialCode("+91", "9876543210")).toBe("+919876543210");
+  });
+
+  it("normalizes a dial code missing its leading '+' (a guest typing a custom code)", () => {
+    expect(combineDialCode("998", "912345678")).toBe("+998912345678");
+  });
+
+  it("strips punctuation/spaces from both the dial code and the national number", () => {
+    expect(combineDialCode(" +91 ", "98765-43210")).toBe("+919876543210");
+  });
+
+  it("strips a domestic trunk-prefix zero from the national number", () => {
+    expect(combineDialCode("+44", "07911123456")).toBe("+447911123456");
+  });
+
+  it("never looks anything up — an unrecognized dial code passes through as-is", () => {
+    // Unlike toE164, this must work for genuinely custom codes not in COUNTRY_OPTIONS.
+    expect(combineDialCode("+998", "912345678")).toBe("+998912345678");
   });
 });
 
