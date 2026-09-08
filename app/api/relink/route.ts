@@ -26,17 +26,14 @@ export async function POST(req: NextRequest) {
     email?: string;
     phone?: string;
     lookup?: boolean;
-    device_uuid: string;
-    browser_signals_hash?: string;
-    user_agent?: string;
   };
 
   // Handle token verification flow
   if (token) {
     // Verify token and get payload
     const { verifyRelinkToken } = await import("@/lib/relink-token");
-    const tokenResult = verifyRelinkToken(token);
-    if (!tokenResult.valid) {
+    const tokenResult = await verifyRelinkToken(token);
+    if (!tokenResult.valid || !tokenResult.payload) {
       return NextResponse.json(
         { error: "invalid or expired token" },
         { status: 403 }

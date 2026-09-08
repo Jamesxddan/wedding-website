@@ -254,7 +254,7 @@ function RelinkForm({ onSuccess, initialName, initialCity }: { onSuccess: () => 
               }}
               placeholder="Your phone number"
               disabled={status === "loading"}
-              error={status === "error" && errorMsg.includes("phone")}
+              error={status === "error" && errorMsg.includes("phone") ? errorMsg : undefined}
               className="flex-1 min-w-[200px]"
             />
           )}

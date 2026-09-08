@@ -1,9 +1,17 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 export default function RelinkVerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <RelinkVerifyPageInner />
+    </Suspense>
+  );
+}
+
+function RelinkVerifyPageInner() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");

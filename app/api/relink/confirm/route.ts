@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const tokenResult = verifyRelinkToken(token);
-  if (!tokenResult.valid) {
+  const tokenResult = await verifyRelinkToken(token);
+  if (!tokenResult.valid || !tokenResult.payload) {
     return NextResponse.json(
       { error: "invalid or expired token" },
       { status: 403 }
