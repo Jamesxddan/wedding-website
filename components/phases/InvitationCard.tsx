@@ -317,6 +317,18 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
   // Clear the idle timer on unmount.
   useEffect(() => () => { if (rsvpIdleTimer.current) clearTimeout(rsvpIdleTimer.current); }, []);
 
+  // If the guest completes RSVP while the idle timer is still pending, cancel
+  // it — a later "Update my RSVP" revert should start a fresh idle period,
+  // not instantly resurface a stale nudge.
+  useEffect(() => {
+    if (!rsvpDone) return;
+    if (rsvpIdleTimer.current) {
+      clearTimeout(rsvpIdleTimer.current);
+      rsvpIdleTimer.current = null;
+    }
+    setRsvpStalled(false);
+  }, [rsvpDone]);
+
   function markRsvpInteraction() {
     if (rsvpIdleTimer.current) {
       clearTimeout(rsvpIdleTimer.current);

@@ -176,4 +176,41 @@ describe("InvitationCard — RSVP idle nudge", () => {
     await act(async () => { vi.advanceTimersByTime(25000); });
     expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
   });
+
+  it("does not resurface a stale nudge after RSVP is completed and then reopened for editing", async () => {
+    globalThis.fetch = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url) === "/api/rsvp" && init?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            rsvp: { response: "attending", guest_count: 1, meal_pref: "veg", attending_events: "both", updated_at: "" },
+            has_email: false,
+          }),
+        }) as unknown as Promise<Response>;
+      }
+      return Promise.resolve({ ok: false, json: async () => ({}) }) as unknown as Promise<Response>;
+    });
+
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    // RSVP section is in view, idle timer arms.
+    act(() => { fireIntersection(true); });
+
+    // Guest completes RSVP just before the idle timer would fire.
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+    fireEvent.click(screen.getByText(/🌿 Veg/i));
+    fireEvent.click(screen.getByText(/Both/i));
+    await act(async () => { await fireEvent.click(screen.getByRole("button", { name: /confirm rsvp/i })); });
+
+    // Let the original 25s idle timer's deadline pass in the background.
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    // Guest reopens the form to edit.
+    fireEvent.click(screen.getByText(/update my rsvp/i));
+
+    // The nudge must NOT be showing immediately — no new idle period has elapsed.
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
 });
