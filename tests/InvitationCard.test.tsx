@@ -96,4 +96,13 @@ describe("InvitationCard", () => {
     expect(localStorageMock.getItem("invitation_seen")).toBe("true");
     expect(exploreMock).toHaveBeenCalledOnce();
   });
+
+  it("shows static teaser chips above the Explore button", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+    expect(screen.getByText(/Countdown/)).toBeInTheDocument();
+    expect(screen.getByText(/Gallery/)).toBeInTheDocument();
+    expect(screen.getByText(/Venue & more/)).toBeInTheDocument();
+  });
 });

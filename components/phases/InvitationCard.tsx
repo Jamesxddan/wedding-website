@@ -31,6 +31,11 @@ const EVENT_OPTIONS: { value: AttendingEvents; label: string; emoji: string }[] 
   { value: "reception", label: "Reception",       emoji: "🥂" },
   { value: "both",      label: "Both",            emoji: "✨" },
 ];
+const EXPLORE_TEASER_CHIPS: { emoji: string; label: string }[] = [
+  { emoji: "🕐", label: "Countdown" },
+  { emoji: "📸", label: "Gallery" },
+  { emoji: "📍", label: "Venue & more" },
+];
 
 const PetalScene = dynamic(() => import("@/components/webgl/PetalScene"), { ssr: false });
 
@@ -1004,10 +1009,19 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                 <div style={{ marginTop: 14 }}>{relinkSlot}</div>
               </div>
             ) : (
-              <button onClick={handleExplore}
-                style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
-                {invitation.explore_btn}
-              </button>
+              <div style={{ animation: "blur-reveal 0.9s ease 0.9s both" }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+                  {EXPLORE_TEASER_CHIPS.map(chip => (
+                    <span key={chip.label} style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "1px", color: RA(0.4) }}>
+                      {chip.emoji} {chip.label}
+                    </span>
+                  ))}
+                </div>
+                <button onClick={handleExplore}
+                  style={{ width: "100%", padding: "14px", background: ROSE, color: "#fef9f0", border: "none", borderRadius: 10, fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", animation: "blur-reveal 0.9s ease 0.95s both, btn-glow 2.2s ease-in-out 2s infinite" }}>
+                  {invitation.explore_btn}
+                </button>
+              </div>
             )}
           </div>
         </div>
