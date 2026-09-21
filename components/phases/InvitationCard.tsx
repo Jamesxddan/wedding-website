@@ -825,6 +825,9 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                       A confirmation email has been sent to you.
                     </p>
                   )}
+                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: ROSE, margin: "6px 0 0", textAlign: "center" }}>
+                    You&apos;re all set 🎉 — the countdown, photos &amp; more are just below.
+                  </p>
                   <button
                     onClick={() => setRsvpDone(false)}
                     style={{ marginTop: 4, background: "none", border: "none", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.35), cursor: "pointer", textDecoration: "underline" }}

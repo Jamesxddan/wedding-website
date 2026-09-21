@@ -105,4 +105,26 @@ describe("InvitationCard", () => {
     expect(screen.getByText(/Gallery/)).toBeInTheDocument();
     expect(screen.getByText(/Venue & more/)).toBeInTheDocument();
   });
+
+  it("shows a forward-looking teaser once RSVP is confirmed", async () => {
+    globalThis.fetch = vi.fn((url: RequestInfo | URL) => {
+      if (String(url) === "/api/rsvp") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            rsvp: { response: "attending", guest_count: 2, meal_pref: "veg", attending_events: "both", updated_at: "" },
+            has_email: true,
+          }),
+        }) as unknown as Promise<Response>;
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Promise<Response>;
+    });
+
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    expect(screen.getByText(/countdown, photos & more are just below/i)).toBeInTheDocument();
+  });
 });
