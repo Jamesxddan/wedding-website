@@ -213,4 +213,29 @@ describe("InvitationCard — RSVP idle nudge", () => {
     // The nudge must NOT be showing immediately — no new idle period has elapsed.
     expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
   });
+
+  it("cancels the nudge the moment the guest picks an attendance option", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(10000); });
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+
+    await act(async () => { vi.advanceTimersByTime(25000); });
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
+  it("the nudge's link advances the guest the same way the main Explore button does", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(25000); });
+    fireEvent.click(screen.getByText(/see what's next/i));
+
+    expect(exploreMock).toHaveBeenCalledOnce();
+  });
 });

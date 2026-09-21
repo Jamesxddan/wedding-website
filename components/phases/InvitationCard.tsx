@@ -889,7 +889,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                       <button
                         key={opt.value}
                         type="button"
-                        onClick={() => setRsvpResp(opt.value)}
+                        onClick={() => { markRsvpInteraction(); setRsvpResp(opt.value); }}
                         style={{
                           display: "flex", alignItems: "center", gap: 10,
                           padding: "10px 14px", borderRadius: 10, cursor: "pointer",
@@ -929,13 +929,13 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <button
                             type="button"
-                            onClick={() => setRsvpCount(c => Math.max(1, c - 1))}
+                            onClick={() => { markRsvpInteraction(); setRsvpCount(c => Math.max(1, c - 1)); }}
                             style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${GA(0.3)}`, background: "transparent", color: ROSE, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
                           >−</button>
                           <span style={{ fontFamily: "Georgia, serif", fontSize: 20, color: ROSE, minWidth: 24, textAlign: "center" }}>{rsvpCount}</span>
                           <button
                             type="button"
-                            onClick={() => setRsvpCount(c => Math.min(20, c + 1))}
+                            onClick={() => { markRsvpInteraction(); setRsvpCount(c => Math.min(20, c + 1)); }}
                             style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${GA(0.3)}`, background: "transparent", color: ROSE, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
                           >+</button>
                           <span style={{ fontFamily: "Georgia, serif", fontSize: 11, color: RA(0.35), fontStyle: "italic" }}>
@@ -956,7 +956,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                               <button
                                 key={pref}
                                 type="button"
-                                onClick={() => setRsvpMeal(pref)}
+                                onClick={() => { markRsvpInteraction(); setRsvpMeal(pref); }}
                                 style={{
                                   flex: 1, padding: "9px 8px", borderRadius: 10, cursor: "pointer",
                                   border: sel ? `1.5px solid ${GA(0.7)}` : `1px solid ${GA(0.25)}`,
@@ -984,7 +984,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                               <button
                                 key={evt.value}
                                 type="button"
-                                onClick={() => setRsvpEvents(evt.value)}
+                                onClick={() => { markRsvpInteraction(); setRsvpEvents(evt.value); }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: 10,
                                   padding: "9px 14px", borderRadius: 10, cursor: "pointer",
@@ -1014,7 +1014,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                       <input
                         type="email"
                         value={rsvpEmail}
-                        onChange={e => setRsvpEmail(e.target.value)}
+                        onChange={e => { markRsvpInteraction(); setRsvpEmail(e.target.value); }}
                         placeholder="so we can send you a confirmation"
                         style={{
                           width: "100%", padding: "10px 12px",
