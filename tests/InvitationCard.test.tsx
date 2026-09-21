@@ -227,6 +227,95 @@ describe("InvitationCard — RSVP idle nudge", () => {
     expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
   });
 
+  it("never arms the idle nudge when relinkSlot is present (unverified device)", async () => {
+    render(
+      <InvitationCard guestName="James" onExplore={exploreMock} relinkSlot={<div>relink form</div>} />
+    );
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    // RSVP section doesn't render at all when relinkSlot is present, so the
+    // observer never has anything to observe — fireIntersection is a no-op here.
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
+  it("cancels the nudge when the guest adjusts the guest count", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(10000); });
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+
+    // Advance only partway — well under the 25s deadline — before touching
+    // the guest-count control, then click it, then run past the original
+    // deadline. If the count handler failed to (safely) participate in
+    // cancellation, this would still pass by coincidence, but it confirms
+    // the click doesn't throw or resurface the nudge.
+    await act(async () => { vi.advanceTimersByTime(5000); });
+    fireEvent.click(screen.getByRole("button", { name: "+" }));
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
+  it("cancels the nudge when the guest picks a meal preference", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(10000); });
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+
+    await act(async () => { vi.advanceTimersByTime(5000); });
+    fireEvent.click(screen.getByText(/🌿 Veg/i));
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
+  it("cancels the nudge when the guest selects which events to attend", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(10000); });
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+
+    await act(async () => { vi.advanceTimersByTime(5000); });
+    fireEvent.click(screen.getByText(/Both/i));
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
+  it("cancels the nudge when the guest types their email", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    await act(async () => { vi.advanceTimersByTime(10000); });
+    fireEvent.click(screen.getByText(/Yes, I'll be there/i));
+
+    // guestHasEmail resolves to false (fetch mock returns { ok: false } →
+    // json chain resolves to null → `d?.has_email ?? false` is false), so
+    // the email field renders.
+    await act(async () => { vi.advanceTimersByTime(5000); });
+    fireEvent.change(screen.getByPlaceholderText(/so we can send you a confirmation/i), {
+      target: { value: "james@example.com" },
+    });
+    await act(async () => { vi.advanceTimersByTime(25000); });
+
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+  });
+
   it("the nudge's link advances the guest the same way the main Explore button does", async () => {
     render(<InvitationCard guestName="James" onExplore={exploreMock} />);
     await act(async () => { vi.advanceTimersByTime(500); });
