@@ -250,6 +250,10 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
   const [rsvpError, setRsvpError]         = useState<string | null>(null);
   const [guestHasEmail, setGuestHasEmail] = useState<boolean | null>(null); // null = loading
   const [rsvpEmail, setRsvpEmail]         = useState("");
+  const [rsvpStalled, setRsvpStalled]     = useState(false);
+  const rsvpSectionRef = useRef<HTMLDivElement>(null);
+  const rsvpIdleTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rsvpIdleArmed  = useRef(false);
 
   const { invitation } = useSiteContent();
   const couplePhotoSrc = (sz: number) => `/api/couple-photo?sz=${sz}`;
@@ -293,6 +297,33 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
       })
       .catch(() => {});
   }, []);
+
+  // Arm a 25s idle timer the first time the RSVP section scrolls into view.
+  useEffect(() => {
+    if (relinkSlot || rsvpDone) return;
+    const el = rsvpSectionRef.current;
+    if (!el || rsvpIdleArmed.current) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !rsvpIdleArmed.current) {
+        rsvpIdleArmed.current = true;
+        rsvpIdleTimer.current = setTimeout(() => setRsvpStalled(true), 25000);
+        observer.disconnect();
+      }
+    }, { threshold: 0.4 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [relinkSlot, rsvpDone, stage]);
+
+  // Clear the idle timer on unmount.
+  useEffect(() => () => { if (rsvpIdleTimer.current) clearTimeout(rsvpIdleTimer.current); }, []);
+
+  function markRsvpInteraction() {
+    if (rsvpIdleTimer.current) {
+      clearTimeout(rsvpIdleTimer.current);
+      rsvpIdleTimer.current = null;
+    }
+    setRsvpStalled(false);
+  }
 
   const isAttending = rsvpResp === "attending" || rsvpResp === "maybe";
   const rsvpReady = rsvpResp && (!isAttending || (rsvpMeal && rsvpEvents));
@@ -795,7 +826,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
 
             {/* RSVP — hidden until the device is verified (relinkSlot present) */}
             {!relinkSlot && (
-            <div style={{ animation: "blur-reveal 0.9s ease 0.9s both", marginBottom: 16 }}>
+            <div ref={rsvpSectionRef} style={{ animation: "blur-reveal 0.9s ease 0.9s both", marginBottom: 16 }}>
               <Divider />
               <p style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "2.5px", textTransform: "uppercase", color: RA(0.35), margin: "14px 0 12px" }}>
                 Will you be joining us?
@@ -861,6 +892,18 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                       </button>
                     );
                   })}
+
+                  {rsvpStalled && (
+                    <div style={{ marginTop: 4, padding: "10px 12px", background: "rgba(212,175,55,0.06)", border: `1px solid ${GA(0.15)}`, borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, animation: "blur-reveal 0.6s ease both" }}>
+                      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: RA(0.5), margin: 0, textAlign: "center" }}>
+                        Take your time — you can always come back and RSVP later. Curious what&apos;s ahead?
+                      </p>
+                      <button type="button" onClick={handleExplore}
+                        style={{ background: "none", border: "none", fontFamily: "Georgia, serif", fontSize: 11, letterSpacing: "1px", color: ROSE, cursor: "pointer", textDecoration: "underline" }}>
+                        See what&apos;s next →
+                      </button>
+                    </div>
+                  )}
 
                   {/* Steps 2–4 — only shown when attending or maybe */}
                   {isAttending && (

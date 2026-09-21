@@ -40,6 +40,22 @@ vi.mock("@/lib/useSelectPhotos", () => ({
 
 import InvitationCard from "@/components/phases/InvitationCard";
 
+let intersectionCallbacks: IntersectionObserverCallback[] = [];
+class MockIntersectionObserver {
+  callback: IntersectionObserverCallback;
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+    intersectionCallbacks.push(callback);
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+function fireIntersection(isIntersecting: boolean) {
+  const entry = { isIntersecting } as IntersectionObserverEntry;
+  intersectionCallbacks.forEach(cb => cb([entry], {} as IntersectionObserver));
+}
+
 async function navigateToCard() {
   // Click envelope front → flip animation starts
   // Text is "tap to open" or "click to open" depending on isMobile
@@ -126,5 +142,38 @@ describe("InvitationCard", () => {
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
     expect(screen.getByText(/countdown, photos & more are just below/i)).toBeInTheDocument();
+  });
+});
+
+describe("InvitationCard — RSVP idle nudge", () => {
+  beforeEach(() => {
+    localStorageMock.clear();
+    exploreMock.mockClear();
+    vi.useFakeTimers();
+    intersectionCallbacks = [];
+    global.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
+    globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, json: async () => ({}) }) as unknown as Promise<Response>);
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("shows the idle nudge after 25s of no interaction once the RSVP section is in view", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    act(() => { fireIntersection(true); });
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
+
+    await act(async () => { vi.advanceTimersByTime(25000); });
+    expect(screen.getByText(/see what's next/i)).toBeInTheDocument();
+  });
+
+  it("does not show the nudge before the RSVP section has scrolled into view", async () => {
+    render(<InvitationCard guestName="James" onExplore={exploreMock} />);
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await navigateToCard();
+
+    await act(async () => { vi.advanceTimersByTime(25000); });
+    expect(screen.queryByText(/see what's next/i)).not.toBeInTheDocument();
   });
 });
