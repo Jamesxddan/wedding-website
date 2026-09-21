@@ -1009,7 +1009,7 @@ export default function InvitationCard({ guestName, guestId, onExplore, relinkSl
                 <div style={{ marginTop: 14 }}>{relinkSlot}</div>
               </div>
             ) : (
-              <div style={{ animation: "blur-reveal 0.9s ease 0.9s both" }}>
+              <div>
                 <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
                   {EXPLORE_TEASER_CHIPS.map(chip => (
                     <span key={chip.label} style={{ fontFamily: "Georgia, serif", fontSize: 9, letterSpacing: "1px", color: RA(0.4) }}>
