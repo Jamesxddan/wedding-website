@@ -4,7 +4,7 @@
     {
       "name": "wedding-website",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--webpack"],
+      "runtimeArgs": ["run", "dev", "--", "--webpack", "--port", "3001"],
       "port": 3001
     }
   ]
