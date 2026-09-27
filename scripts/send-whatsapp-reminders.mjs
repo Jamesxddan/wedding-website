@@ -69,6 +69,9 @@ const db = supabaseREST({ url: SUPABASE_URL, key: SUPABASE_KEY });
 // ---------------------------------------------------------------------------
 // Message template
 // ---------------------------------------------------------------------------
+const DISCLAIMER =
+  "\n\n_🤖 This is an automated message from James & Sharon's wedding website — not a personal text from James._";
+
 function buildMessage(guest, rsvp) {
   const name = guest.name.split(" ")[0]; // first name only
   const weddingDate = "8th October 2026";
@@ -86,7 +89,8 @@ function buildMessage(guest, rsvp) {
       `Hi ${name}! 🎊\n\n` +
       `Just a warm reminder — James & Sharon's wedding is on *${weddingDate}* in *${venue}*.\n\n` +
       `We have you confirmed for ${eventLabel}. Can't wait to celebrate with you! 🥂\n\n` +
-      `If anything changes, just visit the website to update your RSVP: jameswedssharon.site`
+      `If anything changes, just visit the website to update your RSVP: jameswedssharon.site` +
+      DISCLAIMER
     );
   }
 
@@ -96,7 +100,8 @@ function buildMessage(guest, rsvp) {
     `James & Sharon's wedding is almost here — *${weddingDate}* in *${venue}*!\n\n` +
     `We'd love to know if you can make it. Please fill in your RSVP on the website so we can plan seating and meals:\n` +
     `👉 jameswedssharon.site\n\n` +
-    `Looking forward to celebrating with you! 🎉`
+    `Looking forward to celebrating with you! 🎉` +
+    DISCLAIMER
   );
 }
 
