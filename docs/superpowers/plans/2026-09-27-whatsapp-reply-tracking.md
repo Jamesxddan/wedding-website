@@ -239,7 +239,7 @@ export function findGuestByWhatsAppId(guests, waId) {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/phone-match.test.ts`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
