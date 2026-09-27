@@ -42,4 +42,36 @@ describe("classifyIntent", () => {
   it("is case-insensitive", () => {
     expect(classifyIntent("YES WE'LL BE THERE")).toBe("attending");
   });
+
+  // --- Word-boundary matching (final review finding 3) ---
+
+  it("does not classify 'yesterday' as attending via the 'yes' substring", () => {
+    expect(classifyIntent("Got your message yesterday")).toBe("unclear");
+  });
+
+  it("does not classify 'ensure'/'measure'/'pleasure' as attending via the 'sure' substring", () => {
+    expect(classifyIntent("Just want to ensure this reaches you")).toBe("unclear");
+    expect(classifyIntent("It's a measure of how excited we are")).toBe("unclear");
+    expect(classifyIntent("What a pleasure to be invited")).toBe("unclear");
+  });
+
+  it("does not classify 'mighty' as maybe via the 'might' substring", () => {
+    expect(classifyIntent("What a mighty celebration this will be")).toBe("unclear");
+  });
+
+  it("'make sure' is still a genuine standalone 'sure' match, but a message that also hits 'let you know' correctly resolves to unclear via the fail-safe collision rule (not a false 'attending')", () => {
+    // "sure" legitimately matches ATTENDING here (it's a real standalone
+    // word in "make sure", not a substring of a longer word like "ensure"),
+    // so the word-boundary fix alone doesn't — and isn't meant to — suppress
+    // it. What keeps this from wrongly resolving to "attending" is that the
+    // message also contains "let you know" (a MAYBE phrase): both categories
+    // fire, so the existing multi-category collision rule sends it to
+    // "unclear" rather than confidently guessing "attending".
+    expect(classifyIntent("Let me make sure, I'll let you know soon")).toBe("unclear");
+  });
+
+  it("classifies a curly-apostrophe decline as not_attending (smart quotes from iOS/Android keyboards)", () => {
+    expect(classifyIntent("Sorry, can’t make it")).toBe("not_attending");
+    expect(classifyIntent("We won’t be able to come")).toBe("not_attending");
+  });
 });
