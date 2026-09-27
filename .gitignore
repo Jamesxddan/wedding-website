@@ -64,3 +64,6 @@ tests/e2e/.auth/
 .ww-session/
 .wwebjs_cache/
 .wwebjs_auth/
+
+# subagent-driven-development scratch workspace (ledgers, briefs, review diffs)
+.superpowers/
