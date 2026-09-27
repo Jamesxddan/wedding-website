@@ -1,4 +1,4 @@
-import { findGuestByWhatsAppId } from "./phone-match.mjs";
+import { findGuestByWhatsAppId, waIdToE164 } from "./phone-match.mjs";
 import { classifyIntent } from "./whatsapp-intent.mjs";
 import { applyRsvpFromIntent } from "./rsvp-apply.mjs";
 import { logWhatsAppReply } from "./reply-log.mjs";
@@ -12,11 +12,25 @@ export async function handleIncomingMessage(db, guests, fromWaId, messageBody) {
   if (!guest) return { matched: false };
 
   const intent = classifyIntent(messageBody);
-  const { applied } = await applyRsvpFromIntent(db, guest.id, intent);
+
+  // A failed RSVP apply (e.g. a transient Supabase error) must never
+  // prevent the message from being logged — that's the entire audit trail
+  // for this reply, and the catch-up watermark will move past it once a
+  // later message succeeds, permanently losing it otherwise.
+  let applied = false;
+  try {
+    ({ applied } = await applyRsvpFromIntent(db, guest.id, intent));
+  } catch (err) {
+    console.error(`Failed to apply RSVP from WhatsApp reply for guest ${guest.id}:`, err);
+    applied = false;
+  }
 
   await logWhatsAppReply(db, {
     guestId: guest.id,
-    fromNumber: fromWaId,
+    // Store the normalized E.164 number, not the raw WhatsApp id
+    // (e.g. "917995781657@c.us"), so from_number matches how phone
+    // numbers are stored everywhere else.
+    fromNumber: waIdToE164(fromWaId),
     messageBody,
     intent,
     applied,

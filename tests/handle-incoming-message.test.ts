@@ -52,4 +52,34 @@ describe("handleIncomingMessage", () => {
     }));
     expect(db.post).not.toHaveBeenCalledWith("/rsvps", expect.anything());
   });
+
+  // --- Final review findings 5 & 6 ---
+
+  it("logs the normalized E.164 from_number, not the raw WhatsApp id (finding 6)", async () => {
+    const db = fakeDb();
+    await handleIncomingMessage(db, GUESTS, "917995781657@c.us", "Yes we'll be there!");
+
+    expect(db.post).toHaveBeenCalledWith("/whatsapp_replies", expect.objectContaining({
+      from_number: "+917995781657",
+    }));
+  });
+
+  it("still logs the message with applied:false when applyRsvpFromIntent throws (finding 5)", async () => {
+    const db = fakeDb();
+    // Simulate a transient Supabase error inside applyRsvpFromIntent's own
+    // db.get("/rsvps?...") lookup.
+    db.get = vi.fn().mockRejectedValue(new Error("transient supabase error"));
+
+    const result = await handleIncomingMessage(db, GUESTS, "917995781657@c.us", "Yes we'll be there!");
+
+    expect(result).toEqual({ matched: true, intent: "attending", applied: false });
+    // Never wrote an rsvp row (the throw happened before any write could land)
+    expect(db.post).not.toHaveBeenCalledWith("/rsvps", expect.anything());
+    // But the message itself is still logged, with applied_to_rsvp: false
+    expect(db.post).toHaveBeenCalledWith("/whatsapp_replies", expect.objectContaining({
+      guest_id: "guest-1",
+      classified_intent: "attending",
+      applied_to_rsvp: false,
+    }));
+  });
 });
