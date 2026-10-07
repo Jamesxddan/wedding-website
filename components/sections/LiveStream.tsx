@@ -8,7 +8,14 @@ interface Props {
   label: string;
   channel: string;
   delaySeconds?: number;
+  /** Optional photo frame drawn around the player (e.g. /images/stream-frame.webp). */
+  frameSrc?: string;
 }
+
+// Where the video sits inside /images/stream-frame.webp (1536×1024): the dark window to the right of the
+// couple's photo, as a true 16:9 box (930×523 px at 482,292), so the photo and flowers stay visible.
+const FRAME_ASPECT = "1536 / 1024";
+const FRAME_VIDEO_BOX = { left: "31.38%", top: "28.52%", width: "60.55%", height: "51.07%" } as const;
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -25,8 +32,19 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-export default function LiveStream({ url, label, channel, delaySeconds = 0 }: Props) {
+export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc }: Props) {
   const [ready, setReady] = useState(delaySeconds <= 0);
+  // The frame leaves the video ~60% of the width - fine on a laptop, too small on a phone. Phones get the
+  // plain full-width player. Starts false so server and first client render match (no hydration error).
+  const [wideScreen, setWideScreen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const update = () => setWideScreen(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     if (delaySeconds <= 0) { setReady(true); return; }
@@ -47,7 +65,28 @@ export default function LiveStream({ url, label, channel, delaySeconds = 0 }: Pr
         </div>
         <p className="font-body text-deep-rose/70 text-sm">{label}</p>
 
-        {youtubeId ? (
+        {youtubeId && frameSrc && wideScreen ? (
+          <div
+            className="relative w-full rounded-2xl overflow-hidden shadow-lg"
+            style={{ aspectRatio: FRAME_ASPECT, backgroundImage: `url(${frameSrc})`, backgroundSize: "100% 100%" }}
+          >
+            <div className="absolute overflow-hidden rounded-md" style={{ ...FRAME_VIDEO_BOX, background: "#000" }}>
+              {ready ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+                  title={channel}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, letterSpacing: 2 }}>Stream loading…</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : youtubeId ? (
           <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ paddingBottom: "56.25%" }}>
             {ready ? (
               <iframe

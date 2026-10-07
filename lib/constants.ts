@@ -1,4 +1,8 @@
+// Start of the wedding day (IST midnight) - the site switches to the wedding-day page at this moment (lib/phase.ts).
 export const WEDDING_DATE = new Date("2026-10-08T00:00:00+05:30");
+// When the ceremony actually begins - what the countdown counts down to.
+export const CEREMONY_START = new Date("2026-10-08T16:30:00+05:30");
+export const RECEPTION_START = new Date("2026-10-08T19:00:00+05:30");
 
 export const COLORS = {
   blush: "#F4C2C2",

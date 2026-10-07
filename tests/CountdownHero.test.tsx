@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/constants", () => ({
   WEDDING_DATE: new Date("2026-10-08T00:00:00+05:30"),
+  CEREMONY_START: new Date("2026-10-08T16:30:00+05:30"),
   MUSIC_URL: "",
 }));
 

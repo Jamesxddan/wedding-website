@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useScroll, useTransform, motion } from "motion/react";
-import { WEDDING_DATE, MUSIC_URL } from "@/lib/constants";
+import { CEREMONY_START, MUSIC_URL } from "@/lib/constants";
 import Nav from "@/components/ui/Nav";
 import ParticleCanvas from "@/components/ui/ParticleCanvas";
 import CinematicSlideshow from "@/components/ui/CinematicSlideshow";
@@ -17,7 +17,7 @@ interface TimeLeft {
 }
 
 function getTimeLeft(now: Date): TimeLeft {
-  const target = WEDDING_DATE.getTime();
+  const target = CEREMONY_START.getTime(); // 4:30 PM IST ceremony, not midnight
   const diff = Math.max(0, target - now.getTime());
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));

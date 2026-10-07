@@ -5,13 +5,21 @@ import { useEffect, useRef, useState } from "react";
 import { Phase } from "@/lib/phase";
 import { safeGetItem } from "@/lib/storage";
 import { OWNER_PREVIEW_PHASE_KEY, OWNER_PREVIEW_RELINK_KEY, OWNER_PREVIEW_ERROR_KEY, OWNER_PREVIEW_TRUE_AUTO } from "@/lib/usePhase";
+import { OWNER_PREVIEW_STREAM_SCENE_KEY } from "@/lib/stream-scene";
+
+const SCENE_PREVIEWS: Record<string, string> = {
+  wd_reception_soon: "reception_soon",
+  wd_reception_live: "reception_live",
+};
 
 const PHASES: { value: string; label: string; desc: string }[] = [
   { value: "auto",                  label: "Auto",           desc: "Date-based detection" },
   { value: Phase.FIRST_VISIT,       label: "First Visit",    desc: "Registration screen" },
   { value: Phase.INVITATION,        label: "Invitation",     desc: "Show invite card" },
   { value: Phase.RETURN_VISIT,      label: "Pre-Wedding",    desc: "Countdown + gallery" },
-  { value: Phase.WEDDING_DAY,       label: "Wedding Day",    desc: "Live day banner" },
+  { value: Phase.WEDDING_DAY,       label: "Wedding Day",    desc: "Live day banner (streams follow the clock)" },
+  { value: "wd_reception_soon",     label: "Wedding Day · Reception soon", desc: "5:45 PM — 'reception will start soon' note" },
+  { value: "wd_reception_live",     label: "Wedding Day · Reception live", desc: "6:30 PM — reception on top, ceremony replay below" },
   { value: Phase.POST_WEDDING,      label: "Post-Wedding",   desc: "Memories page" },
   { value: "relink",                label: "Relink Screen",  desc: "Fingerprinted, unregistered device" },
 ];
@@ -70,7 +78,10 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
       setActive("relink");
     } else {
       const stored = safeGet(OWNER_PREVIEW_PHASE_KEY);
-      setActive(!stored || stored === OWNER_PREVIEW_TRUE_AUTO ? "auto" : stored);
+      const scene = safeGet(OWNER_PREVIEW_STREAM_SCENE_KEY);
+      const sceneEntry = Object.keys(SCENE_PREVIEWS).find((k) => SCENE_PREVIEWS[k] === scene);
+      if (stored === Phase.WEDDING_DAY && sceneEntry) setActive(sceneEntry);
+      else setActive(!stored || stored === OWNER_PREVIEW_TRUE_AUTO ? "auto" : stored);
     }
     setActiveError(safeGet(OWNER_PREVIEW_ERROR_KEY) ?? "none");
   }, [open]);
@@ -88,6 +99,15 @@ export default function OwnerPhaseSwitcher({ currentPhase }: Props) {
   }, [open]);
 
   function selectPreview(value: string) {
+    // Wedding-day stream scenes: show the wedding-day page with a later live-stream layout (this device only)
+    if (value in SCENE_PREVIEWS) {
+      safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.WEDDING_DAY);
+      safeSet(OWNER_PREVIEW_STREAM_SCENE_KEY, SCENE_PREVIEWS[value]);
+      safeRemove(OWNER_PREVIEW_RELINK_KEY);
+      window.location.reload();
+      return;
+    }
+    safeRemove(OWNER_PREVIEW_STREAM_SCENE_KEY);
     if (value === "relink") {
       safeSet(OWNER_PREVIEW_RELINK_KEY, "1");
       safeSet(OWNER_PREVIEW_PHASE_KEY, Phase.RETURN_VISIT);

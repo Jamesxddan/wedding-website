@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
+import { KIRK_STREAM_URL, BKN_STREAM_URL, CEREMONY_START, RECEPTION_START } from "@/lib/constants";
+import { previewStreamScene, streamSceneAt, type StreamScene } from "@/lib/stream-scene";
 import Nav from "@/components/ui/Nav";
 import LiveStream from "@/components/sections/LiveStream";
 import CabDialog, { type CabMode } from "@/components/ui/CabDialog";
@@ -19,6 +20,7 @@ const GOLD = "#D4AF37";
 const GA = (a: number) => `rgba(212,175,55,${a})`;
 const RA = (a: number) => `rgba(90,31,46,${a})`;
 const STREAM_DELAY = 4;
+const STREAM_FRAME = "/images/stream-frame.webp"; // James Daniel & Sharon photo frame around both live players
 
 const PETALS = [
   { left: "7%",  delay: "0s",    dur: "9s",   size: 9,  rot: "45deg"  },
@@ -55,6 +57,57 @@ interface Props {
   onViewInvitation?: () => void;
 }
 
+/** What's next on the day and how long until it - ceremony, then reception, then nothing. */
+function nextEvent(now: number): { label: string; at: number } | null {
+  if (now < CEREMONY_START.getTime()) return { label: "The ceremony begins in", at: CEREMONY_START.getTime() };
+  if (now < RECEPTION_START.getTime()) return { label: "The reception begins in", at: RECEPTION_START.getTime() };
+  return null;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function DayCountdown({ now }: { now: number }) {
+  const next = nextEvent(now);
+  if (!next) return null;
+  const diff = Math.max(0, next.at - now);
+  const units = [
+    { value: Math.floor(diff / 3_600_000), label: "Hours" },
+    { value: Math.floor((diff % 3_600_000) / 60_000), label: "Minutes" },
+    { value: Math.floor((diff % 60_000) / 1000), label: "Seconds" },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-3" aria-live="off">
+      <p className="font-body text-[11px] tracking-[0.35em] uppercase" style={{ color: RA(0.55) }}>
+        {next.label}
+      </p>
+      <div className="flex items-start gap-3 sm:gap-4">
+        {units.map((u, i) => (
+          <div key={u.label} className="flex items-start gap-3 sm:gap-4">
+            <div
+              className="flex flex-col items-center"
+              style={{
+                minWidth: 72, padding: "12px 10px 8px", borderRadius: 12,
+                background: "rgba(255,255,255,0.6)", border: `1px solid ${GA(0.35)}`,
+                boxShadow: `0 6px 24px ${RA(0.08)}`, backdropFilter: "blur(8px)",
+              }}
+            >
+              <span className="font-heading tabular-nums" style={{ fontSize: "clamp(1.8rem, 6vw, 2.6rem)", lineHeight: 1, color: RA(0.85) }}>
+                {pad2(u.value)}
+              </span>
+              <span className="font-body text-[10px] tracking-[0.25em] uppercase mt-2" style={{ color: RA(0.45) }}>
+                {u.label}
+              </span>
+            </div>
+            {i < units.length - 1 && (
+              <span className="font-heading" style={{ fontSize: "clamp(1.4rem, 4vw, 2rem)", color: GA(0.7), paddingTop: 10 }}>:</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WeddingDayBanner({ guestName, onViewInvitation }: Props) {
   const [cabMode, setCabMode] = useState<CabMode>(null);
   const [kirkUrl, setKirkUrl] = useState(KIRK_STREAM_URL);
@@ -62,6 +115,20 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
   const [appeared, setAppeared] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [chatbotEnabled, setChatbotEnabled] = useState(false);
+  // null until mounted: the clock only runs in the browser, so server and client HTML match (no hydration error)
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const beforeCeremony = now === null || now < CEREMONY_START.getTime();
+
+  // Live-stream layout by time of day, unless the owner is previewing a later scene from the gear menu.
+  const [previewScene, setPreviewScene] = useState<StreamScene | null>(null);
+  useEffect(() => { setPreviewScene(previewStreamScene()); }, []);
+  const scene: StreamScene = previewScene ?? (now === null ? "ceremony" : streamSceneAt(now));
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
@@ -182,7 +249,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
             className="font-script italic"
             style={{ ...fade(300), fontSize: "clamp(1.2rem, 3vw, 1.8rem)", color: RA(0.72) }}
           >
-            are getting married today 🕊️
+            {beforeCeremony ? "are getting married today 🕊️" : "are getting married right now 🕊️"}
           </p>
 
           {/* Date pill */}
@@ -198,6 +265,11 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
             <p className="font-heading text-[13px] tracking-[0.35em] uppercase" style={{ color: RA(0.7) }}>
               October 8th &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Chennai
             </p>
+          </div>
+
+          {/* Live countdown: to the 4:30 PM ceremony, then to the 7 PM reception, then hidden */}
+          <div style={fade(520)}>
+            {now !== null && <DayCountdown now={now} />}
           </div>
 
           {/* Personal greeting */}
@@ -296,23 +368,66 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
         <section className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}>
           <DamaskOverlay opacity={0.03} />
           <div className="relative max-w-4xl mx-auto flex flex-col gap-16">
-            <div className="text-center">
-              <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
-                Live coverage
-              </p>
-              <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Watch the Ceremony</h2>
-              <p className="font-script italic text-sage text-xl">Wherever you are, you are with us 🌸</p>
-            </div>
-            <OrnamentalFrame hangingRing padding={6}>
-              <div style={{ padding: "26px 26px 22px" }}>
-                <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} />
-              </div>
-            </OrnamentalFrame>
-            <OrnamentalFrame hangingRing padding={6}>
-              <div style={{ padding: "26px 26px 22px" }}>
-                <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} />
-              </div>
-            </OrnamentalFrame>
+            {/* Layout by time (lib/stream-scene.ts): ceremony → reception-soon note at 5:45 PM →
+                reception live on top + ceremony replay below at 6:30 PM */}
+            {scene === "reception_live" ? (
+              <>
+                <div className="text-center">
+                  <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
+                    Live now · Wedding Reception
+                  </p>
+                  <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Click below to see the live</h2>
+                  <p className="font-script italic text-sage text-xl">Celebrate with Mr &amp; Mrs James, wherever you are 🥂</p>
+                </div>
+                <OrnamentalFrame hangingRing padding={6}>
+                  <div style={{ padding: "26px 26px 22px" }}>
+                    <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  </div>
+                </OrnamentalFrame>
+                <div className="text-center">
+                  <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
+                    Replay
+                  </p>
+                  <h2 className="font-heading text-3xl md:text-4xl text-deep-rose">
+                    Check out the replay of the Wedding Ceremony of James with Sharon
+                  </h2>
+                </div>
+                <OrnamentalFrame hangingRing padding={6}>
+                  <div style={{ padding: "26px 26px 22px" }}>
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="The Holy Matrimony at St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  </div>
+                </OrnamentalFrame>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
+                    Live coverage
+                  </p>
+                  <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Watch the Ceremony</h2>
+                  <p className="font-script italic text-sage text-xl">Wherever you are, you are with us 🌸</p>
+                </div>
+                <OrnamentalFrame hangingRing padding={6}>
+                  <div style={{ padding: "26px 26px 22px" }}>
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  </div>
+                </OrnamentalFrame>
+                {/* Reception player stays hidden until 6:30 PM; from 5:45 PM a "starting soon" note shows instead */}
+                {scene === "reception_soon" && (
+                  <OrnamentalFrame hangingRing padding={6}>
+                    <div className="flex flex-col items-center gap-4 text-center py-12 px-8">
+                      <div style={{ fontSize: 40, animation: "pulse-glow 3s ease-in-out infinite" }}>🥂</div>
+                      <h3 className="font-heading text-deep-rose text-2xl md:text-3xl">
+                        The reception of Mr &amp; Mrs James will start soon
+                      </h3>
+                      <p className="font-script italic text-sage text-lg">
+                        Stay right here — the live stream from BKN Auditorium will appear on this page ✨
+                      </p>
+                    </div>
+                  </OrnamentalFrame>
+                )}
+              </>
+            )}
           </div>
         </section>
       )}
