@@ -182,7 +182,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
             className="font-script italic"
             style={{ ...fade(300), fontSize: "clamp(1.2rem, 3vw, 1.8rem)", color: RA(0.72) }}
           >
-            are getting married right now 🕊️
+            are getting married today 🕊️
           </p>
 
           {/* Date pill */}
