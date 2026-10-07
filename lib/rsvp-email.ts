@@ -189,7 +189,7 @@ export async function sendRsvpConfirmation(opts: {
 // ---------------------------------------------------------------------------
 // 2. Reminder emails (2-days-before, day-before, wedding-day)
 // ---------------------------------------------------------------------------
-export type ReminderType = "two_days_before" | "day_before" | "wedding_day" | "one_hour_before";
+export type ReminderType = "two_days_before" | "day_before" | "wedding_day" | "one_hour_before" | "correction";
 
 interface ReminderGuest {
   name: string;
@@ -285,6 +285,36 @@ export async function sendReminderEmail(type: ReminderType, guest: ReminderGuest
           </p>
         </div>
         <p style="font-size:13px;color:#a07840;font-style:italic;margin:0">See you tomorrow! 🎊 <a href="${SITE}" style="color:#8B4A6B">${SITE}</a></p>
+      </div>`
+    );
+  } else if (type === "correction") {
+    // Sent on Oct 7 to the guests who got the "Today is the day!" email a day early (cron date bug, since fixed).
+    subject = "Please disregard this morning's email 🙏 — the wedding is TOMORROW";
+    bodyHtml = shell(
+      "linear-gradient(135deg,#3d1020 0%,#5a1f2e 60%,#7a3048 100%)",
+      "Tomorrow · October 8, 2026",
+      `<div style="padding:36px 32px">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:40px;line-height:1;margin-bottom:8px">🙏</div>
+          <h1 style="font-size:22px;color:#5a1f2e;margin:0 0 6px">Sorry for the mix-up, ${firstName}!</h1>
+          <p style="font-size:14px;color:#a07840;font-style:italic;margin:0">Please disregard this morning's email</p>
+        </div>
+        <p style="font-size:15px;line-height:1.75;color:#3a1a10;margin:0 0 22px">
+          A scheduling glitch sent you our <em>"Today is the day"</em> reminder a day early. Kindly disregard it — James &amp; Sharon's wedding is <strong>tomorrow, Thursday, October 8th</strong>, and we can't wait to celebrate with you. Here are the details:
+        </p>
+        ${detailBox([
+          ...(hasChurch ? [
+            ["⛪ Ceremony", "St Andrews Kirk · <strong>4:30 PM</strong> — please arrive by 4:15"],
+            ["", "<a href='https://maps.google.com/?q=St+Andrews+Kirk+Chennai' style='color:#8B4A6B;font-size:12px'>Open in Google Maps →</a>"],
+          ] as Array<[string, string]> : []),
+          ...(hasReception ? [
+            ["🥂 Reception", "BKN Auditorium, Vepery · <strong>7:00 PM</strong>"],
+            ["", "<a href='https://maps.google.com/?q=BKN+Auditorium+Chennai' style='color:#8B4A6B;font-size:12px'>Open in Google Maps →</a>"],
+          ] as Array<[string, string]> : []),
+        ])}
+        <p style="font-size:13px;color:#a07840;font-style:italic;text-align:center;margin:0">
+          Thank you for your patience — see you tomorrow! 🌹 <a href="${SITE}" style="color:#8B4A6B">jameswedssharon.site</a>
+        </p>
       </div>`
     );
   } else if (type === "one_hour_before") {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendReminderEmail, type ReminderType } from "@/lib/rsvp-email";
+import { sendReminderEmail } from "@/lib/rsvp-email";
+import { pickReminderType } from "@/lib/reminder-schedule";
 
 // Wedding date in IST (UTC+5:30)
 const WEDDING_DATE_IST = new Date("2026-10-08T00:00:00+05:30");
@@ -28,19 +29,9 @@ export async function GET(req: NextRequest) {
 
   const days = daysUntilWedding();
 
-  const typeMap: Record<number, ReminderType> = {
-    2: "two_days_before",
-    1: "day_before",
-    0: "wedding_day",
-  };
-
-  // ?type=one_hour_before is fired by its own one-off cron entry on the wedding afternoon (see vercel.json).
-  // It only ever runs on the wedding day itself, whatever else calls it.
-  const wantsHourBefore = req.nextUrl.searchParams.get("type") === "one_hour_before";
-  if (wantsHourBefore && days !== 0) {
-    return NextResponse.json({ skipped: true, reason: "one_hour_before only runs on the wedding day", days_until_wedding: days });
-  }
-  const reminderType: ReminderType | undefined = wantsHourBefore ? "one_hour_before" : typeMap[days];
+  // Plain call = daily 03:00 UTC cron. ?type=afternoon = the 09:30 UTC cron on Oct 7 (correction email)
+  // and Oct 8 ("about an hour" email) - see lib/reminder-schedule.ts and vercel.json.
+  const reminderType = pickReminderType(req.nextUrl.searchParams.get("type"), days);
   if (!reminderType) {
     return NextResponse.json({ skipped: true, days_until_wedding: days });
   }
