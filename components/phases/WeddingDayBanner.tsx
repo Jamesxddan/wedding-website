@@ -21,6 +21,7 @@ const GA = (a: number) => `rgba(212,175,55,${a})`;
 const RA = (a: number) => `rgba(90,31,46,${a})`;
 const STREAM_DELAY = 4;
 const STREAM_FRAME = "/images/stream-frame.webp"; // James Daniel & Sharon photo frame around both live players
+const STREAM_FRAME_OVERLAY = "/images/stream-frame-overlay.webp"; // same frame, window transparent (phones)
 
 const PETALS = [
   { left: "7%",  delay: "0s",    dur: "9s",   size: 9,  rot: "45deg"  },
@@ -369,7 +370,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
 
       {/* ── LIVE STREAMS ─────────────────────────────────────────────────────── */}
       {hasAnyStream && (
-        <section className="relative py-24 px-6 overflow-hidden" style={{ background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}>
+        <section className="relative py-24 overflow-hidden" style={{ paddingLeft: "clamp(8px, 4vw, 24px)", paddingRight: "clamp(8px, 4vw, 24px)", background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}>
           <DamaskOverlay opacity={0.03} />
           <div className="relative max-w-4xl mx-auto flex flex-col gap-16">
             {/* Layout by time (lib/stream-scene.ts): ceremony → reception-soon note at 5:45 PM →
@@ -384,8 +385,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
                   <p className="font-script italic text-sage text-xl">Celebrate with Mr &amp; Mrs James, wherever you are 🥂</p>
                 </div>
                 <OrnamentalFrame hangingRing padding={6}>
-                  <div style={{ padding: "26px 26px 22px" }}>
-                    <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
+                    <LiveStream url={bknUrl} channel="BKN Auditorium" label="Watch the reception live from BKN Auditorium" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} />
                   </div>
                 </OrnamentalFrame>
                 <div className="text-center">
@@ -397,8 +398,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
                   </h2>
                 </div>
                 <OrnamentalFrame hangingRing padding={6}>
-                  <div style={{ padding: "26px 26px 22px" }}>
-                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="The Holy Matrimony at St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="The Holy Matrimony at St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} />
                   </div>
                 </OrnamentalFrame>
               </>
@@ -412,8 +413,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
                   <p className="font-script italic text-sage text-xl">Wherever you are, you are with us 🌸</p>
                 </div>
                 <OrnamentalFrame hangingRing padding={6}>
-                  <div style={{ padding: "26px 26px 22px" }}>
-                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} />
+                  <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} />
                   </div>
                 </OrnamentalFrame>
                 {/* Reception player stays hidden until 6:30 PM; from 5:45 PM a "starting soon" note shows instead */}

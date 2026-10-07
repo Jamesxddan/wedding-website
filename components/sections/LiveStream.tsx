@@ -10,12 +10,17 @@ interface Props {
   delaySeconds?: number;
   /** Optional photo frame drawn around the player (e.g. /images/stream-frame.webp). */
   frameSrc?: string;
+  /** Same frame with its dark window transparent - used on phones, laid over a video filling the window. */
+  frameOverlaySrc?: string;
 }
 
 // Where the video sits inside /images/stream-frame.webp (1536×1024): the dark window to the right of the
 // couple's photo, as a true 16:9 box (930×523 px at 482,292), so the photo and flowers stay visible.
 const FRAME_ASPECT = "1536 / 1024";
 const FRAME_VIDEO_BOX = { left: "31.38%", top: "28.52%", width: "60.55%", height: "51.07%" } as const;
+// Phones: the video fills the whole dark window (1121×732 px at 302,188) and the cut-out couple photo from
+// /images/stream-frame-overlay.webp sits on top - keeps the video as wide as a plain phone player.
+const FRAME_WINDOW_BOX = { left: "19.66%", top: "18.36%", width: "72.98%", height: "71.48%" } as const;
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -32,10 +37,10 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc }: Props) {
+export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc, frameOverlaySrc }: Props) {
   const [ready, setReady] = useState(delaySeconds <= 0);
-  // The frame leaves the video ~60% of the width - fine on a laptop, too small on a phone. Phones get the
-  // plain full-width player. Starts false so server and first client render match (no hydration error).
+  // The desktop frame leaves the video ~60% of the width - too small on a phone, so phones use the overlay
+  // layout (or the plain player if no overlay is given). Starts false so server and client HTML match.
   const [wideScreen, setWideScreen] = useState(false);
 
   useEffect(() => {
@@ -85,6 +90,30 @@ export default function LiveStream({ url, label, channel, delaySeconds = 0, fram
                 </div>
               )}
             </div>
+          </div>
+        ) : youtubeId && frameSrc && frameOverlaySrc ? (
+          <div
+            className="relative w-full rounded-2xl overflow-hidden shadow-lg"
+            style={{ aspectRatio: FRAME_ASPECT, backgroundImage: `url(${frameSrc})`, backgroundSize: "100% 100%" }}
+          >
+            <div className="absolute overflow-hidden" style={{ ...FRAME_WINDOW_BOX, background: "#000" }}>
+              {ready ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+                  title={channel}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, letterSpacing: 2 }}>Stream loading…</span>
+                </div>
+              )}
+            </div>
+            {/* couple photo + flowers on top; taps pass through to the video */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={frameOverlaySrc} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none select-none" />
           </div>
         ) : youtubeId ? (
           <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ paddingBottom: "56.25%" }}>
