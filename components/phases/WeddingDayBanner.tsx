@@ -137,14 +137,20 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
   }, []);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        if (data.youtube_ceremony_url) setKirkUrl(data.youtube_ceremony_url);
-        if (data.youtube_reception_url) setBknUrl(data.youtube_reception_url);
-        setChatbotEnabled(data.chatbot_enabled === "true");
-      })
-      .catch(() => {});
+    const load = () =>
+      fetch("/api/settings")
+        .then((r) => r.json())
+        .then((data: Record<string, string>) => {
+          if (data.youtube_ceremony_url) setKirkUrl(data.youtube_ceremony_url);
+          if (data.youtube_reception_url) setBknUrl(data.youtube_reception_url);
+          setChatbotEnabled(data.chatbot_enabled === "true");
+        })
+        .catch(() => {});
+    load();
+    // Re-check every minute so a stream link pasted in admin replaces the "starts at 4:30" note
+    // on pages guests already have open, without them refreshing.
+    const id = setInterval(load, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   const hasAnyStream = !!kirkUrl || !!bknUrl;
@@ -398,7 +404,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
                 </div>
                 <OrnamentalFrame hangingRing padding={6}>
                   <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
-                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="The Holy Matrimony at St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} />
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="The Holy Matrimony at St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} comingSoon="The ceremony replay will appear here soon" />
                   </div>
                 </OrnamentalFrame>
               </>
@@ -413,7 +419,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
                 </div>
                 <OrnamentalFrame hangingRing padding={6}>
                   <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
-                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} />
+                    <LiveStream url={kirkUrl} channel="St Andrews Kirk" label="Watch the ceremony live from St Andrews Kirk" delaySeconds={STREAM_DELAY} frameSrc={STREAM_FRAME} frameOverlaySrc={STREAM_FRAME_OVERLAY} comingSoon="The live stream will start at 4:30 PM" />
                   </div>
                 </OrnamentalFrame>
                 {/* Reception player stays hidden until 6:30 PM; from 5:45 PM a "starting soon" note shows instead */}

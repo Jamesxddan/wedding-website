@@ -36,7 +36,7 @@ export const MUSIC_URL = "";
 
 // Replace with actual stream URLs from each media team on the day.
 // YouTube URLs are auto-embedded; any other URL gets a "Watch Live" button.
-export const KIRK_STREAM_URL = "https://www.youtube.com/watch?v=25ffO_JAjRo"; // church/ceremony
+export const KIRK_STREAM_URL = ""; // church/ceremony - empty until the real link is pasted in admin (shows the "starts at 4:30 PM" note)
 export const BKN_STREAM_URL = "https://www.youtube.com/watch?v=qYmSQd4ZnuA";  // reception
 
 export const ITINERARY = [

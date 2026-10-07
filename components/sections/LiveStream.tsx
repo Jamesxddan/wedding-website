@@ -12,6 +12,9 @@ interface Props {
   frameSrc?: string;
   /** Same frame with its dark window transparent - used on phones, laid over a video filling the window. */
   frameOverlaySrc?: string;
+  /** Shown in the frame's window while there is no URL yet (e.g. "The live stream will start at 4:30 PM").
+   *  Without it, a player with no URL renders nothing. */
+  comingSoon?: string;
 }
 
 // Where the video sits inside /images/stream-frame.webp (1536×1024): the dark window to the right of the
@@ -37,7 +40,7 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc, frameOverlaySrc }: Props) {
+export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc, frameOverlaySrc, comingSoon }: Props) {
   const [ready, setReady] = useState(delaySeconds <= 0);
   // The desktop frame leaves the video ~60% of the width - too small on a phone, so phones use the overlay
   // layout (or the plain player if no overlay is given). Starts false so server and client HTML match.
@@ -57,7 +60,42 @@ export default function LiveStream({ url, label, channel, delaySeconds = 0, fram
     return () => clearTimeout(t);
   }, [delaySeconds]);
 
-  if (!url) return null;
+  if (!url && !comingSoon) return null;
+
+  // No link yet (admin hasn't pasted it): show the note inside the frame's window instead of a video.
+  // The page re-reads the admin settings every minute, so this turns into the player by itself.
+  if (!url) {
+    return (
+      <AnimatedSection variant="blur-in" as="div">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: "rgba(181,101,118,0.45)" }} />
+            <h3 className="font-heading text-xl text-deep-rose">{channel}</h3>
+          </div>
+          <p className="font-body text-deep-rose/70 text-sm">{label}</p>
+          <div
+            className="relative w-full rounded-2xl overflow-hidden shadow-lg"
+            style={frameSrc
+              ? { aspectRatio: FRAME_ASPECT, backgroundImage: `url(${frameSrc})`, backgroundSize: "100% 100%" }
+              : { aspectRatio: "16 / 9", background: "#0a0a0a" }}
+          >
+            <div
+              className="absolute flex flex-col items-center justify-center text-center rounded-md"
+              style={{ ...(frameSrc ? FRAME_VIDEO_BOX : { left: 0, top: 0, width: "100%", height: "100%" }), background: "#0a0a0a", padding: "4%" }}
+            >
+              <span style={{ fontSize: "clamp(16px, 4vw, 30px)", lineHeight: 1, marginBottom: "4%" }}>🕊️</span>
+              <span className="font-heading" style={{ color: "#f5e6c8", fontSize: "clamp(11px, 2.4vw, 20px)", lineHeight: 1.3 }}>
+                {comingSoon}
+              </span>
+              <span className="font-body" style={{ color: "rgba(255,255,255,0.45)", fontSize: "clamp(8px, 1.4vw, 12px)", marginTop: "3%", letterSpacing: 1 }}>
+                This will turn into the live video automatically
+              </span>
+            </div>
+          </div>
+        </div>
+      </AnimatedSection>
+    );
+  }
 
   const youtubeId = extractYoutubeId(url);
 
