@@ -124,7 +124,6 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  const beforeCeremony = now === null || now < CEREMONY_START.getTime();
 
   // Live-stream layout by time of day, unless the owner is previewing a later scene from the gear menu.
   const [previewScene, setPreviewScene] = useState<StreamScene | null>(null);
@@ -252,7 +251,7 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
             className="font-script italic"
             style={{ ...fade(300), fontSize: "clamp(1.2rem, 3vw, 1.8rem)", color: RA(0.72) }}
           >
-            {beforeCeremony ? "are getting married today 🕊️" : "are getting married right now 🕊️"}
+            are getting married today 🕊️
           </p>
 
           {/* Date pill */}
