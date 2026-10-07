@@ -86,7 +86,7 @@ function DayCountdown({ now }: { now: number }) {
             <div
               className="flex flex-col items-center"
               style={{
-                minWidth: 72, padding: "12px 10px 8px", borderRadius: 12,
+                width: 88, padding: "12px 0 8px", borderRadius: 12, // equal widths, whatever the label length
                 background: "rgba(255,255,255,0.6)", border: `1px solid ${GA(0.35)}`,
                 boxShadow: `0 6px 24px ${RA(0.08)}`, backdropFilter: "blur(8px)",
               }}
@@ -94,7 +94,7 @@ function DayCountdown({ now }: { now: number }) {
               <span className="font-heading tabular-nums" style={{ fontSize: "clamp(1.8rem, 6vw, 2.6rem)", lineHeight: 1, color: RA(0.85) }}>
                 {pad2(u.value)}
               </span>
-              <span className="font-body text-[10px] tracking-[0.25em] uppercase mt-2" style={{ color: RA(0.45) }}>
+              <span className="font-body text-[9.5px] tracking-[0.2em] uppercase mt-2" style={{ color: RA(0.45) }}>
                 {u.label}
               </span>
             </div>
@@ -164,6 +164,8 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
       <section
         className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
         style={{
+          // keeps the content clear of the fixed top menu and of the "Scroll" hint at the bottom
+          paddingTop: 104, paddingBottom: 136,
           background: [
             "radial-gradient(ellipse at 30% 20%, rgba(244,194,194,0.45) 0%, transparent 55%)",
             "radial-gradient(ellipse at 70% 80%, rgba(212,175,55,0.18) 0%, transparent 50%)",
@@ -353,8 +355,10 @@ export default function WeddingDayBanner({ guestName, onViewInvitation }: Props)
 
         {/* Scroll indicator */}
         <div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
-          style={{ opacity: appeared ? 0.5 : 0, transition: "opacity 1s ease 1.5s" }}
+          className="absolute z-10 flex flex-col items-center gap-2"
+          // positioned inline: the bottom-10 / -translate-x-1/2 utility classes aren't generated in this build,
+          // which left the hint floating mid-hero on top of the date pill
+          style={{ bottom: 40, left: "50%", transform: "translateX(-50%)", opacity: appeared ? 0.5 : 0, transition: "opacity 1s ease 1.5s" }}
         >
           <span className="font-body text-[10px] tracking-widest uppercase" style={{ color: RA(0.45) }}>Scroll</span>
           <div className="w-px h-10 animate-scroll-line" style={{ background: `linear-gradient(to bottom, ${RA(0.45)}, transparent)` }} />
