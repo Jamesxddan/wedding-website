@@ -189,7 +189,7 @@ export async function sendRsvpConfirmation(opts: {
 // ---------------------------------------------------------------------------
 // 2. Reminder emails (2-days-before, day-before, wedding-day)
 // ---------------------------------------------------------------------------
-export type ReminderType = "two_days_before" | "day_before" | "wedding_day";
+export type ReminderType = "two_days_before" | "day_before" | "wedding_day" | "one_hour_before";
 
 interface ReminderGuest {
   name: string;
@@ -211,7 +211,8 @@ export async function sendReminderEmail(type: ReminderType, guest: ReminderGuest
 
   let subject: string;
   let bodyHtml: string;
-  const attachments = icsAttachment(attending_events);
+  // The calendar file was already sent with the earlier reminders - not needed an hour before.
+  const attachments = type === "one_hour_before" ? undefined : icsAttachment(attending_events);
 
   if (type === "two_days_before") {
     subject = "See you in 2 days! 📅 James & Sharon's Wedding";
@@ -284,6 +285,33 @@ export async function sendReminderEmail(type: ReminderType, guest: ReminderGuest
           </p>
         </div>
         <p style="font-size:13px;color:#a07840;font-style:italic;margin:0">See you tomorrow! 🎊 <a href="${SITE}" style="color:#8B4A6B">${SITE}</a></p>
+      </div>`
+    );
+  } else if (type === "one_hour_before") {
+    subject = "Starting in about an hour! ⛪ James & Sharon's Wedding";
+    bodyHtml = shell(
+      "linear-gradient(135deg,#2a0a14 0%,#5a1f2e 50%,#D4AF37 100%)",
+      "October 8, 2026 · Starting Soon",
+      `<div style="padding:36px 32px">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:44px;line-height:1;margin-bottom:8px">⛪</div>
+          <h1 style="font-size:22px;color:#5a1f2e;margin:0 0 6px">See you in about an hour!</h1>
+          <p style="font-size:14px;color:#a07840;font-style:italic;margin:0">Time to head out, ${firstName}</p>
+        </div>
+        <p style="font-size:15px;line-height:1.75;color:#3a1a10;margin:0 0 22px">
+          Good afternoon, <strong>${firstName}!</strong> The ceremony begins at <strong>4:30 PM</strong> — please arrive by <strong>4:15</strong> so we can all be seated together. We can't wait to celebrate with you. 💕
+        </p>
+        ${detailBox([
+          ["⛪ Ceremony", "St Andrews Kirk · <strong>4:30 PM</strong>"],
+          ["", "<a href='https://maps.google.com/?q=St+Andrews+Kirk+Chennai' style='color:#8B4A6B;font-size:12px'>Open in Google Maps →</a>"],
+          ...(hasReception ? [
+            ["🥂 Reception", "BKN Auditorium, Vepery · <strong>7:00 PM</strong>"],
+            ["", "<a href='https://maps.google.com/?q=BKN+Auditorium+Chennai' style='color:#8B4A6B;font-size:12px'>Open in Google Maps →</a>"],
+          ] as Array<[string, string]> : []),
+        ])}
+        <p style="font-size:13px;color:#a07840;font-style:italic;text-align:center;margin:0">
+          See you there! 🙏 <a href="${SITE}" style="color:#8B4A6B">jameswedssharon.site</a>
+        </p>
       </div>`
     );
   } else {

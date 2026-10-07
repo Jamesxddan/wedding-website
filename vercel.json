@@ -5,8 +5,8 @@
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/prune-logs",
-      "schedule": "0 4 * * *"
+      "path": "/api/cron/wedding-reminders?type=one_hour_before",
+      "schedule": "30 9 8 10 *"
     }
   ]
 }

@@ -5,19 +5,18 @@ import { sendReminderEmail, type ReminderType } from "@/lib/rsvp-email";
 // Wedding date in IST (UTC+5:30)
 const WEDDING_DATE_IST = new Date("2026-10-08T00:00:00+05:30");
 
-function todayIst(): Date {
-  const now = new Date();
-  // Shift to IST
-  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  ist.setUTCHours(0, 0, 0, 0);
-  return ist;
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Whole-day number on the IST calendar. Both "today" and the wedding date must be shifted into IST
+// *before* truncating to a day - otherwise 2026-10-08T00:00+05:30 (= Oct 7 18:30 UTC) lands on Oct 7
+// and every reminder fires one day early.
+function istDayNumber(d: Date): number {
+  return Math.floor((d.getTime() + IST_OFFSET_MS) / DAY_MS);
 }
 
 function daysUntilWedding(): number {
-  const today = todayIst();
-  const wedding = new Date(WEDDING_DATE_IST);
-  wedding.setUTCHours(0, 0, 0, 0);
-  return Math.round((wedding.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return istDayNumber(WEDDING_DATE_IST) - istDayNumber(new Date());
 }
 
 export async function GET(req: NextRequest) {
@@ -35,7 +34,13 @@ export async function GET(req: NextRequest) {
     0: "wedding_day",
   };
 
-  const reminderType = typeMap[days];
+  // ?type=one_hour_before is fired by its own one-off cron entry on the wedding afternoon (see vercel.json).
+  // It only ever runs on the wedding day itself, whatever else calls it.
+  const wantsHourBefore = req.nextUrl.searchParams.get("type") === "one_hour_before";
+  if (wantsHourBefore && days !== 0) {
+    return NextResponse.json({ skipped: true, reason: "one_hour_before only runs on the wedding day", days_until_wedding: days });
+  }
+  const reminderType: ReminderType | undefined = wantsHourBefore ? "one_hour_before" : typeMap[days];
   if (!reminderType) {
     return NextResponse.json({ skipped: true, days_until_wedding: days });
   }
@@ -63,6 +68,8 @@ export async function GET(req: NextRequest) {
     const guestRaw = (row as unknown as { guests: { name: string; email: string } | { name: string; email: string }[] }).guests;
     const guest = Array.isArray(guestRaw) ? guestRaw[0] : guestRaw;
     if (!guest?.email) { results.skipped++; continue; }
+    // reception-only guests aren't at the 4:30 ceremony, so the "about an hour" email is not for them
+    if (reminderType === "one_hour_before" && row.attending_events === "reception") { results.skipped++; continue; }
 
     try {
       await sendReminderEmail(reminderType, {
