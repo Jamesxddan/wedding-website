@@ -15,6 +15,8 @@ interface Props {
   /** Shown in the frame's window while there is no URL yet (e.g. "The live stream will start at 4:30 PM").
    *  Without it, a player with no URL renders nothing. */
   comingSoon?: string;
+  /** Recording rather than live: static gold dot instead of the pulsing red "live" dot. */
+  replay?: boolean;
 }
 
 // Where the video sits inside /images/stream-frame.webp (1536×1024): the dark window to the right of the
@@ -40,13 +42,14 @@ function extractYoutubeId(url: string): string | null {
   return null;
 }
 
-export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc, frameOverlaySrc, comingSoon }: Props) {
+export default function LiveStream({ url, label, channel, delaySeconds = 0, frameSrc, frameOverlaySrc, comingSoon, replay }: Props) {
   const [ready, setReady] = useState(delaySeconds <= 0);
   // The desktop frame leaves the video ~60% of the width - too small on a phone, so phones use the overlay
   // layout (or the plain player if no overlay is given). Starts false so server and client HTML match.
   const [wideScreen, setWideScreen] = useState(false);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return; // very old in-app browsers / test env: keep phone layout
     const mq = window.matchMedia("(min-width: 640px)");
     const update = () => setWideScreen(mq.matches);
     update();
@@ -103,7 +106,9 @@ export default function LiveStream({ url, label, channel, delaySeconds = 0, fram
     <AnimatedSection variant="blur-in" as="div">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+          {replay
+            ? <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: "#D4AF37" }} />
+            : <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />}
           <h3 className="font-heading text-xl text-deep-rose">{channel}</h3>
         </div>
         <p className="font-body text-deep-rose/70 text-sm">{label}</p>

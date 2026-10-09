@@ -7,6 +7,12 @@ import Comments from "@/components/sections/Comments";
 import Footer from "@/components/ui/Footer";
 import { safeGetItem } from "@/lib/storage";
 import { DamaskOverlay, OrnamentalFrame } from "@/components/ui/OrnamentalMotifs";
+import LiveStream from "@/components/sections/LiveStream";
+import { KIRK_STREAM_URL, BKN_STREAM_URL } from "@/lib/constants";
+
+// Same photo frame as the wedding-day live players
+const STREAM_FRAME = "/images/stream-frame.webp";
+const STREAM_FRAME_OVERLAY = "/images/stream-frame-overlay.webp";
 
 function extractYoutubeId(url: string): string | null {
   try {
@@ -57,6 +63,9 @@ export default function PostWeddingHero({ guestName }: Props) {
   const [videosUrl, setVideosUrl] = useState("");
   const [wmText, setWmText] = useState("James & Sharon");
   const [heroPhoto, setHeroPhoto] = useState<string | null>(null);
+  // Recordings of the two live streams (the same links set in admin for the wedding day)
+  const [ceremonyUrl, setCeremonyUrl] = useState(KIRK_STREAM_URL);
+  const [receptionUrl, setReceptionUrl] = useState(BKN_STREAM_URL);
 
   useEffect(() => {
     const t = setTimeout(() => setAppeared(true), 80);
@@ -66,6 +75,8 @@ export default function PostWeddingHero({ guestName }: Props) {
         setHighlightsUrl(s.highlights_video_url ?? "");
         setPhotosUrl(s.post_wedding_photos_url ?? "");
         setVideosUrl(s.post_wedding_videos_url ?? "");
+        if (s.youtube_ceremony_url) setCeremonyUrl(s.youtube_ceremony_url);
+        if (s.youtube_reception_url) setReceptionUrl(s.youtube_reception_url);
       })
       .catch(() => {});
     const parts = ["James & Sharon", safeGetItem("guest_name"), safeGetItem("guest_city")].filter(Boolean);
@@ -360,6 +371,49 @@ export default function PostWeddingHero({ guestName }: Props) {
           </div>
         </section>
       )}
+
+      {/* ── RE-WATCH THE WEDDING & RECEPTION (recordings of the two live streams) ── */}
+      <section
+        className="relative py-24 overflow-hidden"
+        style={{ paddingLeft: "clamp(8px, 4vw, 24px)", paddingRight: "clamp(8px, 4vw, 24px)", background: "linear-gradient(180deg, #fffdf9 0%, #fdf6ec 100%)" }}
+      >
+        <DamaskOverlay opacity={0.03} />
+        <div className="relative max-w-4xl mx-auto flex flex-col gap-16">
+          <div className="text-center">
+            <p className="font-body text-[11px] tracking-[0.4em] uppercase mb-3" style={{ color: RA(0.75) }}>
+              Relive the day
+            </p>
+            <h2 className="font-heading text-4xl md:text-5xl text-deep-rose mb-3">Re-watch the Wedding &amp; Reception</h2>
+            <p className="font-script italic text-sage text-xl">Every moment, as it happened 💍</p>
+          </div>
+          <OrnamentalFrame hangingRing padding={6}>
+            <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
+              <LiveStream
+                url={ceremonyUrl}
+                channel="The Holy Matrimony"
+                label="St Andrews Kirk, Egmore · 8th October 2026"
+                frameSrc={STREAM_FRAME}
+                frameOverlaySrc={STREAM_FRAME_OVERLAY}
+                comingSoon="The ceremony recording will appear here soon"
+                replay
+              />
+            </div>
+          </OrnamentalFrame>
+          <OrnamentalFrame hangingRing padding={6}>
+            <div style={{ padding: "clamp(6px, 3vw, 26px) clamp(6px, 3vw, 26px) clamp(6px, 3vw, 22px)" }}>
+              <LiveStream
+                url={receptionUrl}
+                channel="The Wedding Reception"
+                label="BKN Auditorium, Vepery · 8th October 2026"
+                frameSrc={STREAM_FRAME}
+                frameOverlaySrc={STREAM_FRAME_OVERLAY}
+                comingSoon="The reception recording will appear here soon"
+                replay
+              />
+            </div>
+          </OrnamentalFrame>
+        </div>
+      </section>
 
       <Gallery folder="wedding" title="Wedding Gallery" />
       <Comments />
