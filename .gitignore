@@ -58,3 +58,12 @@ tests/e2e/.auth/
 
 # git worktrees used for isolated feature work
 .worktrees/
+
+# WhatsApp Web session/credentials (scripts/send-whatsapp-reminders.mjs,
+# scripts/whatsapp-listener.mjs) — never commit a live authenticated session
+.ww-session/
+.wwebjs_cache/
+.wwebjs_auth/
+
+# subagent-driven-development scratch workspace (ledgers, briefs, review diffs)
+.superpowers/
