@@ -530,7 +530,10 @@ export default function Home() {
       )}
 
       {phase === Phase.FIRST_VISIT && (
-        <OpeningScreen onComplete={() => { refresh(); }} />
+        <>
+          <BirthdayTakeover />
+          <OpeningScreen onComplete={() => { refresh(); }} />
+        </>
       )}
 
       {phase === Phase.INVITATION && (

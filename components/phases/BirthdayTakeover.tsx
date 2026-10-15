@@ -11,8 +11,8 @@ import { BIRTHDAY_AGE, useIsBirthday } from "@/lib/birthday";
 //      the last one sets off a huge blast.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Sharon's message - paste her words here; the card is hidden while this is empty.
-const SHARON_NOTE = "";
+// Sharon's message comes from the admin panel (setting "birthday_sharon_note", super admins only);
+// the card stays hidden while it is empty.
 
 const GOLD = "#D4AF37";
 const CANDLES = BIRTHDAY_AGE;
@@ -112,6 +112,18 @@ function playTune(): () => void {
 
 export default function BirthdayTakeover({ guestName }: { guestName?: string }) {
   const isBirthday = useIsBirthday();
+  const [sharonNote, setSharonNote] = useState("");
+  useEffect(() => {
+    if (!isBirthday) return;
+    const load = () =>
+      fetch("/api/settings")
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((s: Record<string, string>) => setSharonNote((s.birthday_sharon_note ?? "").trim()))
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 60_000); // her edits show up without a reload
+    return () => clearInterval(id);
+  }, [isBirthday]);
   const { canvasRef, burst, blast } = useConfetti();
   const [playing, setPlaying] = useState(false);
   const stopTune = useRef<null | (() => void)>(null);
@@ -208,7 +220,10 @@ export default function BirthdayTakeover({ guestName }: { guestName?: string }) 
     setTimeout(() => setPlaying(false), 15000);
   };
 
-  const toWall = () => document.getElementById("wall-of-love")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // New visitors (registration form below) have no Wall of Love yet - take them to the form instead.
+  const toWall = () =>
+    (document.getElementById("wall-of-love") ?? document.getElementById("birthday-cake")?.nextElementSibling)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!isBirthday) return null;
 
@@ -275,7 +290,7 @@ export default function BirthdayTakeover({ guestName }: { guestName?: string }) 
             …and a very happy birthday to his twin, <strong style={{ color: "#fdf6ec" }}>John Jebasingh</strong>! 🎉
           </p>
 
-          {SHARON_NOTE && (
+          {sharonNote && (
             <div
               onPointerDown={(e) => e.stopPropagation()}
               style={{
@@ -287,7 +302,7 @@ export default function BirthdayTakeover({ guestName }: { guestName?: string }) 
                 From your wife, Sharon 💕
               </p>
               <p className="font-script italic" style={{ color: "#fdf6ec", fontSize: "1.15rem", lineHeight: 1.6, margin: 0, whiteSpace: "pre-line" }}>
-                {SHARON_NOTE}
+                {sharonNote}
               </p>
             </div>
           )}

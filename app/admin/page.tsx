@@ -170,6 +170,9 @@ export default function AdminPage() {
   const [annoSaving, setAnnoSaving] = useState(false);
   const [annoSaved, setAnnoSaved] = useState(false);
   const [highlightsInput, setHighlightsInput] = useState("");
+  const [bdayNoteInput, setBdayNoteInput] = useState("");
+  const [bdayNoteSaving, setBdayNoteSaving] = useState(false);
+  const [bdayNoteSaved, setBdayNoteSaved] = useState(false);
   const [highlightsSaving, setHighlightsSaving] = useState(false);
   const [highlightsSaved, setHighlightsSaved] = useState(false);
   const [photosInput, setPhotosInput] = useState("");
@@ -252,6 +255,7 @@ export default function AdminPage() {
     setYtReceptionInput(data.youtube_reception_url ?? "");
     setAnnoInput(data.announcement ?? "");
     setHighlightsInput(data.highlights_video_url ?? "");
+    setBdayNoteInput(data.birthday_sharon_note ?? "");
     setPhotosInput(data.post_wedding_photos_url ?? "");
     setVideosInput(data.post_wedding_videos_url ?? "");
     setCommentVideoInput(data.youtube_comment_video_id ?? "");
@@ -365,6 +369,13 @@ export default function AdminPage() {
     await saveSetting("highlights_video_url", highlightsInput.trim());
     setHighlightsSaving(false); setHighlightsSaved(true);
     setTimeout(() => setHighlightsSaved(false), 2500);
+  }
+
+  async function saveBdayNote() {
+    setBdayNoteSaving(true);
+    await saveSetting("birthday_sharon_note", bdayNoteInput.trim());
+    setBdayNoteSaving(false); setBdayNoteSaved(true);
+    setTimeout(() => setBdayNoteSaved(false), 2500);
   }
 
   async function savePhotosUrl() {
@@ -1539,6 +1550,28 @@ export default function AdminPage() {
                     <p style={{ marginTop: 8, fontSize: 13, color: "#e67e22" }}>⚠️ Couldn&apos;t parse a video ID — check the URL.</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isSuper && (
+            <div style={card}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, color: "#1a1a1a" }}>🎂 Birthday note from Sharon</h3>
+              <p style={{ margin: "0 0 16px", fontSize: 13, color: "#888" }}>
+                Shows as &quot;From your wife, Sharon 💕&quot; on James&apos;s birthday page (16 Oct only). Appears on the
+                site within a minute of saving; leave empty to hide the card.
+              </p>
+              <textarea
+                style={{ ...inputStyle, width: "100%", minHeight: 120, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                value={bdayNoteInput}
+                onChange={(e) => { setBdayNoteInput(e.target.value); setBdayNoteSaved(false); }}
+                placeholder="Happy birthday, my love…"
+                maxLength={1200}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                <button style={saveBtn(bdayNoteSaving, bdayNoteSaved)} onClick={saveBdayNote} disabled={bdayNoteSaving}>
+                  {bdayNoteSaved ? "Saved ✓" : bdayNoteSaving ? "Saving…" : "Save note"}
+                </button>
               </div>
             </div>
           )}
