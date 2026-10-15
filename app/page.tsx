@@ -31,6 +31,7 @@ const BackgroundMusic = dynamic(() => import("@/components/ui/BackgroundMusic"),
 const WeddingDayTeaser = dynamic(() => import("@/components/ui/WeddingDayTeaser"), { ssr: false });
 const WeddingChatbot = dynamic(() => import("@/components/ui/WeddingChatbot"), { ssr: false });
 const OwnerPhaseSwitcher = dynamic(() => import("@/components/ui/OwnerPhaseSwitcher"), { ssr: false });
+const BirthdayRibbon = dynamic(() => import("@/components/ui/BirthdayRibbon"), { ssr: false }); // 16 Oct only
 const BackgroundSlideshow = dynamic(() => import("@/components/ui/BackgroundSlideshow"), { ssr: false });
 const ScrollFloralDivider = dynamic(() => import("@/components/ui/OrnamentalMotifs").then(m => ({ default: m.ScrollFloralDivider })), { ssr: false });
 
@@ -772,6 +773,7 @@ export default function Home() {
       )}
       {/* Preview switcher — gear icon bottom-left: sub-owners, plus any admin /
           super admin (the switcher itself then offers the Admin Panel link). */}
+      <BirthdayRibbon />
       {(isOwner || adminViewer) && !isLoading && (
         <OwnerPhaseSwitcher currentPhase={phase} />
       )}
