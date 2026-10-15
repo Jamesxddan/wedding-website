@@ -11,8 +11,12 @@ import { BIRTHDAY_AGE, useIsBirthday } from "@/lib/birthday";
 //      the last one sets off a huge blast.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Sharon's message comes from the admin panel (setting "birthday_sharon_note", super admins only);
-// the card stays hidden while it is empty.
+// Sharon's message comes from the admin panel (setting "birthday_sharon_note", super admins only).
+// SHARON_NOTE_FALLBACK is the note she emailed on 16 Oct - shown while the setting is empty.
+const SHARON_NOTE_FALLBACK = `My dear lovely husband ,
+A very Happy birthday to you 🥳
+I love you so much and Praise God for having me paired with a person who can understand me so well even before I say anything.
+Can’t wait to share many more birthdays with you .Love you ammu ❤️.I will always support you and stay with you in all the circumstances of life🫂`;
 
 const GOLD = "#D4AF37";
 const CANDLES = BIRTHDAY_AGE;
@@ -112,13 +116,13 @@ function playTune(): () => void {
 
 export default function BirthdayTakeover({ guestName }: { guestName?: string }) {
   const isBirthday = useIsBirthday();
-  const [sharonNote, setSharonNote] = useState("");
+  const [sharonNote, setSharonNote] = useState(SHARON_NOTE_FALLBACK);
   useEffect(() => {
     if (!isBirthday) return;
     const load = () =>
       fetch("/api/settings")
         .then((r) => (r.ok ? r.json() : {}))
-        .then((s: Record<string, string>) => setSharonNote((s.birthday_sharon_note ?? "").trim()))
+        .then((s: Record<string, string>) => setSharonNote((s.birthday_sharon_note ?? "").trim() || SHARON_NOTE_FALLBACK))
         .catch(() => {});
     load();
     const id = setInterval(load, 60_000); // her edits show up without a reload
